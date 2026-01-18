@@ -1,26 +1,27 @@
 const SAVE_KEY = 'WARSZAWA_FOREVER';
 
-// ПОЛУЧЕНИЕ ID ИГРОКА (ВАЖНО ДЛЯ АДМИНКИ)
+// Инициализация телеграма и ID
 let tg = window.Telegram.WebApp;
-tg.expand(); // На весь экран
+tg.expand();
 let userId = (tg.initDataUnsafe && tg.initDataUnsafe.user) 
     ? tg.initDataUnsafe.user.id.toString() 
     : (localStorage.getItem('wolt_user_id') || 'user_' + Math.floor(Math.random()*100000));
 
 if (!tg.initDataUnsafe.user) localStorage.setItem('wolt_user_id', userId);
 
-// ГЛОБАЛЬНЫЕ НАСТРОЙКИ (Синхронизируются с Админкой)
+// Глобальные настройки
 let GLOBAL = {
     basePay: 12,
     inflationRate: 0.05,
-    penaltyLate: 5.00
+    penaltyLate: 5.00,
+    energyCost: 0.15
 };
 
 const ITEMS_DB = {
-    bike: { name: 'Велосипед', type: 'repair', baseCost: 5, icon: 'fa-bicycle' },
-    bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open' },
-    phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen' },
-    gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt' },
+    bike: { name: 'Велосипед', type: 'repair', baseCost: 5, icon: 'fa-bicycle', desc: 'Ремонт ходовой' },
+    bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open', desc: 'Заплатка дыр' },
+    phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen', desc: 'Оплата интернета' },
+    gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt', desc: 'Химчистка' },
     water: { name: 'Вода (0.5л)', type: 'buy', cost: 2.0, effect: {water:35, energy:5}, icon: 'fa-bottle-water', target:'water' },
     bar: { name: 'Сникерс', type: 'buy', cost: 4.5, effect: {energy:20, mood:15}, icon: 'fa-cookie-bite', target:'energy' },
     energy_drink: { name: 'Red Bull', type: 'buy', cost: 7.0, effect: {energy:50, mood:5, water:-5}, icon: 'fa-bolt', target:'energy' },
@@ -38,12 +39,6 @@ let state = {
     history: []
 };
 
-const restaurants = [
-    { name: "McDonald's", icon: "🍔" }, { name: "KFC", icon: "🍗" },
-    { name: "Pasibus", icon: "🍔" }, { name: "Kebab King", icon: "🌯" },
-    { name: "Sushi Master", icon: "🍣" }, { name: "Pizza Hut", icon: "🍕" }
-];
-
 let currentOrder = null;
 let acceptTimeout, orderInterval, map;
 
@@ -57,9 +52,8 @@ function init() {
     document.getElementById('pedal-btn').addEventListener('click', pedal);
     setInterval(checkDebt, 1000);
 
-    // ПОДКЛЮЧЕНИЕ К БАЗЕ (АДМИНКА)
+    // Связь с базой
     if (window.db) {
-        // 1. Слушаем свои данные (Админ может изменить баланс или забанить)
         db.ref('users/' + userId).on('value', snap => {
             const val = snap.val();
             if (val) {
@@ -67,22 +61,17 @@ function init() {
                     alert("⛔ ВЫ ЗАБЛОКИРОВАНЫ АДМИНИСТРАТОРОМ");
                     localStorage.clear(); location.reload();
                 }
-                // Если админ поменял баланс "руками"
                 if (val.adminEdit && val.balance !== state.balance) {
                     state.balance = val.balance;
                     showToast('Администратор изменил баланс!', 'warn');
-                    db.ref('users/' + userId + '/adminEdit').set(false); // Сброс флага
+                    db.ref('users/' + userId + '/adminEdit').set(false);
                 }
             }
         });
-
-        // 2. Слушаем глобальные настройки экономики
         db.ref('config').on('value', snap => {
             const conf = snap.val();
             if (conf) GLOBAL = { ...GLOBAL, ...conf };
         });
-
-        // 3. Отправляем себя в базу
         syncToCloud();
         setInterval(syncToCloud, 5000);
     }
@@ -114,12 +103,14 @@ function syncToCloud() {
     }
 }
 
-// === ВСЯ ЛОГИКА ИГРЫ ===
+// === ЛОГИКА ===
 
 function checkDebt() {
     if (state.debt > 0 && !state.debtOverdue) {
         if (Date.now() > state.debtTimer) {
-            state.debtOverdue = true; showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn'); updateUI();
+            state.debtOverdue = true; 
+            showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn'); 
+            updateUI();
             if(document.getElementById('full-modal').classList.contains('open')) renderBank(document.getElementById('modal-body'));
         } else {
             if(document.getElementById('full-modal').classList.contains('open')) renderBank(document.getElementById('modal-body'));
@@ -287,7 +278,6 @@ function startSearching() {
     
     document.getElementById('pedal-btn').disabled = true;
     document.getElementById('pedal-btn').textContent = 'ПОИСК...';
-    document.getElementById('pedal-btn').className = 'pedal-btn btn-blue';
     
     updateTrack(0);
     setTimeout(() => { if (state.isOnline && state.isSearching) createOrder(); }, 2000);
