@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wolt Courier Tycoon</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+    <div class="notification" id="notif">Уведомление</div>
+    <div class="app-header">
+        <div>
+            <div class="earn-title">Баланс</div>
+            <div class="earn-val" id="money-ui">0.00 PLN</div>
+        </div>
+        <div class="status-badge" id="status-badge">OFFLINE</div>
+    </div>
+    <div class="map-view" id="map-bg">
+        <div class="radar-pulse"></div>
+        <div class="courier-marker" id="player-icon">🚲</div>
+        <div class="map-pin" id="pin-rest">🏪</div>
+        <div class="map-pin" id="pin-client">👤</div>
+    </div>
+    <div class="bottom-sheet">
+        <div id="panel-start">
+            <div class="slider-container" onclick="toggleOnline()">
+                <div class="slider-text" id="slider-text">SWIPE TO ONLINE</div>
+                <div class="slider-knob">➜</div>
+            </div>
+            <div style="text-align:center; margin-top:15px; font-size:12px; color:#999;">
+                <span id="vehicle-name">Транспорт: Велосипед</span> • LVL <span id="lvl-ui">1</span>
+            </div>
+        </div>
+        <div id="panel-offer" class="order-panel">
+            <div class="rest-info">
+                <div>
+                    <div class="rest-name" id="offer-rest">...</div>
+                    <div class="rest-meta" id="offer-meta">...</div>
+                </div>
+                <div class="order-pay" id="offer-pay">0.00</div>
+            </div>
+            <div style="font-size:12px; color:#777; margin-bottom:10px;">Включает бонус за спрос (Surge)</div>
+            <button class="btn-main" onclick="acceptOrder()">ПРИНЯТЬ ЗАКАЗ</button>
+            <button class="btn-main btn-secondary" style="color:var(--danger)" onclick="rejectOrder()">ОТКЛОНИТЬ</button>
+        </div>
+        <div id="panel-active" class="delivery-ui">
+            <h3 style="margin:0 0 10px 0; font-size:16px;" id="task-title">В пути...</h3>
+            <div class="info-row"><span>Прогресс</span><span id="dist-ui">0.0 km</span></div>
+            <div class="progress-bar"><div class="progress-fill" id="prog-bar"></div></div>
+            <div class="info-row"><span>Температура еды</span><span id="temp-ui">100%</span></div>
+            <div class="progress-bar"><div class="temp-bar-fill" id="temp-bar"></div></div>
+            <button class="btn-main" id="action-btn" onmousedown="holdGas()" onmouseup="releaseGas()" onmouseleave="releaseGas()" ontouchstart="holdGas()" ontouchend="releaseGas()">ЖМИ ГАЗ (HOLD)</button>
+        </div>
+    </div>
+    <script src="database.js"></script>
+    <script src="logic.js"></script>
+</body>
+</html>
