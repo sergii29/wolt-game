@@ -17,8 +17,6 @@
             --accent-red: #ff3d00;
             --accent-purple: #d500f9;
             --wolt-blue: #009de0;
-            --modal-bg: #ffffff;
-            --modal-text: #000000;
         }
 
         body, html {
@@ -134,7 +132,7 @@
             transition: width 0.3s;
         }
 
-        /* --- NOTIFICATIONS --- */
+        /* --- TOAST NOTIFICATIONS --- */
         .game-toast {
             position: absolute;
             top: 140px;
@@ -156,10 +154,7 @@
             white-space: nowrap;
             border: 1px solid #333;
         }
-        .game-toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
+        .game-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         .toast-warn { border-color: var(--accent-orange); color: var(--accent-orange); }
         .toast-success { border-color: var(--accent-green); color: var(--accent-green); }
 
@@ -176,9 +171,9 @@
             z-index: 1002;
             box-shadow: 0 -5px 30px rgba(0,0,0,0.3);
             color: #333;
-            transition: transform 0.3s;
         }
 
+        /* SLIDER */
         .slider-container {
             position: relative;
             width: 100%;
@@ -205,82 +200,64 @@
         }
 
         /* CONTROLS */
-        .controls-row {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
+        .controls-row { display: flex; gap: 10px; margin-top: 15px; }
 
         .pedal-btn {
             flex: 1;
             background: var(--wolt-blue);
-            color: white;
-            border: none;
-            padding: 18px;
-            border-radius: 16px;
-            font-size: 18px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            cursor: pointer;
-            box-shadow: 0 4px 0 #007bb5;
-            transition: all 0.1s;
+            color: white; border: none; padding: 18px; border-radius: 16px;
+            font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            cursor: pointer; box-shadow: 0 4px 0 #007bb5; transition: all 0.1s;
         }
         .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
         .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
 
         .bag-btn {
-            width: 60px;
-            background: #f8f9fa;
-            border: 2px solid #eee;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: #333;
-            cursor: pointer;
-            position: relative;
+            width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center; font-size: 24px;
+            color: #333; cursor: pointer; position: relative;
         }
         .bag-badge {
-            position: absolute; top: -5px; right: -5px;
-            background: var(--accent-red); color: white;
-            font-size: 10px; width: 18px; height: 18px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-weight: bold;
+            position: absolute; top: -5px; right: -5px; background: var(--accent-red); color: white;
+            font-size: 10px; width: 18px; height: 18px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-weight: bold;
         }
 
-        /* QUICK INVENTORY POPUP */
+        /* SMART INVENTORY POPUP */
         .quick-inv {
-            position: absolute;
-            bottom: 90px; left: 20px;
-            background: #333;
-            color: white;
-            padding: 10px;
-            border-radius: 12px;
-            z-index: 1005;
-            display: none;
-            flex-direction: column;
-            gap: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            width: 200px;
+            position: absolute; bottom: 90px; left: 20px; width: 220px;
+            background: #252525; color: white; padding: 10px; border-radius: 16px;
+            z-index: 1005; display: none; flex-direction: column; gap: 8px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.6);
+            border: 1px solid #444;
         }
         .quick-inv.open { display: flex; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         
         .inv-item {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px;
-            cursor: pointer;
+            padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px;
+            cursor: pointer; border: 1px solid transparent; transition: background 0.2s;
         }
         .inv-item:active { background: rgba(255,255,255,0.2); }
-        .inv-count { background: var(--wolt-blue); padding: 2px 6px; border-radius: 10px; font-size: 11px; }
+        
+        /* Recommended Item Highlight */
+        .inv-item.recommended {
+            border: 1px solid var(--accent-green);
+            background: rgba(0, 230, 118, 0.1);
+        }
+        .rec-tag {
+            font-size: 9px; color: var(--accent-green); font-weight: bold; text-transform: uppercase;
+            display: block; margin-bottom: 2px;
+        }
+
+        .inv-count { background: var(--wolt-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
 
         @keyframes popUp {
-            from { opacity: 0; transform: translateY(10px) scale(0.9); }
+            from { opacity: 0; transform: translateY(10px) scale(0.95); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* --- SIDE MENU --- */
+        /* --- MENUS --- */
         #side-menu-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
@@ -305,17 +282,18 @@
         .modal-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; font-weight: bold; }
         .modal-content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* SHOP STYLES */
-        .shop-section { margin-bottom: 20px; }
-        .shop-section h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #666; }
+        /* SHOP CARDS */
+        .shop-section { margin-bottom: 25px; }
+        .shop-section h3 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
         .shop-card {
-            background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px;
+            background: white; padding: 15px; border-radius: 14px; margin-bottom: 12px;
             display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
         }
+        .shop-desc { font-size: 11px; color: #888; margin-top: 4px; }
         .shop-btn {
-            padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer;
-            border: 1px solid var(--wolt-blue); color: var(--wolt-blue); background: white;
+            padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer;
+            border: 1px solid var(--wolt-blue); color: var(--wolt-blue); background: white; min-width: 80px;
         }
         .shop-btn.buy { background: var(--wolt-blue); color: white; }
         .shop-btn:active { transform: scale(0.95); }
@@ -341,6 +319,7 @@
         <div class="equip-item"><i class="fa-solid fa-mobile-screen equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-phone" style="width: 100%"></div></div></div>
         <div class="equip-item"><i class="fa-solid fa-shirt equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-gear" style="width: 100%"></div></div></div>
         <div class="equip-item"><i class="fa-solid fa-bolt equip-icon" style="color:yellow"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-energy" style="background:yellow; width: 100%"></div></div></div>
+        <div class="equip-item"><i class="fa-solid fa-droplet equip-icon" style="color:cyan"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-water" style="background:cyan; width: 100%"></div></div></div>
         <div class="equip-item"><i class="fa-solid fa-face-smile equip-icon" style="color:#d500f9"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-mood" style="background:#d500f9; width: 100%"></div></div></div>
     </div>
 
@@ -391,8 +370,7 @@
                 <span id="status-label">Статус</span>
             </div>
 
-            <div class="quick-inv" id="quick-inv">
-                </div>
+            <div class="quick-inv" id="quick-inv"></div>
 
             <div class="controls-row">
                 <div class="bag-btn" onclick="toggleQuickInv()">
@@ -406,20 +384,41 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- DATA ---
         const SAVE_KEY = 'WARSZAWA_FOREVER';
         
+        // --- SMART ITEMS DATABASE ---
         const ITEMS_DB = {
-            // Repairable
-            bike: { name: 'Велосипед', type: 'repair', baseCost: 5, icon: 'fa-bicycle' },
-            bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open' },
-            phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen' },
-            gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt' },
-            // Consumable
-            water: { name: 'Вода 0.5л', type: 'buy', cost: 2.5, effect: { water: 30, energy: 5 }, icon: 'fa-bottle-water' },
-            bar: { name: 'Сникерс', type: 'buy', cost: 4.0, effect: { energy: 25, mood: 5 }, icon: 'fa-cookie-bite' },
-            energy_drink: { name: 'Red Bull', type: 'buy', cost: 6.5, effect: { energy: 50, mood: 10, water: -5 }, icon: 'fa-bolt' },
-            coffee: { name: 'Кофе', type: 'buy', cost: 8.0, effect: { mood: 20, energy: 10 }, icon: 'fa-mug-hot' }
+            // Service
+            bike: { name: 'Велосипед', type: 'repair', baseCost: 5, icon: 'fa-bicycle', desc: 'Ремонт ходовой' },
+            bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open', desc: 'Заплатка дыр' },
+            phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen', desc: 'Оплата интернета' },
+            gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt', desc: 'Химчистка' },
+            
+            // Consumables (The Smart Logic)
+            water: { 
+                name: 'Вода (0.5л)', type: 'buy', cost: 2.0, icon: 'fa-bottle-water',
+                effect: { water: 35, energy: 5 }, 
+                desc: 'Спасает от жажды. Немного бодрит.',
+                target: 'water' 
+            },
+            bar: { 
+                name: 'Сникерс', type: 'buy', cost: 4.5, icon: 'fa-cookie-bite',
+                effect: { energy: 20, mood: 15 }, 
+                desc: 'Баланс энергии и радости.',
+                target: 'energy' // Secondary mood
+            },
+            energy_drink: { 
+                name: 'Red Bull', type: 'buy', cost: 7.0, icon: 'fa-bolt',
+                effect: { energy: 50, mood: 5, water: -5 }, 
+                desc: 'МАКСИМУМ Энергии! Но сушит (-Вода).',
+                target: 'energy' 
+            },
+            coffee: { 
+                name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot',
+                effect: { mood: 30, energy: 10 }, 
+                desc: 'Лучшее для поднятия Настроения!',
+                target: 'mood' 
+            }
         };
 
         let state = {
@@ -428,31 +427,24 @@
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
             needs: { energy: 100, water: 100, mood: 100 },
             inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
-            repairs: { bike: 0, bag: 0, phone: 0, gear: 0 }, // Repair levels
+            repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
             history: [],
             totalOrders: 0
         };
 
         const restaurants = [
-            { name: "McDonald's", icon: "🍔", lat: 52.2297, lng: 21.0122 },
-            { name: "KFC", icon: "🍗", lat: 52.2350, lng: 21.0050 },
-            { name: "Pasibus", icon: "🍔", lat: 52.2310, lng: 21.0180 },
-            { name: "Kebab King", icon: "🌯", lat: 52.2400, lng: 21.0200 }
+            { name: "McDonald's", icon: "🍔" }, { name: "KFC", icon: "🍗" },
+            { name: "Pasibus", icon: "🍔" }, { name: "Kebab King", icon: "🌯" }
         ];
 
         let currentOrder = null;
-        let map, courierMarker;
+        let map;
 
-        // --- INIT ---
         function init() {
-            // Map
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([52.2297, 21.0122], 13);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
-            courierMarker = L.marker([52.2297, 21.0122]).addTo(map);
-
+            L.marker([52.2297, 21.0122]).addTo(map);
             loadGame();
-            
-            // Listeners
             document.getElementById('pedal-btn').addEventListener('click', pedal);
             setupSlider();
         }
@@ -460,10 +452,8 @@
         function loadGame() {
             const saved = localStorage.getItem(SAVE_KEY);
             if (saved) {
-                const parsed = JSON.parse(saved);
-                state = { ...state, ...parsed };
-                // Migration check
-                if (!state.needs.mood) state.needs.mood = 100;
+                state = { ...state, ...JSON.parse(saved) };
+                if (!state.needs.mood) state.needs.mood = 100; // Migration
                 if (!state.inventory) state.inventory = { water: 0, bar: 0, energy_drink: 0, coffee: 0 };
             }
             updateUI();
@@ -480,18 +470,18 @@
             updateBar('bar-bag', state.items.bag);
             updateBar('bar-phone', state.items.phone);
             updateBar('bar-gear', state.items.gear);
-            updateBar('bar-energy', state.needs.energy);
-            document.getElementById('bar-mood').style.width = state.needs.mood + '%';
             
-            // Inventory count badge
+            updateBar('bar-energy', state.needs.energy);
+            updateBar('bar-water', state.needs.water);
+            updateBar('bar-mood', state.needs.mood);
+            
             const totalInv = Object.values(state.inventory).reduce((a,b)=>a+b, 0);
             document.getElementById('bag-count').textContent = totalInv;
-            if (totalInv === 0) document.getElementById('bag-count').style.display = 'none';
-            else document.getElementById('bag-count').style.display = 'flex';
+            document.getElementById('bag-count').style.display = totalInv ? 'flex' : 'none';
         }
 
         function updateBar(id, val) {
-            document.getElementById(id).style.width = val + '%';
+            document.getElementById(id).style.width = Math.max(0, Math.min(100, val)) + '%';
         }
 
         function showToast(msg, type='info') {
@@ -501,132 +491,87 @@
             setTimeout(() => t.className = 'game-toast', 3000);
         }
 
-        // --- GAMEPLAY: PEDAL LOGIC ---
+        // --- GAMEPLAY ---
         function pedal() {
             if (!currentOrder) return;
             
-            // 1. Calculate Fatigue
-            // Less energy = Slower speed
-            // If Energy 100 -> Factor 1.0. If Energy 10 -> Factor 0.2
-            let fatigueFactor = Math.max(0.2, state.needs.energy / 100); 
+            // Logic: Tired = Slow
+            let fatigueMult = Math.max(0.3, state.needs.energy / 100);
             
-            // 2. Base Cost
-            const energyCost = 0.8; 
-            const moodCost = 0.1;
-
-            if (state.needs.energy <= 5) {
-                showToast('<i class="fa-solid fa-triangle-exclamation"></i> Сил нет! Съешь что-нибудь!', 'warn');
-                openQuickInv(); // Auto open hints
+            if (state.needs.energy <= 10 || state.needs.water <= 5) {
+                showToast('<i class="fa-solid fa-triangle-exclamation"></i> Сил нет! Открой рюкзак!', 'warn');
+                openQuickInv(true); // Auto-open with suggestion
                 return;
             }
 
-            // 3. Apply Costs
-            state.needs.energy -= energyCost;
-            state.needs.mood -= moodCost;
+            state.needs.energy -= 0.6;
+            state.needs.water -= 0.4;
+            state.needs.mood -= 0.15; // Slow burnout
             state.items.bike -= 0.1;
 
-            // 4. Progress Math
-            // Base speed 4%. Multiplied by fatigue.
-            let progressStep = 4 * fatigueFactor; 
-            
-            currentOrder.progress += progressStep;
-            
-            // Food temp decay
+            currentOrder.progress += (4 * fatigueMult);
             currentOrder.foodTemp -= 0.15;
-
-            // 5. Visuals
+            
             updateTrack(currentOrder.progress);
             document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%';
             
             if (currentOrder.progress >= 100) nextStage();
-            
-            saveGame();
-            updateUI();
+            saveGame(); updateUI();
         }
 
-        function nextStage() {
-            currentOrder.stage++;
-            currentOrder.progress = 0;
-            updateTrack(0);
-
-            if (currentOrder.stage === 1) {
-                // Wait at restaurant
-                setBtnState(true, 'ЖДЕМ ЗАКАЗ...');
-                document.getElementById('status-label').textContent = 'Ресторан готовит...';
-                
-                setTimeout(() => {
-                    setBtnState(false, 'ЖМИ ГАЗ (PEDAL)');
-                    document.getElementById('status-label').textContent = 'Везем клиенту';
-                    currentOrder.stage = 2;
-                }, 2000);
-            } else if (currentOrder.stage === 3) {
-                completeOrder();
-            }
-        }
-
-        function setBtnState(disabled, text) {
-            const btn = document.getElementById('pedal-btn');
-            btn.disabled = disabled;
-            btn.textContent = text;
-        }
-
-        function completeOrder() {
-            let pay = 12 + (Math.random() * 5);
-            // Mood bonus
-            if (state.needs.mood > 80 && Math.random() > 0.5) {
-                pay += 5;
-                showToast('Клиент доволен вашим позитивом! +Чаевые', 'success');
-            }
-            
-            state.balance += pay;
-            state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
-            
-            currentOrder = null;
-            setBtnState(true, 'ПОИСК...');
-            document.getElementById('active-order-view').style.display = 'none';
-            document.getElementById('offline-view').style.display = 'block';
-            state.isOnline = false; // Reset for loop
-            resetSlider();
-            
-            showToast(`Заказ завершен! +${pay.toFixed(2)} PLN`, 'success');
-            saveGame();
-            updateUI();
-        }
-
-        // --- INVENTORY SYSTEM ---
+        // --- SMART INVENTORY LOGIC ---
         function toggleQuickInv() {
             const menu = document.getElementById('quick-inv');
-            const isOpen = menu.style.display === 'flex';
-            
-            if (isOpen) {
-                menu.style.display = 'none';
-            } else {
-                openQuickInv();
-            }
+            menu.style.display === 'flex' ? menu.style.display = 'none' : openQuickInv();
         }
 
-        function openQuickInv() {
+        function openQuickInv(auto = false) {
             const menu = document.getElementById('quick-inv');
             menu.innerHTML = '';
             
-            let hasItems = false;
-            for (let [key, count] of Object.entries(state.inventory)) {
-                if (count > 0) {
-                    hasItems = true;
-                    const itemData = ITEMS_DB[key];
-                    const div = document.createElement('div');
-                    div.className = 'inv-item';
-                    div.innerHTML = `
-                        <span><i class="fa-solid ${itemData.icon}"></i> ${itemData.name}</span>
-                        <span class="inv-count">x${count}</span>
-                    `;
-                    div.onclick = () => useItem(key);
-                    menu.appendChild(div);
-                }
-            }
+            // 1. Determine what is needed most
+            let lowestStat = 'none';
+            let minVal = 100;
             
-            if (!hasItems) {
-                menu.innerHTML = '<div style="padding:5px; color:#888; font-size:12px; text-align:center">Рюкзак пуст.<br>Купите еду в магазине.</div>';
+            if (state.needs.water < minVal) { minVal = state.needs.water; lowestStat = 'water'; }
+            if (state.needs.energy < minVal) { minVal = state.needs.energy; lowestStat = 'energy'; }
+            if (state.needs.mood < minVal) { minVal = state.needs.mood; lowestStat = 'mood'; }
+
+            // 2. Filter & Sort Inventory
+            // We create an array of owned items
+            let ownedItems = [];
+            for (let [key, count] of Object.entries(state.inventory)) {
+                if (count > 0) ownedItems.push({ key, count, data: ITEMS_DB[key] });
+            }
+
+            // 3. Sorting Logic: Priority to items matching the lowest stat
+            ownedItems.sort((a, b) => {
+                const aMatch = (a.data.target === lowestStat);
+                const bMatch = (b.data.target === lowestStat);
+                return bMatch - aMatch; // True (1) comes first
+            });
+
+            if (ownedItems.length === 0) {
+                menu.innerHTML = '<div style="padding:10px; color:#888; font-size:12px; text-align:center">Рюкзак пуст.<br>Зайди в Магазин.</div>';
+            } else {
+                ownedItems.forEach((item, index) => {
+                    const isRecommended = (item.data.target === lowestStat) && (minVal < 50);
+                    const div = document.createElement('div');
+                    div.className = 'inv-item' + (isRecommended && index === 0 ? ' recommended' : '');
+                    
+                    let label = `<span><i class="fa-solid ${item.data.icon}"></i> ${item.data.name}</span>`;
+                    if (isRecommended && index === 0) {
+                        let reason = lowestStat === 'water' ? 'Жажда!' : (lowestStat === 'mood' ? 'Грустно...' : 'Усталость!');
+                        label = `<div><span class="rec-tag">${reason}</span>` + label + `</div>`;
+                    }
+
+                    div.innerHTML = `
+                        ${label}
+                        <span class="inv-count">x${item.count}</span>
+                    `;
+                    div.onclick = () => useItem(item.key);
+                    menu.appendChild(div);
+                });
             }
             
             menu.style.display = 'flex';
@@ -635,42 +580,34 @@
 
         function useItem(key) {
             if (state.inventory[key] <= 0) return;
-            
             const item = ITEMS_DB[key];
             state.inventory[key]--;
             
-            // Apply effects
-            if (item.effect.energy) state.needs.energy = Math.min(100, state.needs.energy + item.effect.energy);
-            if (item.effect.water) state.needs.water = Math.min(100, state.needs.water + item.effect.water);
-            if (item.effect.mood) state.needs.mood = Math.min(100, state.needs.mood + item.effect.mood);
+            if (item.effect.energy) state.needs.energy += item.effect.energy;
+            if (item.effect.water) state.needs.water += item.effect.water;
+            if (item.effect.mood) state.needs.mood += item.effect.mood;
             
-            showToast(`Использовано: ${item.name}`, 'success');
-            toggleQuickInv(); // Close menu
-            saveGame();
-            updateUI();
+            // Cap at 100
+            ['energy','water','mood'].forEach(k => { if(state.needs[k]>100) state.needs[k]=100; });
+            
+            showToast(`${item.name} использован!`, 'success');
+            toggleQuickInv(); saveGame(); updateUI();
         }
 
-        // --- SHOP & MODALS ---
+        // --- SHOP & MENU ---
         function toggleMenu() {
-            const el = document.getElementById('side-menu-overlay');
-            const menu = document.getElementById('side-menu');
-            el.classList.toggle('open');
-            menu.classList.toggle('open');
+            document.getElementById('side-menu-overlay').classList.toggle('open');
+            document.getElementById('side-menu').classList.toggle('open');
         }
 
         function openModal(type) {
-            toggleMenu(); // Close sidebar
+            toggleMenu(); 
             document.getElementById('full-modal').classList.add('open');
             const body = document.getElementById('modal-body');
-            const title = document.getElementById('modal-title');
+            document.getElementById('modal-title').textContent = type === 'shop' ? 'Магазин' : 'История';
             
-            if (type === 'shop') {
-                title.textContent = 'Магазин и Сервис';
-                renderShop(body);
-            } else {
-                title.textContent = 'История';
-                renderHistory(body);
-            }
+            if (type === 'shop') renderShop(body);
+            else renderHistory(body);
         }
 
         function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
@@ -678,37 +615,34 @@
         function renderShop(container) {
             container.innerHTML = '';
             
-            // 1. Repair Section
-            let html = '<div class="shop-section"><h3>🛠 Сервис (Ремонт)</h3>';
-            ['bike', 'bag', 'phone', 'gear'].forEach(key => {
-                const item = ITEMS_DB[key];
-                const level = state.repairs[key] || 0;
-                const cost = item.baseCost + (level * 0.5);
-                const current = Math.floor(state.items[key]);
-                
-                html += `
-                <div class="shop-card">
-                    <div>
-                        <div style="font-weight:bold"><i class="fa-solid ${item.icon}"></i> ${item.name}</div>
-                        <div style="font-size:12px; color:#666">Состояние: ${current}%</div>
-                    </div>
-                    <button class="shop-btn" onclick="buyRepair('${key}', ${cost})">Починить ${cost.toFixed(1)}</button>
-                </div>`;
-            });
-            html += '</div>';
-
-            // 2. Market Section
-            html += '<div class="shop-section"><h3>🎒 Супермаркет (Еда с собой)</h3>';
+            let html = '<div class="shop-section"><h3>🎒 Еда и Напитки (В рюкзак)</h3>';
             ['water', 'bar', 'energy_drink', 'coffee'].forEach(key => {
                 const item = ITEMS_DB[key];
                 const owned = state.inventory[key] || 0;
                 html += `
                 <div class="shop-card">
+                    <div style="flex:1">
+                        <div style="font-weight:bold"><i class="fa-solid ${item.icon}"></i> ${item.name}</div>
+                        <div class="shop-desc">${item.desc}</div>
+                        <div style="font-size:11px; color:#444; margin-top:2px">В рюкзаке: ${owned}</div>
+                    </div>
+                    <button class="shop-btn buy" onclick="buyItem('${key}')">${item.cost.toFixed(1)}</button>
+                </div>`;
+            });
+            html += '</div>';
+
+            html += '<div class="shop-section"><h3>🛠 Сервис и Обслуживание</h3>';
+            ['bike', 'bag', 'phone', 'gear'].forEach(key => {
+                const item = ITEMS_DB[key];
+                const cost = item.baseCost + ((state.repairs[key]||0) * 0.5);
+                html += `
+                <div class="shop-card">
                     <div>
                         <div style="font-weight:bold"><i class="fa-solid ${item.icon}"></i> ${item.name}</div>
-                        <div style="font-size:12px; color:#666">В рюкзаке: ${owned} шт.</div>
+                        <div class="shop-desc">${item.desc}</div>
+                        <div style="font-size:11px; color:#666">Состояние: ${Math.floor(state.items[key])}%</div>
                     </div>
-                    <button class="shop-btn buy" onclick="buyItem('${key}')">Купить ${item.cost.toFixed(1)}</button>
+                    <button class="shop-btn" onclick="buyRepair('${key}', ${cost})">-${cost.toFixed(1)}</button>
                 </div>`;
             });
             html += '</div>';
@@ -716,98 +650,69 @@
             container.innerHTML = html;
         }
 
-        function buyRepair(key, cost) {
-            if (state.balance >= cost && state.items[key] < 100) {
-                state.balance -= cost;
-                state.items[key] = 100;
-                state.repairs[key] = (state.repairs[key] || 0) + 1;
-                showToast('Починили!', 'success');
-                saveGame(); updateUI(); renderShop(document.getElementById('modal-body'));
-            } else if (state.items[key] >= 100) {
-                showToast('Это и так новое');
-            } else {
-                showToast('Нет денег', 'warn');
-            }
-        }
-
         function buyItem(key) {
             const item = ITEMS_DB[key];
             if (state.balance >= item.cost) {
                 state.balance -= item.cost;
-                state.inventory[key] = (state.inventory[key] || 0) + 1;
+                state.inventory[key] = (state.inventory[key]||0)+1;
                 showToast(`Куплено: ${item.name}`, 'success');
                 saveGame(); updateUI(); renderShop(document.getElementById('modal-body'));
-            } else {
-                showToast('Не хватает денег', 'warn');
-            }
+            } else showToast('Нет денег', 'warn');
         }
 
-        function renderHistory(container) {
-            if (!state.history.length) { container.innerHTML = 'Пусто'; return; }
-            container.innerHTML = state.history.slice().reverse().map(h => 
-                `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between">
+        function buyRepair(key, cost) {
+            if (state.balance >= cost) {
+                state.balance -= cost;
+                state.items[key] = 100;
+                state.repairs[key] = (state.repairs[key]||0)+1;
+                showToast('Восстановлено!', 'success');
+                saveGame(); updateUI(); renderShop(document.getElementById('modal-body'));
+            } else showToast('Нет денег', 'warn');
+        }
+
+        function renderHistory(c) {
+            c.innerHTML = state.history.slice().reverse().map(h => 
+                `<div style="padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between">
                     <b>${h.rest}</b> <span style="color:green">+${h.earn} PLN</span>
                 </div>`
-            ).join('');
+            ).join('') || '<p style="text-align:center;color:#999">Нет заказов</p>';
         }
 
-        // --- SLIDER UTILS ---
-        let isDragging = false, startX;
-        const sliderKnob = document.getElementById('slider-knob');
-        const sliderBox = document.getElementById('slider-box');
-
-        function setupSlider() {
-            sliderKnob.addEventListener('mousedown', startDrag);
-            sliderKnob.addEventListener('touchstart', startDrag);
-            
-            function startDrag(e) {
-                isDragging = true;
-                startX = (e.type==='mousedown') ? e.clientX : e.touches[0].clientX;
-                document.addEventListener('mousemove', onDrag);
-                document.addEventListener('touchmove', onDrag);
-                document.addEventListener('mouseup', stopDrag);
-                document.addEventListener('touchend', stopDrag);
-            }
-            function onDrag(e) {
-                if(!isDragging) return;
-                const cx = (e.type==='mousemove') ? e.clientX : e.touches[0].clientX;
-                let dx = cx - startX;
-                let max = sliderBox.offsetWidth - sliderKnob.offsetWidth - 8;
-                dx = Math.max(0, Math.min(dx, max));
-                sliderKnob.style.transform = `translateX(${dx}px)`;
-                document.getElementById('slider-fill').style.width = `${(dx/max)*100}%`;
-                if(dx >= max*0.9) { goOnline(); stopDrag(); }
-            }
-            function stopDrag() {
-                isDragging = false;
-                document.removeEventListener('mousemove', onDrag);
-                document.removeEventListener('touchmove', onDrag);
-                document.removeEventListener('mouseup', stopDrag);
-                document.removeEventListener('touchend', stopDrag);
-                if(!state.isOnline) resetSlider();
-            }
-        }
-
-        function resetSlider() {
-            sliderKnob.style.transform = 'translateX(0)';
-            document.getElementById('slider-fill').style.width = '0%';
-        }
-
-        function goOnline() {
-            state.isOnline = true;
-            document.getElementById('offline-view').style.display = 'none';
-            document.getElementById('active-order-view').style.display = 'flex';
-            setTimeout(createOrder, 1000);
-        }
-
-        function createOrder() {
-            const r = restaurants[Math.floor(Math.random() * restaurants.length)];
-            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, max: 100 };
-            document.getElementById('rest-name').textContent = r.name;
-            document.getElementById('rest-icon').textContent = r.icon;
-            document.getElementById('status-label').textContent = 'Едем в ресторан';
-            setBtnState(false, 'ЖМИ ГАЗ (PEDAL)');
+        // --- UTILS ---
+        function nextStage() {
+            currentOrder.stage++;
+            currentOrder.progress = 0;
             updateTrack(0);
+
+            if (currentOrder.stage === 1) {
+                setBtnState(true, 'ЖДЕМ ЗАКАЗ...');
+                document.getElementById('status-label').textContent = 'Ресторан готовит...';
+                setTimeout(() => {
+                    setBtnState(false, 'ЖМИ ГАЗ (PEDAL)');
+                    document.getElementById('status-label').textContent = 'Везем клиенту';
+                    currentOrder.stage = 2;
+                }, 2000);
+            } else if (currentOrder.stage === 3) completeOrder();
+        }
+
+        function completeOrder() {
+            let pay = 12 + (Math.random() * 5);
+            if (state.needs.mood > 80 && Math.random() > 0.5) { pay += 4; showToast('Клиент оценил Позитив! +Чаевые', 'success'); }
+            state.balance += pay;
+            state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
+            currentOrder = null;
+            document.getElementById('active-order-view').style.display = 'none';
+            document.getElementById('offline-view').style.display = 'block';
+            state.isOnline = false;
+            resetSlider();
+            showToast(`Доставлено! +${pay.toFixed(2)} PLN`, 'success');
+            saveGame(); updateUI();
+        }
+
+        function setBtnState(disabled, text) {
+            const btn = document.getElementById('pedal-btn');
+            btn.disabled = disabled;
+            btn.textContent = text;
         }
 
         function updateTrack(p) {
@@ -815,14 +720,52 @@
             document.getElementById('track-icon').style.left = p + '%';
         }
 
-        function resetGame() {
-            if(confirm('Сбросить весь прогресс?')) {
-                localStorage.removeItem(SAVE_KEY);
-                location.reload();
-            }
+        function resetSlider() {
+            document.getElementById('slider-knob').style.transform = 'translateX(0)';
+            document.getElementById('slider-fill').style.width = '0%';
+        }
+        
+        let isDragging = false, startX;
+        function setupSlider() {
+            const k = document.getElementById('slider-knob'), b = document.getElementById('slider-box');
+            k.onmousedown = k.ontouchstart = e => {
+                isDragging = true;
+                startX = (e.type==='mousedown'?e.clientX:e.touches[0].clientX);
+                document.onmousemove = document.ontouchmove = e => {
+                    if(!isDragging) return;
+                    let x = (e.type==='mousemove'?e.clientX:e.touches[0].clientX) - startX;
+                    let max = b.offsetWidth - k.offsetWidth - 8;
+                    x = Math.max(0, Math.min(x, max));
+                    k.style.transform = `translateX(${x}px)`;
+                    document.getElementById('slider-fill').style.width = `${(x/max)*100}%`;
+                    if(x >= max*0.9) { goOnline(); isDragging = false; }
+                };
+                document.onmouseup = document.ontouchend = () => { 
+                    isDragging = false; 
+                    if(!state.isOnline) resetSlider(); 
+                };
+            };
         }
 
-        // Start
+        function goOnline() {
+            state.isOnline = true;
+            document.getElementById('offline-view').style.display = 'none';
+            document.getElementById('active-order-view').style.display = 'flex';
+            setTimeout(() => {
+                const r = restaurants[Math.floor(Math.random() * restaurants.length)];
+                currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100 };
+                document.getElementById('rest-name').textContent = r.name;
+                document.getElementById('rest-icon').textContent = r.icon;
+                document.getElementById('status-label').textContent = 'Едем в ресторан';
+                setBtnState(false, 'ЖМИ ГАЗ (PEDAL)');
+                updateTrack(0);
+            }, 1000);
+        }
+
+        function resetGame() {
+            if(confirm('Сбросить весь прогресс?')) { localStorage.removeItem(SAVE_KEY); location.reload(); }
+        }
+
         init();
     </script>
 </body>
