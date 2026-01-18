@@ -113,6 +113,7 @@
         }
         .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
         .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
+        .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
 
         .bag-btn {
             width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px;
@@ -192,6 +193,10 @@
 
         /* GOVT BTN */
         .govt-btn { background: #37474f; color: white; border-color: #37474f; }
+        
+        /* ACCEPT TIMER BAR */
+        .accept-timer-bg { width: 100%; height: 4px; background: #eee; margin-top: 5px; border-radius: 2px; overflow: hidden; display: none; }
+        .accept-timer-fill { height: 100%; background: var(--accent-orange); width: 100%; transition: width 1s linear; }
 
     </style>
 </head>
@@ -253,7 +258,11 @@
         <div id="active-order-view" style="display:none; flex-direction:column; gap:10px">
             <div style="display:flex; gap:15px; align-items:center">
                 <div style="font-size:24px; width:45px; height:45px; background:#f5f5f5; border-radius:10px; display:flex; align-items:center; justify-content:center" id="rest-icon">🍔</div>
-                <div><h3 style="margin:0" id="rest-name">Поиск...</h3><p style="margin:0; font-size:12px; color:#888" id="order-dest">Ожидание</p></div>
+                <div style="flex:1">
+                    <h3 style="margin:0" id="rest-name">Поиск...</h3>
+                    <p style="margin:0; font-size:12px; color:#888" id="order-dest">Ожидание</p>
+                    <div class="accept-timer-bg" id="accept-timer"><div class="accept-timer-fill" id="accept-timer-fill"></div></div>
+                </div>
             </div>
 
             <div style="position:relative; height:30px; margin:5px 0">
@@ -321,6 +330,7 @@
         ];
 
         let currentOrder = null;
+        let acceptTimeout = null;
         let map;
 
         function init() {
@@ -381,6 +391,12 @@
         function pedal() {
             if (!currentOrder) return;
             
+            // Accept logic: first click accepts
+            if (!currentOrder.accepted) {
+                acceptOrder();
+                return;
+            }
+
             let fatigue = Math.max(0.3, state.needs.energy / 100);
             
             if (state.needs.energy <= 5 || state.needs.water <= 5) {
@@ -396,13 +412,67 @@
             state.items.bike -= 0.05;
             
             currentOrder.progress += (5 * fatigue);
-            currentOrder.foodTemp -= 0.10;
             
+            // Temperature logic based on bag health
+            let bagFactor = 1 + ((100 - state.items.bag) / 100); // Broken bag = 2x cooling
+            currentOrder.foodTemp -= (0.15 * bagFactor);
+            
+            // Temp Warning
+            if (currentOrder.foodTemp < 50 && !currentOrder.tempWarned) {
+                showToast('❄️ Еда остывает! Поторопись!', 'warn');
+                currentOrder.tempWarned = true;
+            }
+
             updateTrack(currentOrder.progress);
             document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%';
             
+            // Random Events (10% chance)
+            if (Math.random() < 0.1) triggerRandomEvent();
+
             if (currentOrder.progress >= 100) nextStage();
             saveGame(); updateUI();
+        }
+
+        function triggerRandomEvent() {
+            const btn = document.getElementById('pedal-btn');
+            const events = [
+                { text: "🚧 ПРОБКА! Стоим...", time: 2000 },
+                { text: "🚦 Красный свет...", time: 1500 },
+                { text: "🚕 Объезд аварии...", time: 2500 }
+            ];
+            const ev = events[Math.floor(Math.random()*events.length)];
+            
+            btn.disabled = true;
+            btn.classList.add('blocked');
+            btn.textContent = ev.text;
+            
+            // Extra cooling during traffic
+            currentOrder.foodTemp -= 2; 
+
+            setTimeout(() => {
+                if (currentOrder) { // check if not finished
+                    btn.disabled = false;
+                    btn.classList.remove('blocked');
+                    btn.textContent = 'ЖМИ ГАЗ (PEDAL)';
+                }
+            }, ev.time);
+        }
+
+        function acceptOrder() {
+            currentOrder.accepted = true;
+            clearTimeout(acceptTimeout);
+            document.getElementById('accept-timer').style.display = 'none';
+            document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
+            document.getElementById('pedal-btn').classList.remove('blocked'); // Just in case
+        }
+
+        function missOrder() {
+            state.isSearching = true; // Loop back
+            currentOrder = null;
+            state.balance -= 0.10; // Fixed penalty
+            showToast('Заказ упущен! Штраф -0.10 PLN', 'warn');
+            saveGame(); updateUI();
+            startSearching();
         }
 
         function nextStage() {
@@ -454,6 +524,7 @@
             document.getElementById('rest-icon').textContent = '🔍';
             document.getElementById('status-label').textContent = 'Ищем заказ...';
             document.getElementById('order-dest').textContent = 'Ожидание...';
+            document.getElementById('accept-timer').style.display = 'none';
             
             resetSlider('online');
             const box = document.getElementById('online-slider-box');
@@ -471,13 +542,24 @@
         function createOrder() {
             state.isSearching = false;
             const r = restaurants[Math.floor(Math.random() * restaurants.length)];
-            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100 };
+            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false };
             document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
             document.getElementById('rest-icon').textContent = r.icon;
-            document.getElementById('status-label').textContent = 'Едем в ресторан';
+            document.getElementById('status-label').textContent = '🔥 ПРИМИ ЗАКАЗ! 🔥';
             document.getElementById('order-dest').textContent = 'Забрать: 2.5 km';
-            document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
+            document.getElementById('pedal-btn').textContent = 'ПРИНЯТЬ ЗАКАЗ';
             document.getElementById('pedal-btn').disabled = false;
+
+            // Timer logic
+            const bar = document.getElementById('accept-timer');
+            const fill = document.getElementById('accept-timer-fill');
+            bar.style.display = 'block';
+            fill.style.width = '100%';
+            // Force redraw for animation
+            void fill.offsetWidth;
+            fill.style.width = '0%'; 
+
+            acceptTimeout = setTimeout(missOrder, 15000); // 15 sec to accept
 
             resetSlider('online');
             const box = document.getElementById('online-slider-box');
@@ -490,6 +572,7 @@
             state.isOnline = false;
             state.isSearching = false;
             state.scheduledOffline = false;
+            if (acceptTimeout) clearTimeout(acceptTimeout);
             document.getElementById('active-order-view').style.display = 'none';
             document.getElementById('offline-view').style.display = 'block';
             resetSlider('offline');
@@ -595,7 +678,6 @@
                 const base = i.baseCost + ((state.repairs[k]||0)*0.5);
                 const price = base * inflation;
                 const currentHealth = Math.floor(state.items[k]);
-                // BUTTON LOGIC: Disabled if > 0
                 const isBroken = currentHealth <= 0;
                 const btnText = isBroken ? `Починить -${price.toFixed(1)}` : `Целое (${currentHealth}%)`;
                 
@@ -660,9 +742,7 @@
         }
 
         function buyRepair(k, cost, btn) {
-            // Double check validation (though disabled button handles it UI wise)
             if (state.items[k] > 0) return;
-
             if(state.balance >= cost) { 
                 state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; 
                 btn.textContent = 'ГОТОВО!'; btn.className = 'shop-btn bought';
@@ -673,27 +753,15 @@
 
         function buyDeflation(levels, cost) {
             if (state.balance < cost) { showToast('Недостаточно средств', 'warn'); return; }
-            
-            // Logic to reduce repairs
             let reduced = 0;
-            // Loop through repair items and reduce levels
             for (let i = 0; i < levels; i++) {
-                // Find first item with level > 0
                 const key = Object.keys(state.repairs).find(k => state.repairs[k] > 0);
-                if (key) {
-                    state.repairs[key]--;
-                    reduced++;
-                }
+                if (key) { state.repairs[key]--; reduced++; }
             }
-
             if (reduced > 0) {
-                state.balance -= cost;
-                showToast(`Инфляция снижена на ${reduced} ур.!`, 'success');
-                saveGame(); updateUI();
-                renderDeflation(document.getElementById('modal-body'));
-            } else {
-                showToast('Инфляция уже на минимуме!', 'warn');
-            }
+                state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success');
+                saveGame(); updateUI(); renderDeflation(document.getElementById('modal-body'));
+            } else { showToast('Инфляция уже на минимуме!', 'warn'); }
         }
 
         function renderBank(c) {
@@ -728,16 +796,11 @@
         
         function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
         
-        // --- NEW RESET LOGIC ---
         function resetGame() {
             if(confirm('Сбросить прогресс? Вы начнете новую игру с долгом 7000 PLN!')) {
                 localStorage.removeItem(SAVE_KEY);
-                // Create specific "Hard Start" state
                 const newState = {
-                    balance: 0,
-                    debt: 7000,
-                    debtTimer: Date.now(), // Due now
-                    debtOverdue: true, // Immediate garnishment
+                    balance: 0, debt: 7000, debtTimer: Date.now(), debtOverdue: true,
                     isOnline: false, isSearching: false, scheduledOffline: false,
                     items: { bike: 100, bag: 100, phone: 100, gear: 100 },
                     needs: { energy: 100, water: 100, mood: 100 },
