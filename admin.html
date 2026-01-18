@@ -3,64 +3,178 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wolt Admin 🛡️</title>
+    <title>Wolt God Mode</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .admin-header { display: flex; justify-content: space-between; align-items: center; }
-        .online-dot { height: 10px; width: 10px; background-color: #bbb; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .online-dot.active { background-color: #00e676; box-shadow: 0 0 5px #00e676; }
+        /* Специфичные стили для Админки поверх style.css */
+        body { background-color: #121212; color: white; overflow-y: auto; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .panel-card {
+            background: #1e1e1e;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 1px solid #333;
+        }
+
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #333; }
+        .panel-title { font-size: 18px; font-weight: 800; color: var(--wolt-blue); text-transform: uppercase; }
+        
+        /* Статистика */
+        .stat-big { font-size: 36px; font-weight: 900; color: white; }
+        .stat-label { color: #888; font-size: 12px; text-transform: uppercase; }
+        .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+
+        /* Игроки */
+        .user-list { display: flex; flex-direction: column; gap: 10px; }
+        .user-row { 
+            background: #252525; border-radius: 12px; padding: 15px; 
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+            border-left: 4px solid #555; transition: 0.2s;
+        }
+        .user-row.online { border-left-color: var(--accent-green); background: rgba(0, 230, 118, 0.05); }
+        .user-row.banned { border-left-color: var(--accent-red); opacity: 0.6; }
+
+        .user-info { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+        .user-avatar { width: 40px; height: 40px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--wolt-blue); }
+        
+        .user-stats { display: flex; gap: 15px; font-size: 13px; color: #ccc; margin: 10px 0; }
+        .stat-pill { background: #333; padding: 4px 8px; border-radius: 6px; }
+
+        .user-actions { display: flex; gap: 8px; }
+        .act-btn { 
+            border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 12px; color: white; transition: 0.2s;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .act-btn:hover { transform: translateY(-2px); }
+        
+        .btn-edit { background: var(--wolt-blue); }
+        .btn-gift { background: var(--accent-purple); }
+        .btn-fix { background: var(--accent-green); }
+        .btn-ban { background: #444; color: #aaa; }
+        .btn-ban.banned { background: var(--accent-red); color: white; }
+
+        /* Конфиг Экономики */
+        .config-input { 
+            background: #333; border: 1px solid #444; color: white; padding: 8px; border-radius: 8px; width: 80px; text-align: center; font-weight: bold; 
+        }
+        .config-label { color: #ccc; font-size: 14px; }
+
+        /* Модалка редактирования */
+        .edit-modal { 
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #252525; padding: 30px; border-radius: 20px; z-index: 3000;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); border: 1px solid #444;
+            display: none; text-align: center; width: 300px;
+        }
+        .edit-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2999; display: none;
+        }
+
     </style>
 </head>
-<body class="admin-body">
+<body>
 
-    <div class="admin-header admin-section">
-        <h1>🛡️ Центр Управления</h1>
-        <div>Онлайн: <span id="online-count" style="font-weight:bold; color:var(--wolt-blue)">0</span></div>
+    <h1 style="margin-bottom: 20px; color: white;"><i class="fa-solid fa-user-astronaut"></i> Wolt Admin <span style="font-size:12px; color:#666; vertical-align:middle">v2.0</span></h1>
+
+    <div class="dashboard-grid">
+        
+        <div class="panel-card">
+            <div class="panel-header">
+                <span class="panel-title">Статус Сервера</span>
+                <i class="fa-solid fa-server" style="color:#666"></i>
+            </div>
+            <div style="display:flex; justify-content:space-between; text-align:center">
+                <div>
+                    <div class="stat-big" id="total-users">0</div>
+                    <div class="stat-label">Всего курьеров</div>
+                </div>
+                <div>
+                    <div class="stat-big" id="online-users" style="color:var(--accent-green)">0</div>
+                    <div class="stat-label">Сейчас Онлайн</div>
+                </div>
+            </div>
+            <button class="shop-btn" onclick="resetAllUsers()" style="background:var(--accent-red); width:100%; margin-top:20px; border:none; color:white">
+                <i class="fa-solid fa-skull"></i> ОБНУЛИТЬ ВСЕХ (WIPE)
+            </button>
+        </div>
+
+        <div class="panel-card">
+            <div class="panel-header">
+                <span class="panel-title">Экономика Варшавы</span>
+                <i class="fa-solid fa-coins" style="color:#666"></i>
+            </div>
+            
+            <div class="stat-row">
+                <span class="config-label">💰 Базовая оплата (PLN)</span>
+                <input type="number" id="conf-pay" class="config-input" step="1">
+            </div>
+            <div class="stat-row">
+                <span class="config-label">📈 Инфляция (0.05 = 5%)</span>
+                <input type="number" id="conf-inf" class="config-input" step="0.01">
+            </div>
+            <div class="stat-row">
+                <span class="config-label">👮 Штраф (Опоздание)</span>
+                <input type="number" id="conf-fine" class="config-input" step="1">
+            </div>
+            <div class="stat-row">
+                <span class="config-label">⚡ Расход энергии</span>
+                <input type="number" id="conf-energy" class="config-input" step="0.05">
+            </div>
+
+            <button class="shop-btn buy" onclick="saveConfig()" style="width:100%; margin-top:10px">
+                <i class="fa-solid fa-floppy-disk"></i> ПРИМЕНИТЬ НАСТРОЙКИ
+            </button>
+        </div>
+
     </div>
 
-    <div class="admin-section">
-        <h3>🌍 Глобальная Экономика</h3>
-        <div class="stat-row">
-            <span>Базовая оплата (PLN)</span>
-            <input type="number" id="conf-pay" class="stat-input" value="12">
+    <div class="panel-card">
+        <div class="panel-header">
+            <span class="panel-title">Список Курьеров</span>
+            <input type="text" id="search-box" placeholder="🔍 Поиск по ID..." style="background:#333; border:none; color:white; padding:5px 10px; border-radius:5px" onkeyup="renderUsers()">
         </div>
-        <div class="stat-row">
-            <span>Инфляция (коэфф 0.05 = 5%)</span>
-            <input type="number" id="conf-inf" class="stat-input" value="0.05" step="0.01">
+        <div id="users-container" class="user-list">
+            <div style="text-align:center; color:#666; padding:20px">Загрузка базы данных...</div>
         </div>
-        <div class="stat-row">
-            <span>Штраф за опоздание (PLN)</span>
-            <input type="number" id="conf-fine" class="stat-input" value="5.00">
-        </div>
-        <div class="stat-row">
-            <span>Расход энергии (за клик)</span>
-            <input type="number" id="conf-energy" class="stat-input" value="0.15" step="0.01">
-        </div>
-        <button class="shop-btn buy" onclick="saveConfig()" style="width:100%; margin-top:10px">ПРИМЕНИТЬ КО ВСЕМ</button>
     </div>
 
-    <div class="admin-section">
-        <h3>👥 Игроки</h3>
-        <div id="users-list">Загрузка...</div>
+    <div class="edit-overlay" id="overlay" onclick="closeModal()"></div>
+    <div class="edit-modal" id="bal-modal">
+        <h3 style="margin-top:0">Изменить Баланс</h3>
+        <p style="color:#888" id="modal-username">User</p>
+        <input type="number" id="new-balance-input" class="bank-input" style="background:#333; color:white; border-color:#555">
+        <div style="display:flex; gap:10px; margin-top:15px">
+            <button class="shop-btn" onclick="closeModal()" style="background:#444; color:white; border:none">Отмена</button>
+            <button class="shop-btn buy" onclick="confirmBalance()">Сохранить</button>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="database.js"></script>
-    <script>
+    <script src="database.js"></script> <script>
         const dbRef = firebase.database().ref();
+        let allUsers = {};
+        let currentEditId = null;
 
-        // Загрузка настроек
+        // 1. СЛУШАЕМ КОНФИГ
         dbRef.child('config').on('value', snap => {
-            const c = snap.val();
-            if(c) {
-                document.getElementById('conf-pay').value = c.basePay || 12;
-                document.getElementById('conf-inf').value = c.inflationRate || 0.05;
-                document.getElementById('conf-fine').value = c.penaltyLate || 5;
-                document.getElementById('conf-energy').value = c.energyCost || 0.15;
-            }
+            const c = snap.val() || {};
+            document.getElementById('conf-pay').value = c.basePay || 12;
+            document.getElementById('conf-inf').value = c.inflationRate || 0.05;
+            document.getElementById('conf-fine').value = c.penaltyLate || 5;
+            document.getElementById('conf-energy').value = c.energyCost || 0.15;
         });
 
+        // 2. СОХРАНЯЕМ КОНФИГ
         function saveConfig() {
             dbRef.child('config').update({
                 basePay: parseFloat(document.getElementById('conf-pay').value),
@@ -68,87 +182,124 @@
                 penaltyLate: parseFloat(document.getElementById('conf-fine').value),
                 energyCost: parseFloat(document.getElementById('conf-energy').value)
             });
-            alert('Настройки успешно обновлены!');
+            alert('✅ Настройки обновлены у всех игроков!');
         }
 
-        // Загрузка игроков
+        // 3. СЛУШАЕМ ИГРОКОВ
         dbRef.child('users').on('value', snap => {
-            const list = document.getElementById('users-list');
-            list.innerHTML = '';
-            let online = 0;
-
-            snap.forEach(child => {
-                const uid = child.key;
-                const u = child.val();
-                
-                // Проверка онлайна (если был активен меньше 60 сек назад)
-                const isOnline = (Date.now() - u.lastActive) < 60000;
-                if(isOnline) online++;
-
-                const div = document.createElement('div');
-                div.className = 'user-card ' + (isOnline ? 'online' : '') + (u.isBanned ? ' banned' : '');
-                
-                div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center">
-                        <div>
-                            <span class="online-dot ${isOnline ? 'active' : ''}"></span>
-                            <strong>${u.name || 'Гость'}</strong>
-                            <small style="color:#999; margin-left:5px">${uid}</small>
-                        </div>
-                        ${u.isBanned ? '<span style="color:red; font-weight:bold">⛔ БАН</span>' : ''}
-                    </div>
-                    
-                    <div class="action-grid">
-                        <div style="font-size:12px; color:#555">
-                            💰 Баланс: <b>${(u.balance||0).toFixed(2)}</b><br>
-                            🏦 Долг: ${(u.debt||0).toFixed(2)}
-                        </div>
-                        <div style="font-size:12px; color:#555">
-                            ⚡ Энергия: ${Math.floor(u.needs?.energy||0)}%<br>
-                            🚲 Байк: ${Math.floor(u.items?.bike||0)}%
-                        </div>
-                    </div>
-
-                    <div style="margin-top:10px; display:flex; gap:5px; flex-wrap:wrap">
-                        <button class="btn-mini btn-blue" onclick="editBalance('${uid}')">💵 Изменить $</button>
-                        <button class="btn-mini btn-green" onclick="healUser('${uid}')">🚑 Полечить</button>
-                        <button class="btn-mini btn-green" onclick="repairUser('${uid}')">🔧 Починить</button>
-                        <button class="btn-mini btn-dark" onclick="resetUser('${uid}')">♻️ Сброс</button>
-                        <button class="btn-mini btn-red" onclick="toggleBan('${uid}', ${!u.isBanned})">${u.isBanned ? 'Разбанить' : '⛔ БАН'}</button>
-                    </div>
-                `;
-                list.appendChild(div);
-            });
-            document.getElementById('online-count').textContent = online;
+            allUsers = snap.val() || {};
+            renderUsers();
         });
 
-        // Действия Админа
-        function editBalance(uid) {
-            let newBal = prompt("Введите новый баланс:");
-            if(newBal !== null) {
-                dbRef.child('users/'+uid).update({ balance: parseFloat(newBal), adminEdit: true });
+        function renderUsers() {
+            const container = document.getElementById('users-container');
+            const search = document.getElementById('search-box').value.toLowerCase();
+            container.innerHTML = '';
+            
+            let onlineCount = 0;
+            let totalCount = 0;
+
+            Object.entries(allUsers).forEach(([uid, u]) => {
+                // Фильтр поиска
+                if (search && !uid.toLowerCase().includes(search) && !u.name.toLowerCase().includes(search)) return;
+
+                totalCount++;
+                const isOnline = (Date.now() - u.lastActive) < 60000; // 1 минута таймаут
+                if (isOnline) onlineCount++;
+
+                const div = document.createElement('div');
+                div.className = `user-row ${isOnline ? 'online' : ''} ${u.isBanned ? 'banned' : ''}`;
+                
+                div.innerHTML = `
+                    <div class="user-info">
+                        <div class="user-avatar">${u.name.charAt(0).toUpperCase()}</div>
+                        <div>
+                            <div style="font-weight:bold; color:white">${u.name} ${isOnline ? '<i class="fa-solid fa-circle" style="color:var(--accent-green); font-size:8px"></i>' : ''}</div>
+                            <div style="font-size:10px; color:#666">${uid}</div>
+                        </div>
+                    </div>
+
+                    <div class="user-stats">
+                        <div class="stat-pill"><i class="fa-solid fa-wallet" style="color:var(--wolt-blue)"></i> ${u.balance.toFixed(2)}</div>
+                        <div class="stat-pill"><i class="fa-solid fa-building-columns" style="color:var(--accent-red)"></i> ${u.debt.toFixed(2)}</div>
+                        <div class="stat-pill">🚲 Lvl ${u.repairs?.bike || 0}</div>
+                    </div>
+
+                    <div class="user-actions">
+                        <button class="act-btn btn-edit" onclick="openBalanceModal('${uid}', ${u.balance})"><i class="fa-solid fa-pen"></i> Баланс</button>
+                        <button class="act-btn btn-gift" onclick="giveGift('${uid}')"><i class="fa-solid fa-gift"></i> Паёк</button>
+                        <button class="act-btn btn-fix" onclick="repairUser('${uid}')"><i class="fa-solid fa-wrench"></i> Чинка</button>
+                        <button class="act-btn btn-ban ${u.isBanned?'banned':''}" onclick="toggleBan('${uid}', ${!u.isBanned})">
+                            ${u.isBanned ? '<i class="fa-solid fa-lock-open"></i> Разбан' : '<i class="fa-solid fa-ban"></i> БАН'}
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('total-users').textContent = totalCount;
+            document.getElementById('online-users').textContent = onlineCount;
+        }
+
+        // --- ДЕЙСТВИЯ ---
+
+        // Баланс (через модалку)
+        function openBalanceModal(uid, currentBal) {
+            currentEditId = uid;
+            document.getElementById('modal-username').textContent = `ID: ${uid}`;
+            document.getElementById('new-balance-input').value = currentBal;
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('bal-modal').style.display = 'block';
+        }
+        function closeModal() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('bal-modal').style.display = 'none';
+        }
+        function confirmBalance() {
+            const val = parseFloat(document.getElementById('new-balance-input').value);
+            if (!isNaN(val) && currentEditId) {
+                dbRef.child(`users/${currentEditId}`).update({ balance: val, adminEdit: true });
+                closeModal();
             }
         }
-        function healUser(uid) {
-            dbRef.child('users/'+uid+'/needs').set({energy:100, water:100, mood:100});
+
+        // Подарок (Еда + Настроение)
+        function giveGift(uid) {
+            if(!confirm("Выдать игроку гуманитарную помощь? (Еда + Вода + Настроение)")) return;
+            dbRef.child(`users/${uid}/needs`).set({energy: 100, water: 100, mood: 100});
+            // Добавим немного предметов в инвентарь
+            dbRef.child(`users/${uid}/inventory`).transaction(inv => {
+                if(!inv) inv = {water:0, bar:0, energy_drink:0, coffee:0};
+                inv.water += 1; inv.bar += 1;
+                return inv;
+            });
+            alert('Подарок отправлен!');
         }
+
+        // Ремонт (Полный)
         function repairUser(uid) {
-            dbRef.child('users/'+uid+'/items').set({bike:100, bag:100, phone:100, gear:100});
+            if(!confirm("Починить все предметы игрока бесплатно?")) return;
+            dbRef.child(`users/${uid}/items`).set({bike: 100, bag: 100, phone: 100, gear: 100});
+            alert('Предметы восстановлены!');
         }
-        function resetUser(uid) {
-            if(confirm("Сбросить игрока в начало?")) {
-                dbRef.child('users/'+uid).update({ 
-                    balance: 0, debt: 0, 
-                    items: {bike:100,bag:100,phone:100,gear:100},
-                    repairs: {bike:0,bag:0,phone:0,gear:0}
-                });
-            }
-        }
+
+        // Бан
         function toggleBan(uid, status) {
-            if(confirm(status ? "Забанить?" : "Разбанить?")) {
-                dbRef.child('users/'+uid+'/isBanned').set(status);
+            if(confirm(status ? "⛔ ЗАБАНИТЬ этого игрока? Он не сможет войти." : "✅ РАЗБАНИТЬ игрока?")) {
+                dbRef.child(`users/${uid}/isBanned`).set(status);
             }
         }
+
+        // Глобальный сброс
+        function resetAllUsers() {
+            const code = prompt("Введи код подтверждения: WIPE");
+            if (code === "WIPE") {
+                dbRef.child('users').remove();
+                alert("🗑️ БАЗА ДАННЫХ ИГРОКОВ ОЧИЩЕНА!");
+                location.reload();
+            }
+        }
+
     </script>
 </body>
 </html>
