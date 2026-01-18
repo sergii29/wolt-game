@@ -195,8 +195,13 @@
         .govt-btn { background: #37474f; color: white; border-color: #37474f; }
         
         /* TIMERS UI */
-        .accept-timer-bg { width: 100%; height: 4px; background: #eee; margin-top: 5px; border-radius: 2px; overflow: hidden; display: none; }
-        .accept-timer-fill { height: 100%; background: var(--accent-orange); width: 100%; transition: width 1s linear; }
+        .accept-timer-bg { width: 100%; height: 6px; background: #eee; margin-top: 8px; border-radius: 3px; overflow: hidden; display: none; }
+        .accept-timer-fill { height: 100%; background: var(--accent-red); width: 100%; }
+        
+        /* ANIMATION for Timer */
+        @keyframes shrinkTimer { from { width: 100%; } to { width: 0%; } }
+        .animate-timer { animation: shrinkTimer 15s linear forwards; }
+
         .delivery-timer { font-size: 11px; color: #666; margin-top: 2px; font-weight: bold; }
 
     </style>
@@ -345,7 +350,7 @@
             loadGame();
             document.getElementById('pedal-btn').addEventListener('click', pedal);
             initSliders();
-            setInterval(checkDebt, 10000);
+            setInterval(checkDebt, 1000); // Check debt often for timer update
         }
 
         function loadGame() {
@@ -362,8 +367,22 @@
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
 
         function checkDebt() {
-            if (state.debt > 0 && Date.now() > state.debtTimer && !state.debtOverdue) {
-                state.debtOverdue = true; showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn'); updateUI();
+            // Logic for debt timer
+            if (state.debt > 0 && !state.debtOverdue) {
+                if (Date.now() > state.debtTimer) {
+                    state.debtOverdue = true; 
+                    showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn'); 
+                    updateUI();
+                    // Refresh bank modal if open to show "Overdue"
+                    if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) {
+                        renderBank(document.getElementById('modal-body'));
+                    }
+                } else {
+                    // Update timer in modal if open
+                    if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) {
+                       renderBank(document.getElementById('modal-body')); // Live update of timer
+                    }
+                }
             }
         }
 
@@ -407,11 +426,9 @@
                 }
 
                 // 2. Physics: Cooling
-                // Base 0.5 per sec. Broken bag adds multiplier up to 2x.
                 let decay = 0.5 * (1 + ((100 - state.items.bag) / 100));
                 currentOrder.foodTemp -= decay;
                 
-                // Temp Warning
                 if (currentOrder.foodTemp < 50 && !currentOrder.tempWarned) {
                     showToast('❄️ Еда остывает! Поторопись!', 'warn');
                     currentOrder.tempWarned = true;
@@ -424,7 +441,7 @@
                     return;
                 }
 
-            }, 1000); // Ticks every second
+            }, 1000);
         }
 
         function stopOrderLoop() {
@@ -447,7 +464,7 @@
         function pedal() {
             if (!currentOrder) return;
             
-            // First click accepts order
+            // Accept logic
             if (!currentOrder.accepted) { acceptOrder(); return; }
 
             let fatigue = Math.max(0.3, state.needs.energy / 100);
@@ -458,13 +475,14 @@
                 return;
             }
 
+            // WEAR & CONSUMPTION (Increased)
             state.needs.energy -= 0.15; 
             state.needs.water -= 0.10;
             state.needs.mood -= 0.05;
-            state.items.bike -= 0.05;
+            state.items.bike -= 0.1; // Increased wear on bike
+            state.items.phone -= 0.05; // Battery wear
             
             currentOrder.progress += (5 * fatigue);
-            // NOTE: Temperature decrease moved to orderLoop for realism!
             
             updateTrack(currentOrder.progress);
             
@@ -489,8 +507,6 @@
             btn.textContent = ev.text;
             showToast('Задержка! Еда остывает!', 'warn');
             
-            // Food cools automatically via orderLoop while player waits!
-
             setTimeout(() => {
                 if (currentOrder) { 
                     btn.disabled = false;
@@ -544,6 +560,10 @@
             let pay = (12 + (Math.random() * 6)) * inflationMult;
             if (state.needs.mood > 80 && Math.random() > 0.5) { pay += 5 * inflationMult; showToast('Позитив! +Чаевые', 'success'); }
 
+            // Apply wear to Bag and Gear on completion
+            state.items.bag -= 1.0; 
+            state.items.gear -= 0.5;
+
             if (state.debtOverdue && state.debt > 0) {
                 let penalty = pay * 0.20;
                 if (penalty > state.debt) penalty = state.debt;
@@ -587,7 +607,6 @@
         function createOrder() {
             state.isSearching = false;
             const r = restaurants[Math.floor(Math.random() * restaurants.length)];
-            // Limit 60 seconds for delivery
             currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: 60, tempWarned: false };
             
             document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
@@ -597,13 +616,13 @@
             document.getElementById('pedal-btn').textContent = 'ПРИНЯТЬ ЗАКАЗ';
             document.getElementById('pedal-btn').disabled = false;
 
-            // Timer logic
+            // ANIMATED TIMER
             const bar = document.getElementById('accept-timer');
             const fill = document.getElementById('accept-timer-fill');
             bar.style.display = 'block';
-            fill.style.width = '100%';
-            void fill.offsetWidth;
-            fill.style.width = '0%'; 
+            fill.classList.remove('animate-timer');
+            void fill.offsetWidth; // Trigger reflow
+            fill.classList.add('animate-timer');
 
             acceptTimeout = setTimeout(missOrder, 15000); 
 
@@ -748,6 +767,7 @@
         function renderDeflation(c) {
             const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflation = 1 + (levelSum * 0.1);
+            
             const cost1 = 2700 * inflation;
             const cost2 = 5000 * inflation;
 
@@ -807,12 +827,22 @@
         }
 
         function renderBank(c) {
+            let timeLeftStr = "00:00";
+            if(state.debt > 0 && !state.debtOverdue) {
+                let diff = Math.max(0, state.debtTimer - Date.now());
+                let m = Math.floor(diff / 60000);
+                let s = Math.floor((diff % 60000) / 1000);
+                timeLeftStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            }
+
             c.innerHTML = `
-                <div class="debt-alert-box" style="display:${state.debtOverdue?'block':'none'}">⚠️ <strong>ПРОСРОЧКА!</strong><br>Удерживаем 20% с каждого заказа.</div>
+                <div class="debt-alert-box" style="display:${state.debtOverdue?'block':'none'}">⚠️ <strong>ПРОСРОЧЕНО!</strong><br>Удерживаем 20% с каждого заказа.</div>
                 <div style="text-align:center; margin-bottom:20px">
                     <div style="font-size:14px; color:#666">Текущий долг</div>
                     <div style="font-size:32px; font-weight:800; color:${state.debt>0?'var(--accent-red)':'#333'}">${state.debt.toFixed(2)} PLN</div>
-                    <div style="font-size:12px; color:#888">${state.debt>0 && !state.debtOverdue ? 'Вернуть до: '+new Date(state.debtTimer).toLocaleTimeString() : ''}</div>
+                    <div style="font-size:12px; color:${state.debtOverdue?'red':'#00c853'}; font-weight:bold; margin-top:5px">
+                        ${state.debt > 0 ? (state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + timeLeftStr) : 'Нет долгов'}
+                    </div>
                 </div>
                 <input type="number" id="loan-amount" class="bank-input" placeholder="Сумма...">
                 <div class="bank-actions">
