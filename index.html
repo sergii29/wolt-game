@@ -15,6 +15,7 @@
             --accent-green: #00e676;
             --accent-orange: #ff9100;
             --accent-red: #ff3d00;
+            --accent-purple: #d500f9;
             --wolt-blue: #009de0;
             --modal-bg: #ffffff;
             --modal-text: #000000;
@@ -31,7 +32,6 @@
             user-select: none;
         }
 
-        /* --- MAP --- */
         #map {
             height: 100%;
             width: 100%;
@@ -91,14 +91,14 @@
             text-transform: uppercase;
         }
 
-        /* --- EQUIPMENT STATUS BAR --- */
+        /* --- BARS --- */
         .equip-bar {
             position: absolute;
             top: 70px;
             left: 15px;
             right: 15px;
             display: flex;
-            gap: 8px;
+            gap: 6px;
             z-index: 999;
             pointer-events: none;
         }
@@ -106,8 +106,8 @@
         .equip-item {
             flex: 1;
             background: rgba(0,0,0,0.7);
-            border-radius: 8px;
-            padding: 4px;
+            border-radius: 6px;
+            padding: 3px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -115,7 +115,7 @@
         }
 
         .equip-icon {
-            font-size: 12px;
+            font-size: 10px;
             margin-bottom: 2px;
             color: #ccc;
         }
@@ -134,31 +134,34 @@
             transition: width 0.3s;
         }
 
-        /* --- TIP BANNER --- */
-        #tip-banner {
+        /* --- NOTIFICATIONS --- */
+        .game-toast {
             position: absolute;
-            top: 130px;
+            top: 140px;
             left: 50%;
             transform: translateX(-50%) translateY(-20px);
-            background: rgba(0, 230, 118, 0.95);
-            color: #004d40;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
             padding: 10px 20px;
             border-radius: 25px;
             font-weight: bold;
             font-size: 14px;
             z-index: 1001;
-            box-shadow: 0 5px 20px rgba(0,230,118,0.4);
             opacity: 0;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s;
             pointer-events: none;
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
+            border: 1px solid #333;
         }
-        #tip-banner.show {
+        .game-toast.show {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+        .toast-warn { border-color: var(--accent-orange); color: var(--accent-orange); }
+        .toast-success { border-color: var(--accent-green); color: var(--accent-green); }
 
         /* --- BOTTOM SHEET --- */
         .bottom-sheet {
@@ -172,50 +175,10 @@
             padding: 20px;
             z-index: 1002;
             box-shadow: 0 -5px 30px rgba(0,0,0,0.3);
-            transition: transform 0.3s ease;
             color: #333;
+            transition: transform 0.3s;
         }
 
-        /* DEMAND INDICATOR */
-        .demand-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-
-        .demand-title {
-            font-size: 20px;
-            font-weight: 800;
-        }
-
-        .demand-bars {
-            display: flex;
-            gap: 4px;
-            align-items: flex-end;
-            height: 20px;
-        }
-
-        .d-bar {
-            width: 6px;
-            background: #eee;
-            border-radius: 2px;
-        }
-        .d-bar:nth-child(1) { height: 10px; }
-        .d-bar:nth-child(2) { height: 15px; }
-        .d-bar:nth-child(3) { height: 20px; }
-
-        .demand-high .d-bar { background: var(--accent-green); }
-        .demand-med .d-bar:not(:nth-child(3)) { background: var(--accent-orange); }
-        .demand-low .d-bar:first-child { background: var(--accent-red); }
-
-        .demand-text {
-            font-size: 14px;
-            color: #666;
-            margin-left: 10px;
-        }
-
-        /* SLIDER TO ONLINE */
         .slider-container {
             position: relative;
             width: 100%;
@@ -229,136 +192,30 @@
             margin-top: 10px;
         }
         
-        .slider-text {
-            color: #999;
-            font-weight: 600;
-            z-index: 1;
-            letter-spacing: 0.5px;
-        }
-
+        .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; }
         .slider-knob {
-            position: absolute;
-            left: 4px;
-            top: 4px;
-            bottom: 4px;
-            width: 52px;
-            background: var(--wolt-blue);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 20px;
-            cursor: grab;
-            transition: transform 0.1s;
-            z-index: 2;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px;
+            background: var(--wolt-blue); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 20px; cursor: grab; z-index: 2;
         }
-
         .slider-fill {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 0%;
-            background: rgba(0, 157, 224, 0.2);
-            z-index: 0;
+            position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+            background: rgba(0, 157, 224, 0.2); z-index: 0;
         }
 
-        /* ACTIVE ORDER VIEW */
-        #active-order-view {
-            display: none;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .order-info {
+        /* CONTROLS */
+        .controls-row {
             display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .rest-icon {
-            width: 50px;
-            height: 50px;
-            background: #f5f5f5;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
+            gap: 10px;
+            margin-top: 15px;
         }
 
-        .order-text h3 { margin: 0; font-size: 16px; }
-        .order-text p { margin: 4px 0 0; font-size: 12px; color: #888; }
-
-        /* PROGRESS TRACK */
-        .track-container {
-            position: relative;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            margin: 10px 0;
-        }
-
-        .track-line {
-            position: absolute;
-            left: 0; right: 0; top: 50%;
-            height: 4px;
-            background: #eee;
-            transform: translateY(-50%);
-            z-index: 0;
-        }
-        
-        .track-fill {
-            position: absolute;
-            left: 0; top: 50%;
-            height: 4px;
-            width: 0%;
-            background: var(--wolt-blue);
-            transform: translateY(-50%);
-            z-index: 0;
-            transition: width 0.2s;
-        }
-
-        .track-icon {
-            position: absolute;
-            top: 50%;
-            left: 0%; 
-            transform: translate(-50%, -50%);
-            width: 32px;
-            height: 32px;
-            background: white;
-            border: 2px solid var(--wolt-blue);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--wolt-blue);
-            z-index: 2;
-            transition: left 0.2s;
-            font-size: 14px;
-        }
-        
-        .track-point {
-            width: 10px; 
-            height: 10px; 
-            background: #ccc; 
-            border-radius: 50%; 
-            position: absolute; 
-            top: 50%; 
-            transform: translateY(-50%);
-            z-index: 1;
-        }
-        .tp-start { left: 0; }
-        .tp-end { right: 0; }
-
-        /* PEDAL BUTTON */
         .pedal-btn {
+            flex: 1;
             background: var(--wolt-blue);
             color: white;
             border: none;
-            width: 100%;
             padding: 18px;
             border-radius: 16px;
             font-size: 18px;
@@ -367,170 +224,101 @@
             letter-spacing: 1px;
             cursor: pointer;
             box-shadow: 0 4px 0 #007bb5;
-            transition: transform 0.1s, box-shadow 0.1s;
+            transition: all 0.1s;
         }
-        .pedal-btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 transparent;
-        }
-        .pedal-btn:disabled {
-            background: #ccc;
-            box-shadow: none;
-            transform: none;
-            cursor: not-allowed;
-        }
+        .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
+        .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
 
-        .temp-status {
-            font-size: 12px;
+        .bag-btn {
+            width: 60px;
+            background: #f8f9fa;
+            border: 2px solid #eee;
+            border-radius: 16px;
             display: flex;
-            justify-content: space-between;
-            color: #666;
-            margin-top: -5px;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #333;
+            cursor: pointer;
+            position: relative;
         }
-        .temp-val { font-weight: bold; }
-        .temp-hot { color: var(--accent-red); }
-        .temp-cold { color: var(--wolt-blue); }
-
-        /* --- SIDE MENU OVERLAY --- */
-        #side-menu-overlay {
-            position: fixed;
-            top: 0; 
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            z-index: 2000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-        }
-        #side-menu-overlay.open {
-            opacity: 1;
-            pointer-events: auto;
+        .bag-badge {
+            position: absolute; top: -5px; right: -5px;
+            background: var(--accent-red); color: white;
+            font-size: 10px; width: 18px; height: 18px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: bold;
         }
 
-        #side-menu {
+        /* QUICK INVENTORY POPUP */
+        .quick-inv {
             position: absolute;
-            top: 0; left: -80%;
-            width: 80%;
-            max-width: 300px;
-            height: 100%;
-            background: #1e1e1e;
-            transition: left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-            padding: 20px;
+            bottom: 90px; left: 20px;
+            background: #333;
             color: white;
-            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
-            display: flex;
+            padding: 10px;
+            border-radius: 12px;
+            z-index: 1005;
+            display: none;
             flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            width: 200px;
+        }
+        .quick-inv.open { display: flex; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        
+        .inv-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px;
+            cursor: pointer;
+        }
+        .inv-item:active { background: rgba(255,255,255,0.2); }
+        .inv-count { background: var(--wolt-blue); padding: 2px 6px; border-radius: 10px; font-size: 11px; }
+
+        @keyframes popUp {
+            from { opacity: 0; transform: translateY(10px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* --- SIDE MENU --- */
+        #side-menu-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #side-menu-overlay.open { opacity: 1; pointer-events: auto; }
+        #side-menu {
+            position: absolute; top: 0; left: -85%; width: 85%; max-width: 320px; height: 100%;
+            background: #1e1e1e; transition: left 0.3s; padding: 20px; box-sizing: border-box;
+            display: flex; flex-direction: column;
         }
         #side-menu.open { left: 0; }
+        .menu-item { padding: 15px 0; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 15px; font-size: 16px; }
 
-        .menu-header {
-            font-size: 24px;
-            font-weight: 800;
-            margin-bottom: 30px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .menu-item {
-            padding: 16px 10px;
-            border-bottom: 1px solid #333;
-            cursor: pointer;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: background 0.2s;
-        }
-        .menu-item:active { background: #333; }
-        .menu-item i { width: 20px; text-align: center; color: var(--wolt-blue); }
-
-        /* --- FULL SCREEN MODAL (Wolt Style) --- */
+        /* --- FULL MODAL --- */
         .full-modal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--modal-bg);
-            color: var(--modal-text);
-            z-index: 3000;
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-            display: flex;
-            flex-direction: column;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #f5f5f5; color: black; z-index: 3000;
+            transform: translateY(100%); transition: transform 0.3s;
+            display: flex; flex-direction: column;
         }
         .full-modal.open { transform: translateY(0); }
+        .modal-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; font-weight: bold; }
+        .modal-content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        .modal-header {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            background: white;
+        /* SHOP STYLES */
+        .shop-section { margin-bottom: 20px; }
+        .shop-section h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #666; }
+        .shop-card {
+            background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .modal-back {
-            cursor: pointer;
-            font-size: 20px;
-            padding: 5px;
-            color: var(--wolt-blue);
+        .shop-btn {
+            padding: 8px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer;
+            border: 1px solid var(--wolt-blue); color: var(--wolt-blue); background: white;
         }
-
-        .modal-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            background: #f9f9f9;
-        }
-
-        /* SHOP / REPAIR ITEMS */
-        .shop-item {
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .shop-info { display: flex; align-items: center; gap: 15px; }
-        .shop-icon { 
-            width: 40px; height: 40px; 
-            background: #f0f8ff; 
-            border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center;
-            color: var(--wolt-blue);
-            font-size: 18px;
-        }
-        .shop-details h4 { margin: 0; font-size: 16px; }
-        .shop-details p { margin: 4px 0 0; font-size: 12px; color: #888; }
-        
-        .repair-btn {
-            background: white;
-            border: 1px solid var(--wolt-blue);
-            color: var(--wolt-blue);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 13px;
-            cursor: pointer;
-        }
-        .repair-btn:active { background: var(--wolt-blue); color: white; }
-        
-        /* STATISTICS LIST */
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-        }
-        .stat-date { color: #888; font-size: 12px; }
+        .shop-btn.buy { background: var(--wolt-blue); color: white; }
+        .shop-btn:active { transform: scale(0.95); }
 
     </style>
 </head>
@@ -548,80 +336,37 @@
     </div>
 
     <div class="equip-bar">
-        <div class="equip-item">
-            <i class="fa-solid fa-bicycle equip-icon"></i>
-            <div class="progress-mini"><div class="progress-mini-fill" id="bar-bike" style="width: 100%"></div></div>
-        </div>
-        <div class="equip-item">
-            <i class="fa-solid fa-box-open equip-icon"></i>
-            <div class="progress-mini"><div class="progress-mini-fill" id="bar-bag" style="width: 100%"></div></div>
-        </div>
-        <div class="equip-item">
-            <i class="fa-solid fa-mobile-screen equip-icon"></i>
-            <div class="progress-mini"><div class="progress-mini-fill" id="bar-phone" style="width: 100%"></div></div>
-        </div>
-        <div class="equip-item">
-            <i class="fa-solid fa-shirt equip-icon"></i>
-            <div class="progress-mini"><div class="progress-mini-fill" id="bar-gear" style="width: 100%"></div></div>
-        </div>
-         <div class="equip-item">
-            <i class="fa-solid fa-bolt equip-icon" style="color: yellow"></i>
-            <div class="progress-mini"><div class="progress-mini-fill" id="bar-energy" style="width: 100%; background: yellow"></div></div>
-        </div>
-         <div class="equip-item">
-            <i class="fa-solid fa-droplet equip-icon" style="color: cyan"></i>
-            <div class="progress-mini"><div class="progress-mini-fill" id="bar-water" style="width: 100%; background: cyan"></div></div>
-        </div>
+        <div class="equip-item"><i class="fa-solid fa-bicycle equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-bike" style="width: 100%"></div></div></div>
+        <div class="equip-item"><i class="fa-solid fa-box-open equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-bag" style="width: 100%"></div></div></div>
+        <div class="equip-item"><i class="fa-solid fa-mobile-screen equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-phone" style="width: 100%"></div></div></div>
+        <div class="equip-item"><i class="fa-solid fa-shirt equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-gear" style="width: 100%"></div></div></div>
+        <div class="equip-item"><i class="fa-solid fa-bolt equip-icon" style="color:yellow"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-energy" style="background:yellow; width: 100%"></div></div></div>
+        <div class="equip-item"><i class="fa-solid fa-face-smile equip-icon" style="color:#d500f9"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-mood" style="background:#d500f9; width: 100%"></div></div></div>
     </div>
 
-    <div id="tip-banner">
-        <i class="fa-solid fa-coins"></i>
-        <span id="tip-text">+2.50 PLN Чаевые!</span>
-    </div>
+    <div id="toast" class="game-toast"><i class="fa-solid fa-circle-info"></i> <span>Msg</span></div>
 
     <div id="side-menu-overlay" onclick="toggleMenu()">
         <div id="side-menu" onclick="event.stopPropagation()">
-            <div class="menu-header">
-                <span>Профиль</span>
-                <i class="fa-solid fa-xmark" onclick="toggleMenu()" style="cursor:pointer"></i>
-            </div>
-            <div class="menu-item" onclick="openModal('shop')">
-                <i class="fa-solid fa-screwdriver-wrench"></i> Инвентарь / Ремонт
-            </div>
-            <div class="menu-item" onclick="openModal('stats')">
-                <i class="fa-solid fa-clock-rotate-left"></i> История заказов
-            </div>
-            <div class="menu-item" style="color: #666; cursor: default">
-                <i class="fa-solid fa-shop"></i> Магазин (Скоро)
-            </div>
-            <div class="menu-item" onclick="resetGame()" style="margin-top: auto; border-top: 1px solid #333; color: var(--accent-red)">
-                <i class="fa-solid fa-trash"></i> Сброс прогресса
-            </div>
+            <h2 style="margin-bottom: 20px">Профиль</h2>
+            <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store"></i> Магазин / Инвентарь</div>
+            <div class="menu-item" onclick="openModal('stats')"><i class="fa-solid fa-clock-rotate-left"></i> История</div>
+            <div class="menu-item" onclick="resetGame()" style="color:red; margin-top:auto"><i class="fa-solid fa-trash"></i> Сброс</div>
         </div>
     </div>
 
     <div id="full-modal" class="full-modal">
         <div class="modal-header">
-            <i class="fa-solid fa-arrow-left modal-back" onclick="closeModal()"></i>
-            <span id="modal-title">Заголовок</span>
+            <i class="fa-solid fa-arrow-left" onclick="closeModal()" style="font-size:20px; padding:10px; cursor:pointer"></i>
+            <span id="modal-title">Title</span>
         </div>
-        <div class="modal-content" id="modal-body">
-            </div>
+        <div class="modal-content" id="modal-body"></div>
     </div>
 
     <div class="bottom-sheet">
         <div id="offline-view">
-            <div class="demand-header">
-                <div style="display:flex; align-items:center">
-                    <div class="demand-title">Warsaw</div>
-                    <div class="demand-text" id="demand-text">Спрос: Высокий</div>
-                </div>
-                <div class="demand-bars demand-high" id="demand-indicator">
-                    <div class="d-bar"></div><div class="d-bar"></div><div class="d-bar"></div>
-                </div>
-            </div>
-            <p style="color:#888; font-size:13px; margin-bottom:15px">Множитель заработка: <span id="demand-mult">x1.2</span></p>
-
+            <h3 style="margin:0">Варшава</h3>
+            <p style="color:#888; font-size:13px">Спрос: Высокий • x1.2 к оплате</p>
             <div class="slider-container" id="slider-box">
                 <div class="slider-fill" id="slider-fill"></div>
                 <div class="slider-text">СВАЙП ДЛЯ ОНЛАЙНА</div>
@@ -629,99 +374,99 @@
             </div>
         </div>
 
-        <div id="active-order-view">
-            <div class="order-info">
-                <div class="rest-icon" id="rest-icon">🍔</div>
-                <div class="order-text">
-                    <h3 id="rest-name">McDonald's</h3>
-                    <p id="order-dest">Доставка на Mokotów • 2.4 km</p>
+        <div id="active-order-view" style="display:none; flex-direction:column; gap:10px">
+            <div style="display:flex; gap:15px; align-items:center">
+                <div style="font-size:24px; width:45px; height:45px; background:#f5f5f5; border-radius:10px; display:flex; align-items:center; justify-content:center" id="rest-icon">🍔</div>
+                <div><h3 style="margin:0" id="rest-name">Rest</h3><p style="margin:0; font-size:12px; color:#888" id="order-dest">Dest</p></div>
+            </div>
+
+            <div style="position:relative; height:30px; margin:5px 0">
+                <div style="position:absolute; top:50%; left:0; right:0; height:4px; background:#eee; transform:translateY(-50%)"></div>
+                <div style="position:absolute; top:50%; left:0; height:4px; background:var(--wolt-blue); transform:translateY(-50%); width:0%" id="track-fill"></div>
+                <div style="position:absolute; top:50%; left:0; transform:translate(-50%, -50%); width:28px; height:28px; background:white; border:2px solid var(--wolt-blue); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--wolt-blue); font-size:12px; transition:left 0.2s" id="track-icon"><i class="fa-solid fa-bicycle"></i></div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-size:12px; color:#666">
+                <span>Еда: <strong id="temp-val">100%</strong></span>
+                <span id="status-label">Статус</span>
+            </div>
+
+            <div class="quick-inv" id="quick-inv">
                 </div>
-            </div>
 
-            <div class="track-container">
-                <div class="track-line"></div>
-                <div class="track-point tp-start"></div>
-                <div class="track-point tp-end"></div>
-                <div class="track-fill" id="track-fill"></div>
-                <div class="track-icon" id="track-icon"><i class="fa-solid fa-bicycle"></i></div>
+            <div class="controls-row">
+                <div class="bag-btn" onclick="toggleQuickInv()">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                    <div class="bag-badge" id="bag-count">0</div>
+                </div>
+                <button class="pedal-btn" id="pedal-btn">ЖМИ ГАЗ (PEDAL)</button>
             </div>
-            
-            <div class="temp-status">
-                <span>Еда: <span id="temp-val" class="temp-hot">100%</span></span>
-                <span id="status-label">Едем в ресторан</span>
-            </div>
-
-            <button class="pedal-btn" id="pedal-btn">ЖМИ ГАЗ (PEDAL)</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- GAME STATE ---
+        // --- DATA ---
         const SAVE_KEY = 'WARSZAWA_FOREVER';
         
-        // Base config for repairs (Starting Prices)
-        const REPAIR_CONFIG = {
-            bike: { name: 'Велосипед', base: 5.0, inc: 0.50, icon: 'fa-bicycle' },
-            bag: { name: 'Термосумка', base: 2.0, inc: 0.20, icon: 'fa-box-open' },
-            phone: { name: 'Смартфон (Зарядка)', base: 1.0, inc: 0.10, icon: 'fa-mobile-screen' },
-            gear: { name: 'Экипировка', base: 3.0, inc: 0.30, icon: 'fa-shirt' },
-            energy: { name: 'Энергетик', base: 2.5, inc: 0.05, icon: 'fa-bolt' },
-            water: { name: 'Вода', base: 1.5, inc: 0.02, icon: 'fa-droplet' }
+        const ITEMS_DB = {
+            // Repairable
+            bike: { name: 'Велосипед', type: 'repair', baseCost: 5, icon: 'fa-bicycle' },
+            bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open' },
+            phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen' },
+            gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt' },
+            // Consumable
+            water: { name: 'Вода 0.5л', type: 'buy', cost: 2.5, effect: { water: 30, energy: 5 }, icon: 'fa-bottle-water' },
+            bar: { name: 'Сникерс', type: 'buy', cost: 4.0, effect: { energy: 25, mood: 5 }, icon: 'fa-cookie-bite' },
+            energy_drink: { name: 'Red Bull', type: 'buy', cost: 6.5, effect: { energy: 50, mood: 10, water: -5 }, icon: 'fa-bolt' },
+            coffee: { name: 'Кофе', type: 'buy', cost: 8.0, effect: { mood: 20, energy: 10 }, icon: 'fa-mug-hot' }
         };
 
         let state = {
             balance: 0,
             isOnline: false,
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
-            needs: { energy: 100, water: 100 },
-            // Counters for inflation logic
-            repairs: { bike: 0, bag: 0, phone: 0, gear: 0, energy: 0, water: 0 },
-            history: [], // Stores last orders
-            isNew: true,
+            needs: { energy: 100, water: 100, mood: 100 },
+            inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
+            repairs: { bike: 0, bag: 0, phone: 0, gear: 0 }, // Repair levels
+            history: [],
             totalOrders: 0
         };
 
-        // --- RESTAURANTS DATA ---
         const restaurants = [
             { name: "McDonald's", icon: "🍔", lat: 52.2297, lng: 21.0122 },
             { name: "KFC", icon: "🍗", lat: 52.2350, lng: 21.0050 },
             { name: "Pasibus", icon: "🍔", lat: 52.2310, lng: 21.0180 },
-            { name: "Kebab King", icon: "🌯", lat: 52.2400, lng: 21.0200 },
-            { name: "Vegan Ramen Shop", icon: "🍜", lat: 52.2100, lng: 21.0300 },
-            { name: "Pizza Hut", icon: "🍕", lat: 52.2250, lng: 21.0100 },
-            { name: "Manekin", icon: "🥞", lat: 52.2330, lng: 21.0150 }
+            { name: "Kebab King", icon: "🌯", lat: 52.2400, lng: 21.0200 }
         ];
 
-        // --- MAP SETUP ---
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([52.2297, 21.0122], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
-        let courierMarker = L.marker([52.2297, 21.0122], {
-            icon: L.divIcon({
-                className: 'courier-icon',
-                html: '<div style="background:#009de0; width:15px; height:15px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px #009de0;"></div>',
-                iconSize: [20, 20]
-            })
-        }).addTo(map);
-
-        // --- VARIABLES ---
         let currentOrder = null;
-        let demandLevel = 2;
-        
-        // --- CORE FUNCTIONS ---
+        let map, courierMarker;
+
+        // --- INIT ---
+        function init() {
+            // Map
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([52.2297, 21.0122], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+            courierMarker = L.marker([52.2297, 21.0122]).addTo(map);
+
+            loadGame();
+            
+            // Listeners
+            document.getElementById('pedal-btn').addEventListener('click', pedal);
+            setupSlider();
+        }
+
         function loadGame() {
             const saved = localStorage.getItem(SAVE_KEY);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 state = { ...state, ...parsed };
-                // Ensure new fields exist if loaded from old save
-                if (!state.repairs) state.repairs = { bike: 0, bag: 0, phone: 0, gear: 0, energy: 0, water: 0 };
-                if (!state.history) state.history = [];
-            } else {
-                state.isNew = false;
+                // Migration check
+                if (!state.needs.mood) state.needs.mood = 100;
+                if (!state.inventory) state.inventory = { water: 0, bar: 0, energy_drink: 0, coffee: 0 };
             }
             updateUI();
-            startDemandCycle();
         }
 
         function saveGame() {
@@ -736,246 +481,67 @@
             updateBar('bar-phone', state.items.phone);
             updateBar('bar-gear', state.items.gear);
             updateBar('bar-energy', state.needs.energy);
-            updateBar('bar-water', state.needs.water);
+            document.getElementById('bar-mood').style.width = state.needs.mood + '%';
+            
+            // Inventory count badge
+            const totalInv = Object.values(state.inventory).reduce((a,b)=>a+b, 0);
+            document.getElementById('bag-count').textContent = totalInv;
+            if (totalInv === 0) document.getElementById('bag-count').style.display = 'none';
+            else document.getElementById('bag-count').style.display = 'flex';
         }
 
         function updateBar(id, val) {
-            const el = document.getElementById(id);
-            el.style.width = val + '%';
-            if (val < 20) el.style.background = '#ff3d00';
-            else if (id === 'bar-energy') el.style.background = 'yellow';
-            else if (id === 'bar-water') el.style.background = 'cyan';
-            else el.style.background = '#00e676';
+            document.getElementById(id).style.width = val + '%';
         }
 
-        // --- MENU & MODALS SYSTEM ---
-        function toggleMenu() {
-            const overlay = document.getElementById('side-menu-overlay');
-            const menu = document.getElementById('side-menu');
-            
-            if (overlay.classList.contains('open')) {
-                overlay.classList.remove('open');
-                menu.classList.remove('open');
-            } else {
-                overlay.classList.add('open');
-                setTimeout(() => menu.classList.add('open'), 10);
-            }
+        function showToast(msg, type='info') {
+            const t = document.getElementById('toast');
+            t.innerHTML = msg;
+            t.className = 'game-toast show ' + (type === 'warn' ? 'toast-warn' : (type==='success' ? 'toast-success' : ''));
+            setTimeout(() => t.className = 'game-toast', 3000);
         }
 
-        function openModal(type) {
-            // Close side menu first
-            toggleMenu();
-            
-            const modal = document.getElementById('full-modal');
-            const title = document.getElementById('modal-title');
-            const body = document.getElementById('modal-body');
-            
-            modal.classList.add('open');
-            
-            if (type === 'shop') {
-                title.textContent = 'Инвентарь и Ремонт';
-                renderShop(body);
-            } else if (type === 'stats') {
-                title.textContent = 'История заказов';
-                renderStats(body);
-            }
-        }
-
-        function closeModal() {
-            document.getElementById('full-modal').classList.remove('open');
-        }
-
-        // --- SHOP LOGIC ---
-        function getRepairCost(type) {
-            const cfg = REPAIR_CONFIG[type];
-            const count = state.repairs[type] || 0;
-            // Formula: Base + (Count * Increment)
-            return cfg.base + (count * cfg.inc);
-        }
-
-        function renderShop(container) {
-            container.innerHTML = '';
-            
-            const createItem = (key, currentVal, isNeed) => {
-                const cfg = REPAIR_CONFIG[key];
-                const cost = getRepairCost(key);
-                const isFull = currentVal >= 99;
-                
-                const div = document.createElement('div');
-                div.className = 'shop-item';
-                div.innerHTML = `
-                    <div class="shop-info">
-                        <div class="shop-icon"><i class="fa-solid ${cfg.icon}"></i></div>
-                        <div class="shop-details">
-                            <h4>${cfg.name}</h4>
-                            <p>Состояние: ${Math.floor(currentVal)}% ${isNeed ? '' : `• Уровень: ${state.repairs[key]}`}</p>
-                        </div>
-                    </div>
-                    <button class="repair-btn" onclick="repairItem('${key}')" ${isFull ? 'disabled style="opacity:0.5"' : ''}>
-                        ${isFull ? 'OK' : `-${cost.toFixed(2)} PLN`}
-                    </button>
-                `;
-                return div;
-            };
-
-            container.innerHTML += `<h3 style="margin-top:0">Снаряжение</h3>`;
-            container.appendChild(createItem('bike', state.items.bike, false));
-            container.appendChild(createItem('bag', state.items.bag, false));
-            container.appendChild(createItem('phone', state.items.phone, false));
-            container.appendChild(createItem('gear', state.items.gear, false));
-            
-            container.innerHTML += `<h3>Потребности</h3>`;
-            container.appendChild(createItem('energy', state.needs.energy, true));
-            container.appendChild(createItem('water', state.needs.water, true));
-        }
-
-        function repairItem(key) {
-            const cost = getRepairCost(key);
-            
-            if (state.balance < cost) {
-                alert('Недостаточно средств!');
-                return;
-            }
-
-            state.balance -= cost;
-            state.repairs[key]++; // Increase level/inflation
-            
-            if (key === 'energy' || key === 'water') {
-                state.needs[key] = 100;
-            } else {
-                state.items[key] = 100;
-            }
-
-            saveGame();
-            updateUI();
-            
-            // Re-render shop to show new price
-            renderShop(document.getElementById('modal-body'));
-        }
-
-        function renderStats(container) {
-            container.innerHTML = '';
-            if (state.history.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#888; margin-top:50px">Пока нет заказов</p>';
-                return;
-            }
-            
-            // Show last 20 orders reversed
-            const list = [...state.history].reverse().slice(0, 20);
-            
-            list.forEach(order => {
-                const div = document.createElement('div');
-                div.className = 'stat-row';
-                div.innerHTML = `
-                    <div>
-                        <strong>${order.rest}</strong><br>
-                        <span class="stat-date">${order.time}</span>
-                    </div>
-                    <div style="text-align:right">
-                        <span style="color:#00e676">+${order.earn} PLN</span><br>
-                        <span style="font-size:12px; color:#888">${order.temp}% темп.</span>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        // --- SLIDER & JOB LOGIC (UNCHANGED CORE) ---
-        const sliderKnob = document.getElementById('slider-knob');
-        const sliderBox = document.getElementById('slider-box');
-        let isDragging = false, startX = 0;
-
-        sliderKnob.addEventListener('mousedown', startDrag);
-        sliderKnob.addEventListener('touchstart', startDrag);
-
-        function startDrag(e) {
-            if (state.isOnline) return;
-            isDragging = true;
-            startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX;
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('touchmove', onDrag);
-            document.addEventListener('mouseup', stopDrag);
-            document.addEventListener('touchend', stopDrag);
-        }
-
-        function onDrag(e) {
-            if (!isDragging) return;
-            const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX;
-            let moveX = clientX - startX;
-            let maxMove = sliderBox.offsetWidth - sliderKnob.offsetWidth - 8;
-            if (moveX < 0) moveX = 0; else if (moveX > maxMove) moveX = maxMove;
-            sliderKnob.style.transform = `translateX(${moveX}px)`;
-            document.getElementById('slider-fill').style.width = `${(moveX / maxMove) * 100}%`;
-            if (moveX >= maxMove * 0.95) { goOnline(); stopDrag(); }
-        }
-
-        function stopDrag() {
-            isDragging = false;
-            document.removeEventListener('mousemove', onDrag);
-            document.removeEventListener('touchmove', onDrag);
-            document.removeEventListener('mouseup', stopDrag);
-            document.removeEventListener('touchend', stopDrag);
-            if (!state.isOnline) {
-                sliderKnob.style.transform = 'translateX(0px)';
-                document.getElementById('slider-fill').style.width = '0%';
-            }
-        }
-
-        function goOnline() {
-            state.isOnline = true;
-            document.getElementById('offline-view').style.display = 'none';
-            document.getElementById('active-order-view').style.display = 'flex';
-            setTimeout(createOrder, 1500);
-        }
-
-        function createOrder() {
-            if (!state.isOnline) return;
-            const rest = restaurants[Math.floor(Math.random() * restaurants.length)];
-            currentOrder = {
-                rest: rest,
-                dist: (1.5 + Math.random() * 3).toFixed(1),
-                progress: 0,
-                stage: 0,
-                foodTemp: 100
-            };
-            document.getElementById('rest-name').textContent = rest.name;
-            document.getElementById('rest-icon').textContent = rest.icon;
-            document.getElementById('order-dest').textContent = `Забрать: ${currentOrder.dist} km`;
-            document.getElementById('status-label').textContent = 'Едем в ресторан';
-            document.getElementById('pedal-btn').disabled = false;
-            document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
-            updateTrack(0);
-        }
-
-        document.getElementById('pedal-btn').addEventListener('click', () => {
+        // --- GAMEPLAY: PEDAL LOGIC ---
+        function pedal() {
             if (!currentOrder) return;
             
-            // Wear & Tear
-            state.needs.energy -= 0.5;
-            state.needs.water -= 0.3;
-            state.items.bike -= 0.15; // Increased wear slightly
-            state.items.bag -= 0.05;
-            state.items.phone -= 0.05;
+            // 1. Calculate Fatigue
+            // Less energy = Slower speed
+            // If Energy 100 -> Factor 1.0. If Energy 10 -> Factor 0.2
+            let fatigueFactor = Math.max(0.2, state.needs.energy / 100); 
+            
+            // 2. Base Cost
+            const energyCost = 0.8; 
+            const moodCost = 0.1;
 
-            if (state.needs.energy <= 0 || state.needs.water <= 0) {
-                alert("Истощение! Посетите меню 'Инвентарь', чтобы восстановиться.");
+            if (state.needs.energy <= 5) {
+                showToast('<i class="fa-solid fa-triangle-exclamation"></i> Сил нет! Съешь что-нибудь!', 'warn');
+                openQuickInv(); // Auto open hints
                 return;
             }
 
-            currentOrder.progress += 10;
-            currentOrder.foodTemp -= 0.2;
+            // 3. Apply Costs
+            state.needs.energy -= energyCost;
+            state.needs.mood -= moodCost;
+            state.items.bike -= 0.1;
+
+            // 4. Progress Math
+            // Base speed 4%. Multiplied by fatigue.
+            let progressStep = 4 * fatigueFactor; 
+            
+            currentOrder.progress += progressStep;
+            
+            // Food temp decay
+            currentOrder.foodTemp -= 0.15;
+
+            // 5. Visuals
+            updateTrack(currentOrder.progress);
             document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%';
             
             if (currentOrder.progress >= 100) nextStage();
-            else updateTrack(currentOrder.progress);
             
             saveGame();
             updateUI();
-        });
-
-        function updateTrack(pct) {
-            document.getElementById('track-fill').style.width = pct + '%';
-            document.getElementById('track-icon').style.left = pct + '%';
         }
 
         function nextStage() {
@@ -984,12 +550,13 @@
             updateTrack(0);
 
             if (currentOrder.stage === 1) {
-                document.getElementById('status-label').textContent = 'Ожидание заказа...';
-                document.getElementById('pedal-btn').disabled = true;
+                // Wait at restaurant
+                setBtnState(true, 'ЖДЕМ ЗАКАЗ...');
+                document.getElementById('status-label').textContent = 'Ресторан готовит...';
+                
                 setTimeout(() => {
-                    document.getElementById('status-label').textContent = 'Везем клиенту!';
-                    document.getElementById('pedal-btn').disabled = false;
-                    document.getElementById('order-dest').textContent = 'К клиенту: 2.1 km';
+                    setBtnState(false, 'ЖМИ ГАЗ (PEDAL)');
+                    document.getElementById('status-label').textContent = 'Везем клиенту';
                     currentOrder.stage = 2;
                 }, 2000);
             } else if (currentOrder.stage === 3) {
@@ -997,55 +564,266 @@
             }
         }
 
-        function completeOrder() {
-            let basePay = 10 + (Math.random() * 5);
-            let total = basePay * (demandLevel === 2 ? 1.5 : 1.0);
-            let tip = (currentOrder.foodTemp > 70 && Math.random() > 0.3) ? (2 + Math.random() * 3) : 0;
-            
-            if (tip > 0) {
-                const b = document.getElementById('tip-banner');
-                document.getElementById('tip-text').textContent = `+${tip.toFixed(2)} PLN Чаевые!`;
-                b.classList.add('show');
-                setTimeout(() => b.classList.remove('show'), 3000);
-            }
-
-            const earned = total + tip;
-            state.balance += earned;
-            state.totalOrders++;
-            
-            // Save History
-            state.history.push({
-                rest: currentOrder.rest.name,
-                earn: earned.toFixed(2),
-                temp: Math.floor(currentOrder.foodTemp),
-                time: new Date().toLocaleTimeString().slice(0,5)
-            });
-
-            state.items.bag -= 0.5; 
-            currentOrder = null;
-            document.getElementById('pedal-btn').disabled = true;
-            document.getElementById('status-label').textContent = 'Поиск заказа...';
-            
-            saveGame();
-            updateUI();
-            setTimeout(createOrder, 2000);
+        function setBtnState(disabled, text) {
+            const btn = document.getElementById('pedal-btn');
+            btn.disabled = disabled;
+            btn.textContent = text;
         }
 
-        function startDemandCycle() {
-            setInterval(() => {
-                demandLevel = Math.floor(Math.random() * 3);
-                // Update UI simplified for brevity (logic same as before)
-            }, 30000);
+        function completeOrder() {
+            let pay = 12 + (Math.random() * 5);
+            // Mood bonus
+            if (state.needs.mood > 80 && Math.random() > 0.5) {
+                pay += 5;
+                showToast('Клиент доволен вашим позитивом! +Чаевые', 'success');
+            }
+            
+            state.balance += pay;
+            state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
+            
+            currentOrder = null;
+            setBtnState(true, 'ПОИСК...');
+            document.getElementById('active-order-view').style.display = 'none';
+            document.getElementById('offline-view').style.display = 'block';
+            state.isOnline = false; // Reset for loop
+            resetSlider();
+            
+            showToast(`Заказ завершен! +${pay.toFixed(2)} PLN`, 'success');
+            saveGame();
+            updateUI();
+        }
+
+        // --- INVENTORY SYSTEM ---
+        function toggleQuickInv() {
+            const menu = document.getElementById('quick-inv');
+            const isOpen = menu.style.display === 'flex';
+            
+            if (isOpen) {
+                menu.style.display = 'none';
+            } else {
+                openQuickInv();
+            }
+        }
+
+        function openQuickInv() {
+            const menu = document.getElementById('quick-inv');
+            menu.innerHTML = '';
+            
+            let hasItems = false;
+            for (let [key, count] of Object.entries(state.inventory)) {
+                if (count > 0) {
+                    hasItems = true;
+                    const itemData = ITEMS_DB[key];
+                    const div = document.createElement('div');
+                    div.className = 'inv-item';
+                    div.innerHTML = `
+                        <span><i class="fa-solid ${itemData.icon}"></i> ${itemData.name}</span>
+                        <span class="inv-count">x${count}</span>
+                    `;
+                    div.onclick = () => useItem(key);
+                    menu.appendChild(div);
+                }
+            }
+            
+            if (!hasItems) {
+                menu.innerHTML = '<div style="padding:5px; color:#888; font-size:12px; text-align:center">Рюкзак пуст.<br>Купите еду в магазине.</div>';
+            }
+            
+            menu.style.display = 'flex';
+            menu.classList.add('open');
+        }
+
+        function useItem(key) {
+            if (state.inventory[key] <= 0) return;
+            
+            const item = ITEMS_DB[key];
+            state.inventory[key]--;
+            
+            // Apply effects
+            if (item.effect.energy) state.needs.energy = Math.min(100, state.needs.energy + item.effect.energy);
+            if (item.effect.water) state.needs.water = Math.min(100, state.needs.water + item.effect.water);
+            if (item.effect.mood) state.needs.mood = Math.min(100, state.needs.mood + item.effect.mood);
+            
+            showToast(`Использовано: ${item.name}`, 'success');
+            toggleQuickInv(); // Close menu
+            saveGame();
+            updateUI();
+        }
+
+        // --- SHOP & MODALS ---
+        function toggleMenu() {
+            const el = document.getElementById('side-menu-overlay');
+            const menu = document.getElementById('side-menu');
+            el.classList.toggle('open');
+            menu.classList.toggle('open');
+        }
+
+        function openModal(type) {
+            toggleMenu(); // Close sidebar
+            document.getElementById('full-modal').classList.add('open');
+            const body = document.getElementById('modal-body');
+            const title = document.getElementById('modal-title');
+            
+            if (type === 'shop') {
+                title.textContent = 'Магазин и Сервис';
+                renderShop(body);
+            } else {
+                title.textContent = 'История';
+                renderHistory(body);
+            }
+        }
+
+        function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
+
+        function renderShop(container) {
+            container.innerHTML = '';
+            
+            // 1. Repair Section
+            let html = '<div class="shop-section"><h3>🛠 Сервис (Ремонт)</h3>';
+            ['bike', 'bag', 'phone', 'gear'].forEach(key => {
+                const item = ITEMS_DB[key];
+                const level = state.repairs[key] || 0;
+                const cost = item.baseCost + (level * 0.5);
+                const current = Math.floor(state.items[key]);
+                
+                html += `
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold"><i class="fa-solid ${item.icon}"></i> ${item.name}</div>
+                        <div style="font-size:12px; color:#666">Состояние: ${current}%</div>
+                    </div>
+                    <button class="shop-btn" onclick="buyRepair('${key}', ${cost})">Починить ${cost.toFixed(1)}</button>
+                </div>`;
+            });
+            html += '</div>';
+
+            // 2. Market Section
+            html += '<div class="shop-section"><h3>🎒 Супермаркет (Еда с собой)</h3>';
+            ['water', 'bar', 'energy_drink', 'coffee'].forEach(key => {
+                const item = ITEMS_DB[key];
+                const owned = state.inventory[key] || 0;
+                html += `
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold"><i class="fa-solid ${item.icon}"></i> ${item.name}</div>
+                        <div style="font-size:12px; color:#666">В рюкзаке: ${owned} шт.</div>
+                    </div>
+                    <button class="shop-btn buy" onclick="buyItem('${key}')">Купить ${item.cost.toFixed(1)}</button>
+                </div>`;
+            });
+            html += '</div>';
+            
+            container.innerHTML = html;
+        }
+
+        function buyRepair(key, cost) {
+            if (state.balance >= cost && state.items[key] < 100) {
+                state.balance -= cost;
+                state.items[key] = 100;
+                state.repairs[key] = (state.repairs[key] || 0) + 1;
+                showToast('Починили!', 'success');
+                saveGame(); updateUI(); renderShop(document.getElementById('modal-body'));
+            } else if (state.items[key] >= 100) {
+                showToast('Это и так новое');
+            } else {
+                showToast('Нет денег', 'warn');
+            }
+        }
+
+        function buyItem(key) {
+            const item = ITEMS_DB[key];
+            if (state.balance >= item.cost) {
+                state.balance -= item.cost;
+                state.inventory[key] = (state.inventory[key] || 0) + 1;
+                showToast(`Куплено: ${item.name}`, 'success');
+                saveGame(); updateUI(); renderShop(document.getElementById('modal-body'));
+            } else {
+                showToast('Не хватает денег', 'warn');
+            }
+        }
+
+        function renderHistory(container) {
+            if (!state.history.length) { container.innerHTML = 'Пусто'; return; }
+            container.innerHTML = state.history.slice().reverse().map(h => 
+                `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between">
+                    <b>${h.rest}</b> <span style="color:green">+${h.earn} PLN</span>
+                </div>`
+            ).join('');
+        }
+
+        // --- SLIDER UTILS ---
+        let isDragging = false, startX;
+        const sliderKnob = document.getElementById('slider-knob');
+        const sliderBox = document.getElementById('slider-box');
+
+        function setupSlider() {
+            sliderKnob.addEventListener('mousedown', startDrag);
+            sliderKnob.addEventListener('touchstart', startDrag);
+            
+            function startDrag(e) {
+                isDragging = true;
+                startX = (e.type==='mousedown') ? e.clientX : e.touches[0].clientX;
+                document.addEventListener('mousemove', onDrag);
+                document.addEventListener('touchmove', onDrag);
+                document.addEventListener('mouseup', stopDrag);
+                document.addEventListener('touchend', stopDrag);
+            }
+            function onDrag(e) {
+                if(!isDragging) return;
+                const cx = (e.type==='mousemove') ? e.clientX : e.touches[0].clientX;
+                let dx = cx - startX;
+                let max = sliderBox.offsetWidth - sliderKnob.offsetWidth - 8;
+                dx = Math.max(0, Math.min(dx, max));
+                sliderKnob.style.transform = `translateX(${dx}px)`;
+                document.getElementById('slider-fill').style.width = `${(dx/max)*100}%`;
+                if(dx >= max*0.9) { goOnline(); stopDrag(); }
+            }
+            function stopDrag() {
+                isDragging = false;
+                document.removeEventListener('mousemove', onDrag);
+                document.removeEventListener('touchmove', onDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                document.removeEventListener('touchend', stopDrag);
+                if(!state.isOnline) resetSlider();
+            }
+        }
+
+        function resetSlider() {
+            sliderKnob.style.transform = 'translateX(0)';
+            document.getElementById('slider-fill').style.width = '0%';
+        }
+
+        function goOnline() {
+            state.isOnline = true;
+            document.getElementById('offline-view').style.display = 'none';
+            document.getElementById('active-order-view').style.display = 'flex';
+            setTimeout(createOrder, 1000);
+        }
+
+        function createOrder() {
+            const r = restaurants[Math.floor(Math.random() * restaurants.length)];
+            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, max: 100 };
+            document.getElementById('rest-name').textContent = r.name;
+            document.getElementById('rest-icon').textContent = r.icon;
+            document.getElementById('status-label').textContent = 'Едем в ресторан';
+            setBtnState(false, 'ЖМИ ГАЗ (PEDAL)');
+            updateTrack(0);
+        }
+
+        function updateTrack(p) {
+            document.getElementById('track-fill').style.width = p + '%';
+            document.getElementById('track-icon').style.left = p + '%';
         }
 
         function resetGame() {
-            if(confirm('Точно сбросить весь прогресс?')) {
+            if(confirm('Сбросить весь прогресс?')) {
                 localStorage.removeItem(SAVE_KEY);
                 location.reload();
             }
         }
 
-        loadGame();
+        // Start
+        init();
     </script>
 </body>
 </html>
