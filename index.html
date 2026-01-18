@@ -38,9 +38,10 @@
             <h2 style="margin-bottom: 20px">Профиль</h2>
             <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--wolt-blue)"></i> Магазин / Инвентарь</div>
             <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
-            <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
+            <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство</div>
             <div class="menu-item" onclick="openModal('stats')"><i class="fa-solid fa-clock-rotate-left"></i> История</div>
-            <div class="menu-item" onclick="resetGame()" style="color:red; margin-top:auto"><i class="fa-solid fa-trash"></i> Сброс</div>
+            <div class="menu-item" onclick="window.location.href='admin.html'" style="margin-top:auto; color:#ccc; font-size:12px"><i class="fa-solid fa-user-secret"></i> Admin Login</div>
+            <div class="menu-item" onclick="resetGame()" style="color:red"><i class="fa-solid fa-trash"></i> Сброс</div>
         </div>
     </div>
 
@@ -55,7 +56,7 @@
     <div class="bottom-sheet">
         <div id="offline-view">
             <h3 style="margin:0">Варшава</h3>
-            <p style="color:#888; font-size:13px">Спрос: Высокий • Инфляция: Активна</p>
+            <p style="color:#888; font-size:13px">Спрос: Высокий • <span id="inflation-badge">Инфляция</span></p>
             <div class="slider-container" id="offline-slider-box">
                 <div class="slider-fill" id="offline-slider-fill"></div>
                 <div class="slider-text">СВАЙП ДЛЯ ОНЛАЙНА</div>
@@ -70,9 +71,9 @@
                     <h3 style="margin:0" id="rest-name">Поиск...</h3>
                     <div style="display:flex; justify-content:space-between; align-items:center">
                         <p style="margin:0; font-size:12px; color:#888" id="order-dest">Ожидание</p>
-                        <span id="delivery-timer" class="delivery-timer"></span>
+                        <span id="delivery-timer" style="font-size:11px; font-weight:bold; color:#666"></span>
                     </div>
-                    <div class="accept-timer-bg" id="accept-timer"><div class="accept-timer-fill" id="accept-timer-fill"></div></div>
+                    <div style="width:100%; height:6px; background:#eee; margin-top:8px; border-radius:3px; overflow:hidden; display:none" id="accept-timer"><div style="height:100%; background:#ff3d00; width:100%" id="accept-timer-fill"></div></div>
                 </div>
             </div>
 
@@ -98,17 +99,17 @@
             <div class="controls-row">
                 <div class="bag-btn" onclick="toggleQuickInv()">
                     <i class="fa-solid fa-bag-shopping"></i>
-                    <div class="bag-badge" id="bag-count">0</div>
+                    <div class="bag-badge" id="bag-count" style="display:none">0</div>
                 </div>
                 <button class="pedal-btn" id="pedal-btn">ЖМИ ГАЗ (PEDAL)</button>
             </div>
-            <div id="garnishment-info" style="font-size:11px; color:var(--accent-red); text-align:center; display:none">
-                Будет удержано 20% в счет долга
-            </div>
+            <div id="garnishment-info" style="font-size:11px; color:var(--accent-red); text-align:center; display:none">Будет удержано 20% в счет долга</div>
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="logic.js"></script>
+    <script src="database.js"></script> <script src="logic.js"></script>
 </body>
 </html>
