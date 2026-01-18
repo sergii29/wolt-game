@@ -3,59 +3,852 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wolt Courier Tycoon</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <title>Warsaw Courier Sim</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #1a1a1a;
+            --bg-panel: #202020;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent-blue: #00ccff;
+            --accent-green: #00e676;
+            --accent-orange: #ff9100;
+            --accent-red: #ff3d00;
+            --wolt-blue: #009de0;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            overflow: hidden;
+            user-select: none; /* Защита от выделения текста при кликах */
+        }
+
+        /* --- MAP --- */
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+            filter: brightness(0.8) contrast(1.2); /* Глубокая темная карта */
+        }
+
+        /* --- TOP UI --- */
+        .top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 1000;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            pointer-events: none; /* Пропускать клики сквозь градиент */
+        }
+
+        .menu-btn, .stats-btn {
+            background: white;
+            color: black;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .balance-display {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-align: center;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .balance-amount {
+            font-size: 18px;
+            font-weight: 800;
+            color: white;
+        }
+
+        .balance-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        /* --- EQUIPMENT STATUS BAR --- */
+        .equip-bar {
+            position: absolute;
+            top: 70px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            gap: 8px;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        .equip-item {
+            flex: 1;
+            background: rgba(0,0,0,0.6);
+            border-radius: 8px;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .equip-icon {
+            font-size: 12px;
+            margin-bottom: 2px;
+            color: #ccc;
+        }
+
+        .progress-mini {
+            width: 100%;
+            height: 3px;
+            background: #444;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-mini-fill {
+            height: 100%;
+            background: var(--accent-green);
+            transition: width 0.3s;
+        }
+
+        /* --- TIP BANNER --- */
+        #tip-banner {
+            position: absolute;
+            top: 130px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: rgba(0, 230, 118, 0.95);
+            color: #004d40;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 1001;
+            box-shadow: 0 5px 20px rgba(0,230,118,0.4);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #tip-banner.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* --- BOTTOM SHEET --- */
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            padding: 20px;
+            z-index: 1002;
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+            color: #333;
+        }
+
+        /* DEMAND INDICATOR */
+        .demand-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .demand-title {
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .demand-bars {
+            display: flex;
+            gap: 4px;
+            align-items: flex-end;
+            height: 20px;
+        }
+
+        .d-bar {
+            width: 6px;
+            background: #eee;
+            border-radius: 2px;
+        }
+        .d-bar:nth-child(1) { height: 10px; }
+        .d-bar:nth-child(2) { height: 15px; }
+        .d-bar:nth-child(3) { height: 20px; }
+
+        .demand-high .d-bar { background: var(--accent-green); }
+        .demand-med .d-bar:not(:nth-child(3)) { background: var(--accent-orange); }
+        .demand-low .d-bar:first-child { background: var(--accent-red); }
+
+        .demand-text {
+            font-size: 14px;
+            color: #666;
+            margin-left: 10px;
+        }
+
+        /* SLIDER TO ONLINE */
+        .slider-container {
+            position: relative;
+            width: 100%;
+            height: 60px;
+            background: #f0f0f0;
+            border-radius: 30px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        
+        .slider-text {
+            color: #999;
+            font-weight: 600;
+            z-index: 1;
+            letter-spacing: 0.5px;
+        }
+
+        .slider-knob {
+            position: absolute;
+            left: 4px;
+            top: 4px;
+            bottom: 4px;
+            width: 52px;
+            background: var(--wolt-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            cursor: grab;
+            transition: transform 0.1s;
+            z-index: 2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .slider-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 0%;
+            background: rgba(0, 157, 224, 0.2);
+            z-index: 0;
+        }
+
+        /* ACTIVE ORDER VIEW */
+        #active-order-view {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .order-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .rest-icon {
+            width: 50px;
+            height: 50px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .order-text h3 { margin: 0; font-size: 16px; }
+        .order-text p { margin: 4px 0 0; font-size: 12px; color: #888; }
+
+        /* PROGRESS TRACK */
+        .track-container {
+            position: relative;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .track-line {
+            position: absolute;
+            left: 0; right: 0; top: 50%;
+            height: 4px;
+            background: #eee;
+            transform: translateY(-50%);
+            z-index: 0;
+        }
+        
+        .track-fill {
+            position: absolute;
+            left: 0; top: 50%;
+            height: 4px;
+            width: 0%;
+            background: var(--wolt-blue);
+            transform: translateY(-50%);
+            z-index: 0;
+            transition: width 0.2s;
+        }
+
+        .track-icon {
+            position: absolute;
+            top: 50%;
+            left: 0%; /* Moves with JS */
+            transform: translate(-50%, -50%);
+            width: 32px;
+            height: 32px;
+            background: white;
+            border: 2px solid var(--wolt-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--wolt-blue);
+            z-index: 2;
+            transition: left 0.2s;
+            font-size: 14px;
+        }
+        
+        .track-point {
+            width: 10px; 
+            height: 10px; 
+            background: #ccc; 
+            border-radius: 50%; 
+            position: absolute; 
+            top: 50%; 
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+        .tp-start { left: 0; }
+        .tp-end { right: 0; }
+
+        /* PEDAL BUTTON */
+        .pedal-btn {
+            background: var(--wolt-blue);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 18px;
+            border-radius: 16px;
+            font-size: 18px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #007bb5;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .pedal-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 transparent;
+        }
+        .pedal-btn:disabled {
+            background: #ccc;
+            box-shadow: none;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .temp-status {
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            margin-top: -5px;
+        }
+        .temp-val { font-weight: bold; }
+        .temp-hot { color: var(--accent-red); }
+        .temp-cold { color: var(--wolt-blue); }
+
+        /* --- SIDE MENU (Simple overlay) --- */
+        #side-menu {
+            position: fixed;
+            top: 0; left: -280px;
+            width: 260px;
+            height: 100%;
+            background: #252525;
+            z-index: 2000;
+            transition: left 0.3s;
+            padding: 20px;
+            color: white;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+        }
+        #side-menu.open { left: 0; }
+        .menu-header { font-size: 24px; font-weight: bold; margin-bottom: 30px; }
+        .menu-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+        }
+        .menu-close {
+            position: absolute; right: 20px; top: 20px;
+            font-size: 24px; cursor: pointer;
+        }
+
+    </style>
 </head>
 <body>
-    <div class="notification" id="notif">Уведомление</div>
-    <div class="app-header">
-        <div>
-            <div class="earn-title">Баланс</div>
-            <div class="earn-val" id="money-ui">0.00 PLN</div>
+
+    <div id="map"></div>
+
+    <div class="top-bar">
+        <div class="menu-btn" onclick="toggleMenu()"><i class="fa-solid fa-bars"></i></div>
+        <div class="balance-display">
+            <div class="balance-amount" id="balance-val">0.00 PLN</div>
+            <div class="balance-label">Баланс</div>
         </div>
-        <div class="status-badge" id="status-badge">OFFLINE</div>
+        <div class="stats-btn"><i class="fa-solid fa-chart-simple"></i></div>
     </div>
-    <div class="map-view" id="map-bg">
-        <div class="radar-pulse"></div>
-        <div class="courier-marker" id="player-icon">🚲</div>
-        <div class="map-pin" id="pin-rest">🏪</div>
-        <div class="map-pin" id="pin-client">👤</div>
+
+    <div class="equip-bar">
+        <div class="equip-item">
+            <i class="fa-solid fa-bicycle equip-icon"></i>
+            <div class="progress-mini"><div class="progress-mini-fill" id="bar-bike" style="width: 100%"></div></div>
+        </div>
+        <div class="equip-item">
+            <i class="fa-solid fa-box-open equip-icon"></i>
+            <div class="progress-mini"><div class="progress-mini-fill" id="bar-bag" style="width: 100%"></div></div>
+        </div>
+        <div class="equip-item">
+            <i class="fa-solid fa-mobile-screen equip-icon"></i>
+            <div class="progress-mini"><div class="progress-mini-fill" id="bar-phone" style="width: 100%"></div></div>
+        </div>
+        <div class="equip-item">
+            <i class="fa-solid fa-shirt equip-icon"></i>
+            <div class="progress-mini"><div class="progress-mini-fill" id="bar-gear" style="width: 100%"></div></div>
+        </div>
+        <div class="equip-item">
+            <i class="fa-solid fa-bolt equip-icon" style="color: yellow"></i>
+            <div class="progress-mini"><div class="progress-mini-fill" id="bar-energy" style="width: 100%; background: yellow"></div></div>
+        </div>
+         <div class="equip-item">
+            <i class="fa-solid fa-droplet equip-icon" style="color: cyan"></i>
+            <div class="progress-mini"><div class="progress-mini-fill" id="bar-water" style="width: 100%; background: cyan"></div></div>
+        </div>
     </div>
+
+    <div id="tip-banner">
+        <i class="fa-solid fa-coins"></i>
+        <span id="tip-text">+2.50 PLN Чаевые!</span>
+    </div>
+
+    <div id="side-menu">
+        <div class="menu-close" onclick="toggleMenu()">&times;</div>
+        <div class="menu-header">Курьер</div>
+        <div class="menu-item" onclick="resetGame()">Сброс прогресса (Debug)</div>
+        <div class="menu-item">История заказов</div>
+        <div class="menu-item">Магазин / Ремонт</div>
+        <div class="menu-item">Настройки</div>
+    </div>
+
     <div class="bottom-sheet">
-        <div id="panel-start">
-            <div class="slider-container" onclick="toggleOnline()">
-                <div class="slider-text" id="slider-text">SWIPE TO ONLINE</div>
-                <div class="slider-knob">➜</div>
-            </div>
-            <div style="text-align:center; margin-top:15px; font-size:12px; color:#999;">
-                <span id="vehicle-name">Транспорт: Велосипед</span> • LVL <span id="lvl-ui">1</span>
-            </div>
-        </div>
-        <div id="panel-offer" class="order-panel">
-            <div class="rest-info">
-                <div>
-                    <div class="rest-name" id="offer-rest">...</div>
-                    <div class="rest-meta" id="offer-meta">...</div>
+        
+        <div id="offline-view">
+            <div class="demand-header">
+                <div style="display:flex; align-items:center">
+                    <div class="demand-title">Warsaw</div>
+                    <div class="demand-text" id="demand-text">Спрос: Высокий</div>
                 </div>
-                <div class="order-pay" id="offer-pay">0.00</div>
+                <div class="demand-bars demand-high" id="demand-indicator">
+                    <div class="d-bar"></div><div class="d-bar"></div><div class="d-bar"></div>
+                </div>
             </div>
-            <div style="font-size:12px; color:#777; margin-bottom:10px;">Включает бонус за спрос (Surge)</div>
-            <button class="btn-main" onclick="acceptOrder()">ПРИНЯТЬ ЗАКАЗ</button>
-            <button class="btn-main btn-secondary" style="color:var(--danger)" onclick="rejectOrder()">ОТКЛОНИТЬ</button>
+            <p style="color:#888; font-size:13px; margin-bottom:15px">Множитель заработка: <span id="demand-mult">x1.2</span></p>
+
+            <div class="slider-container" id="slider-box">
+                <div class="slider-fill" id="slider-fill"></div>
+                <div class="slider-text">СВАЙП ДЛЯ ОНЛАЙНА</div>
+                <div class="slider-knob" id="slider-knob"><i class="fa-solid fa-chevron-right"></i></div>
+            </div>
         </div>
-        <div id="panel-active" class="delivery-ui">
-            <h3 style="margin:0 0 10px 0; font-size:16px;" id="task-title">В пути...</h3>
-            <div class="info-row"><span>Прогресс</span><span id="dist-ui">0.0 km</span></div>
-            <div class="progress-bar"><div class="progress-fill" id="prog-bar"></div></div>
-            <div class="info-row"><span>Температура еды</span><span id="temp-ui">100%</span></div>
-            <div class="progress-bar"><div class="temp-bar-fill" id="temp-bar"></div></div>
-            <button class="btn-main" id="action-btn" onmousedown="holdGas()" onmouseup="releaseGas()" onmouseleave="releaseGas()" ontouchstart="holdGas()" ontouchend="releaseGas()">ЖМИ ГАЗ (HOLD)</button>
+
+        <div id="active-order-view">
+            <div class="order-info">
+                <div class="rest-icon" id="rest-icon">🍔</div>
+                <div class="order-text">
+                    <h3 id="rest-name">McDonald's</h3>
+                    <p id="order-dest">Доставка на Mokotów • 2.4 km</p>
+                </div>
+            </div>
+
+            <div class="track-container">
+                <div class="track-line"></div>
+                <div class="track-point tp-start"></div>
+                <div class="track-point tp-end"></div>
+                <div class="track-fill" id="track-fill"></div>
+                <div class="track-icon" id="track-icon"><i class="fa-solid fa-bicycle"></i></div>
+            </div>
+            
+            <div class="temp-status">
+                <span>Еда: <span id="temp-val" class="temp-hot">100%</span></span>
+                <span id="status-label">Едем в ресторан</span>
+            </div>
+
+            <button class="pedal-btn" id="pedal-btn">ЖМИ ГАЗ (PEDAL)</button>
         </div>
+
     </div>
-    <script src="database.js"></script>
-    <script src="logic.js"></script>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // --- GAME STATE ---
+        const SAVE_KEY = 'WARSZAWA_FOREVER';
+        let state = {
+            balance: 0,
+            isOnline: false,
+            items: { bike: 100, bag: 100, phone: 100, gear: 100 },
+            needs: { energy: 100, water: 100 },
+            isNew: true,
+            totalOrders: 0
+        };
+
+        // --- RESTAURANTS DATA ---
+        const restaurants = [
+            { name: "McDonald's", icon: "🍔", lat: 52.2297, lng: 21.0122 },
+            { name: "KFC", icon: "🍗", lat: 52.2350, lng: 21.0050 },
+            { name: "Pasibus", icon: "🍔", lat: 52.2310, lng: 21.0180 },
+            { name: "Kebab King", icon: "🌯", lat: 52.2400, lng: 21.0200 },
+            { name: "Vegan Ramen Shop", icon: "🍜", lat: 52.2100, lng: 21.0300 },
+            { name: "Pizza Hut", icon: "🍕", lat: 52.2250, lng: 21.0100 },
+            { name: "Manekin", icon: "🥞", lat: 52.2330, lng: 21.0150 },
+            { name: "Barn Burger", icon: "🍖", lat: 52.2340, lng: 21.0130 }
+        ];
+
+        // --- MAP SETUP ---
+        const map = L.map('map', {
+            zoomControl: false,
+            attributionControl: false
+        }).setView([52.2297, 21.0122], 13); // Warsaw center
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        let courierMarker = L.marker([52.2297, 21.0122], {
+            icon: L.divIcon({
+                className: 'courier-icon',
+                html: '<div style="background:#009de0; width:15px; height:15px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px #009de0;"></div>',
+                iconSize: [20, 20]
+            })
+        }).addTo(map);
+
+        // --- VARIABLES ---
+        let currentOrder = null;
+        let demandLevel = 2; // 0=Low, 1=Med, 2=High
+        let demandTimer = null;
+        
+        // --- INITIALIZATION ---
+        function loadGame() {
+            const saved = localStorage.getItem(SAVE_KEY);
+            if (saved) {
+                state = JSON.parse(saved);
+            } else {
+                // First time bonus
+                state.isNew = false;
+                state.items = { bike: 100, bag: 100, phone: 100, gear: 100 };
+            }
+            updateUI();
+            startDemandCycle();
+        }
+
+        function saveGame() {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+        }
+
+        function updateUI() {
+            document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN';
+            
+            // Bars
+            document.getElementById('bar-bike').style.width = state.items.bike + '%';
+            document.getElementById('bar-bag').style.width = state.items.bag + '%';
+            document.getElementById('bar-phone').style.width = state.items.phone + '%';
+            document.getElementById('bar-gear').style.width = state.items.gear + '%';
+            document.getElementById('bar-energy').style.width = state.needs.energy + '%';
+            document.getElementById('bar-water').style.width = state.needs.water + '%';
+        }
+
+        // --- SLIDER LOGIC ---
+        const sliderKnob = document.getElementById('slider-knob');
+        const sliderBox = document.getElementById('slider-box');
+        const sliderFill = document.getElementById('slider-fill');
+        let isDragging = false;
+        let startX, currentX;
+
+        sliderKnob.addEventListener('mousedown', startDrag);
+        sliderKnob.addEventListener('touchstart', startDrag);
+
+        function startDrag(e) {
+            if (state.isOnline) return;
+            isDragging = true;
+            startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('touchmove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchend', stopDrag);
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+            const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX;
+            let moveX = clientX - startX;
+            let maxMove = sliderBox.offsetWidth - sliderKnob.offsetWidth - 8;
+            
+            if (moveX < 0) moveX = 0;
+            if (moveX > maxMove) moveX = maxMove;
+
+            sliderKnob.style.transform = `translateX(${moveX}px)`;
+            sliderFill.style.width = `${(moveX / maxMove) * 100}%`;
+
+            if (moveX >= maxMove * 0.95) {
+                goOnline();
+                stopDrag();
+            }
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('touchmove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+            document.removeEventListener('touchend', stopDrag);
+            
+            if (!state.isOnline) {
+                // Reset slider
+                sliderKnob.style.transform = 'translateX(0px)';
+                sliderFill.style.width = '0%';
+            }
+        }
+
+        function goOnline() {
+            state.isOnline = true;
+            document.getElementById('offline-view').style.display = 'none';
+            document.getElementById('active-order-view').style.display = 'flex';
+            document.querySelector('.slider-text').textContent = 'В ПОИСКЕ...';
+            startJobLoop();
+        }
+
+        // --- JOB LOGIC ---
+        function startJobLoop() {
+            // Find order
+            setTimeout(() => {
+                createOrder();
+            }, 1500);
+        }
+
+        function createOrder() {
+            const rest = restaurants[Math.floor(Math.random() * restaurants.length)];
+            const dist = (1.5 + Math.random() * 3).toFixed(1);
+            
+            currentOrder = {
+                rest: rest,
+                dist: dist,
+                progress: 0,
+                stage: 0, // 0: To Rest, 1: Wait, 2: To Client
+                foodTemp: 100,
+                maxProgress: 100
+            };
+
+            // UI Setup
+            document.getElementById('rest-name').textContent = rest.name;
+            document.getElementById('rest-icon').textContent = rest.icon;
+            document.getElementById('order-dest').textContent = `Забрать: ${dist} km`;
+            document.getElementById('status-label').textContent = 'Едем в ресторан';
+            document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
+            document.getElementById('pedal-btn').disabled = false;
+            
+            updateTrack(0);
+            
+            // Map Line (Simulated)
+            const courierPos = courierMarker.getLatLng();
+            const restPos = [rest.lat, rest.lng];
+            // Simple map fly
+            map.flyTo(restPos, 14, { duration: 2 });
+        }
+
+        // --- PEDAL BUTTON ---
+        const pedalBtn = document.getElementById('pedal-btn');
+        pedalBtn.addEventListener('click', () => {
+            if (!currentOrder) return;
+
+            // Consume stats
+            state.needs.energy -= 0.5;
+            state.needs.water -= 0.3;
+            state.items.bike -= 0.1;
+
+            if (state.needs.energy <= 0 || state.needs.water <= 0) {
+                alert("Нет сил! Выпейте воды или съешьте батончик.");
+                return; // Block action
+            }
+
+            // Progress Logic
+            let step = 10; // How much % per click
+            currentOrder.progress += step;
+
+            // Temp Decay
+            currentOrder.foodTemp -= 0.2;
+            updateTempUI();
+
+            if (currentOrder.progress >= 100) {
+                nextStage();
+            } else {
+                updateTrack(currentOrder.progress);
+            }
+            
+            saveGame();
+            updateUI();
+        });
+
+        function updateTrack(pct) {
+            document.getElementById('track-fill').style.width = pct + '%';
+            document.getElementById('track-icon').style.left = pct + '%';
+        }
+
+        function updateTempUI() {
+            const el = document.getElementById('temp-val');
+            el.textContent = Math.floor(currentOrder.foodTemp) + '%';
+            if (currentOrder.foodTemp < 50) {
+                el.className = 'temp-val temp-cold';
+                el.textContent += ' (Остыла)';
+            } else {
+                el.className = 'temp-val temp-hot';
+            }
+        }
+
+        function nextStage() {
+            currentOrder.stage++;
+            currentOrder.progress = 0;
+            updateTrack(0);
+
+            if (currentOrder.stage === 1) {
+                // Waiting for food
+                document.getElementById('status-label').textContent = 'Ожидание заказа...';
+                document.getElementById('pedal-btn').textContent = 'ЖДЕМ...';
+                document.getElementById('pedal-btn').disabled = true;
+                
+                setTimeout(() => {
+                    document.getElementById('status-label').textContent = 'Везем клиенту!';
+                    document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
+                    document.getElementById('pedal-btn').disabled = false;
+                    document.getElementById('order-dest').textContent = 'К клиенту: 2.1 km';
+                    // Move stage
+                    currentOrder.stage = 2; 
+                }, 2000); // 2 sec wait simulation
+
+            } else if (currentOrder.stage === 3) {
+                // Finish
+                completeOrder();
+            }
+        }
+
+        function completeOrder() {
+            // Calc payout
+            let basePay = 10 + (Math.random() * 5);
+            let multiplier = (demandLevel === 2) ? 1.5 : (demandLevel === 1 ? 1.0 : 0.8);
+            let total = basePay * multiplier;
+
+            // Tips logic
+            let tip = 0;
+            if (currentOrder.foodTemp > 70) {
+                if (Math.random() > 0.3) { // 70% chance of tip
+                    tip = 2 + Math.random() * 5;
+                    showTip(tip);
+                }
+            }
+
+            state.balance += (total + tip);
+            state.items.bag -= 0.5; // Bag wear
+            state.totalOrders++;
+
+            // Reset UI
+            alert(`Заказ доставлен!\nЗаработок: ${total.toFixed(2)} PLN\nТемпература: ${Math.floor(currentOrder.foodTemp)}%`);
+            
+            // Go back to searching or offline? 
+            // For now, loop back to search
+            document.getElementById('status-label').textContent = 'Поиск заказа...';
+            document.getElementById('pedal-btn').disabled = true;
+            currentOrder = null;
+            saveGame();
+            updateUI();
+            
+            setTimeout(createOrder, 2000);
+        }
+
+        function showTip(amount) {
+            const banner = document.getElementById('tip-banner');
+            document.getElementById('tip-text').textContent = `+${amount.toFixed(2)} PLN Чаевые!`;
+            banner.classList.add('show');
+            setTimeout(() => {
+                banner.classList.remove('show');
+            }, 3000);
+        }
+
+        // --- EXTRAS ---
+        function toggleMenu() {
+            document.getElementById('side-menu').classList.toggle('open');
+        }
+
+        function startDemandCycle() {
+            // Randomly change demand every 30 seconds
+            setInterval(() => {
+                demandLevel = Math.floor(Math.random() * 3);
+                const indicator = document.getElementById('demand-indicator');
+                const text = document.getElementById('demand-text');
+                const mult = document.getElementById('demand-mult');
+
+                indicator.className = 'demand-bars';
+                if (demandLevel === 2) {
+                    indicator.classList.add('demand-high');
+                    text.textContent = 'Спрос: Высокий';
+                    mult.textContent = 'x1.5';
+                } else if (demandLevel === 1) {
+                    indicator.classList.add('demand-med');
+                    text.textContent = 'Спрос: Средний';
+                    mult.textContent = 'x1.0';
+                } else {
+                    indicator.classList.add('demand-low');
+                    text.textContent = 'Спрос: Низкий';
+                    mult.textContent = 'x0.8';
+                }
+            }, 30000);
+        }
+
+        function resetGame() {
+            localStorage.removeItem(SAVE_KEY);
+            location.reload();
+        }
+
+        // Start
+        loadGame();
+
+    </script>
 </body>
 </html>
