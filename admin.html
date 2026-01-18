@@ -6,16 +6,17 @@
     <title>Wolt Admin</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; padding: 20px; }
+        body { background: #121212; color: white; font-family: sans-serif; padding: 20px; overflow-y: auto; }
         .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
         h2 { color: #00ccff; margin-top: 0; }
         .row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
-        input { background: #333; border: 1px solid #555; color: white; padding: 5px; border-radius: 5px; width: 80px; text-align: center; }
-        button { padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; color: white; }
+        input { background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 5px; width: 100px; text-align: center; }
+        button { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; color: white; }
         .btn-save { background: #00ccff; width: 100%; margin-top: 10px; }
-        .btn-edit { background: #009de0; } .btn-ban { background: #ff3d00; } .btn-reset { background: #555; }
-        .user-item { background: #252525; padding: 10px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #555; }
-        .user-item.online { border-left-color: #00e676; }
+        .user-item { background: #252525; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #555; }
+        .user-item.online { border-left-color: #00e676; background: rgba(0, 230, 118, 0.05); }
+        .btn-mini { font-size: 12px; padding: 5px 10px; margin-left: 5px; }
+        .btn-blue { background: #009de0; } .btn-green { background: #00e676; color: #000; } .btn-red { background: #ff3d00; }
     </style>
 </head>
 <body>
@@ -32,25 +33,15 @@
     </div>
 
     <div class="card">
-        <h2>👥 Игроки</h2>
+        <h2>👥 Игроки (<span id="online-cnt">0</span> online)</h2>
         <div id="list">Загрузка...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script>
-        const firebaseConfig = {
-          apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
-          authDomain: "warszawa-courier.firebaseapp.com",
-          databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
-          projectId: "warszawa-courier",
-          storageBucket: "warszawa-courier.firebasestorage.app",
-          messagingSenderId: "295860613508",
-          appId: "1:295860613508:web:86fe8364377d6875612dd1",
-          measurementId: "G-TGSCHBVLX2"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const firebaseConfig = { apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk", authDomain: "warszawa-courier.firebaseapp.com", databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app", projectId: "warszawa-courier", storageBucket: "warszawa-courier.firebasestorage.app", messagingSenderId: "295860613508", appId: "1:295860613508:web:86fe8364377d6875612dd1", measurementId: "G-TGSCHBVLX2" };
+        firebase.initializeApp(firebaseConfig); const db = firebase.database();
 
         db.ref('config').on('value', s => {
             const c = s.val() || {};
@@ -74,32 +65,30 @@
 
         db.ref('users').on('value', s => {
             const list = document.getElementById('list'); list.innerHTML = '';
+            let on = 0;
             s.forEach(c => {
                 const u = c.val(); const uid = c.key;
                 const online = (Date.now() - u.lastActive) < 60000;
+                if(online) on++;
                 list.innerHTML += `
                     <div class="user-item ${online?'online':''}">
                         <div class="row"><b>${u.name}</b> <small>${uid}</small></div>
                         <div class="row">💰 ${u.balance.toFixed(2)} | 🏦 ${u.debt.toFixed(0)}</div>
-                        <div class="row" style="justify-content:flex-end; gap:5px">
-                            <button class="btn-edit" onclick="setBal('${uid}')">$</button>
-                            <button class="btn-reset" onclick="reset('${uid}')">♻️</button>
-                            <button class="btn-ban" onclick="ban('${uid}', ${!u.isBanned})">${u.isBanned?'UNBAN':'BAN'}</button>
+                        <div class="row" style="justify-content:flex-end">
+                            <button class="btn-mini btn-blue" onclick="setBal('${uid}')">$</button>
+                            <button class="btn-mini btn-green" onclick="heal('${uid}')">🚑</button>
+                            <button class="btn-mini btn-green" onclick="fix('${uid}')">🔧</button>
+                            <button class="btn-mini btn-red" onclick="ban('${uid}', ${!u.isBanned})">${u.isBanned?'UNBAN':'BAN'}</button>
                         </div>
                     </div>`;
             });
+            document.getElementById('online-cnt').textContent = on;
         });
 
-        function setBal(uid) {
-            let v = prompt("Новый баланс:");
-            if(v) db.ref('users/'+uid).update({balance: parseFloat(v), adminEdit: true});
-        }
-        function reset(uid) {
-            if(confirm("Сбросить?")) db.ref('users/'+uid).update({balance:0, debt:0, items:{bike:100,bag:100,phone:100,gear:100}, repairs:{bike:0,bag:0,phone:0,gear:0}, adminEdit: true});
-        }
-        function ban(uid, b) {
-            if(confirm(b?"Забанить?":"Разбанить?")) db.ref('users/'+uid).update({isBanned: b});
-        }
+        function setBal(uid) { let v = prompt("Новый баланс:"); if(v) db.ref('users/'+uid).update({balance: parseFloat(v), adminEdit: true}); }
+        function heal(uid) { db.ref('users/'+uid+'/needs').set({energy:100,water:100,mood:100}); db.ref('users/'+uid+'/inventory').transaction(i=>{if(!i)i={water:0,bar:0,energy_drink:0,coffee:0}; i.water+=5; i.bar+=5; return i;}); }
+        function fix(uid) { db.ref('users/'+uid+'/items').set({bike:100,bag:100,phone:100,gear:100}); }
+        function ban(uid, b) { if(confirm(b?"Забанить?":"Разбанить?")) db.ref('users/'+uid).update({isBanned: b}); }
     </script>
 </body>
 </html>
