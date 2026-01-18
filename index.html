@@ -558,11 +558,29 @@
             const inflationMult = 1 + (totalRepairs * 0.05);
             
             let pay = (12 + (Math.random() * 6)) * inflationMult;
-            if (state.needs.mood > 80 && Math.random() > 0.5) { pay += 5 * inflationMult; showToast('Позитив! +Чаевые', 'success'); }
+            let tip = 0;
+
+            // --- TIPPING LOGIC ---
+            if (currentOrder.foodTemp > 60) {
+                if (Math.random() > 0.5) tip += (2 + Math.random() * 3) * inflationMult;
+            }
+            if (state.needs.mood > 80 && currentOrder.foodTemp > 40) {
+                if (Math.random() > 0.3) tip += 3 * inflationMult;
+            }
+
+            if (tip > 0) {
+                pay += tip;
+                let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) 
+                    ? `🔥 Быстро и весело! +${tip.toFixed(2)} чай!` 
+                    : `👍 Клиент доволен! +${tip.toFixed(2)} чай`;
+                showToast(msg, 'success');
+            } else if (currentOrder.foodTemp < 50) {
+                showToast('Еда остыла... Без чаевых.', 'warn');
+            }
 
             // Apply wear to Bag and Gear on completion
-            state.items.bag -= 1.0; 
-            state.items.gear -= 0.5;
+            state.items.bag -= 1.5; 
+            state.items.gear -= 0.8;
 
             if (state.debtOverdue && state.debt > 0) {
                 let penalty = pay * 0.20;
@@ -574,7 +592,9 @@
             
             state.balance += pay;
             state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
-            showToast(`Заказ: +${pay.toFixed(2)} PLN`, 'success');
+            
+            // Base pay toast after delay
+            setTimeout(() => { showToast(`Заказ: +${pay.toFixed(2)} PLN`, 'success'); }, 500);
             
             if (state.scheduledOffline) { goOffline(); } else { startSearching(); }
             saveGame(); updateUI();
@@ -767,7 +787,6 @@
         function renderDeflation(c) {
             const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflation = 1 + (levelSum * 0.1);
-            
             const cost1 = 2700 * inflation;
             const cost2 = 5000 * inflation;
 
@@ -889,4 +908,3 @@
     </script>
 </body>
 </html>
-
