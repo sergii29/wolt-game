@@ -194,9 +194,10 @@
         /* GOVT BTN */
         .govt-btn { background: #37474f; color: white; border-color: #37474f; }
         
-        /* ACCEPT TIMER BAR */
+        /* TIMERS UI */
         .accept-timer-bg { width: 100%; height: 4px; background: #eee; margin-top: 5px; border-radius: 2px; overflow: hidden; display: none; }
         .accept-timer-fill { height: 100%; background: var(--accent-orange); width: 100%; transition: width 1s linear; }
+        .delivery-timer { font-size: 11px; color: #666; margin-top: 2px; font-weight: bold; }
 
     </style>
 </head>
@@ -260,7 +261,10 @@
                 <div style="font-size:24px; width:45px; height:45px; background:#f5f5f5; border-radius:10px; display:flex; align-items:center; justify-content:center" id="rest-icon">🍔</div>
                 <div style="flex:1">
                     <h3 style="margin:0" id="rest-name">Поиск...</h3>
-                    <p style="margin:0; font-size:12px; color:#888" id="order-dest">Ожидание</p>
+                    <div style="display:flex; justify-content:space-between; align-items:center">
+                        <p style="margin:0; font-size:12px; color:#888" id="order-dest">Ожидание</p>
+                        <span id="delivery-timer" class="delivery-timer"></span>
+                    </div>
                     <div class="accept-timer-bg" id="accept-timer"><div class="accept-timer-fill" id="accept-timer-fill"></div></div>
                 </div>
             </div>
@@ -331,6 +335,7 @@
 
         let currentOrder = null;
         let acceptTimeout = null;
+        let orderInterval = null;
         let map;
 
         function init() {
@@ -364,7 +369,6 @@
 
         function updateUI() {
             document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN';
-            
             ['bike','bag','phone','gear'].forEach(k => updateBar(`bar-${k}`, state.items[k]));
             ['energy','water','mood'].forEach(k => updateBar(`bar-${k}`, state.needs[k]));
             
@@ -387,15 +391,64 @@
             setTimeout(() => t.className = 'game-toast', 3000);
         }
 
+        // --- ORDER LOOP (PHYSICS & TIME) ---
+        function startOrderLoop() {
+            if (orderInterval) clearInterval(orderInterval);
+            orderInterval = setInterval(() => {
+                if (!currentOrder || !currentOrder.accepted) return;
+
+                // 1. Delivery Timer
+                currentOrder.timeLeft--;
+                document.getElementById('delivery-timer').textContent = `⏱ ${currentOrder.timeLeft}с`;
+                
+                if (currentOrder.timeLeft <= 0) {
+                    failOrder("time");
+                    return;
+                }
+
+                // 2. Physics: Cooling
+                // Base 0.5 per sec. Broken bag adds multiplier up to 2x.
+                let decay = 0.5 * (1 + ((100 - state.items.bag) / 100));
+                currentOrder.foodTemp -= decay;
+                
+                // Temp Warning
+                if (currentOrder.foodTemp < 50 && !currentOrder.tempWarned) {
+                    showToast('❄️ Еда остывает! Поторопись!', 'warn');
+                    currentOrder.tempWarned = true;
+                }
+                
+                document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%';
+
+                if (currentOrder.foodTemp <= 0) {
+                    failOrder("cold");
+                    return;
+                }
+
+            }, 1000); // Ticks every second
+        }
+
+        function stopOrderLoop() {
+            if (orderInterval) clearInterval(orderInterval);
+            orderInterval = null;
+            document.getElementById('delivery-timer').textContent = '';
+        }
+
+        function failOrder(reason) {
+            stopOrderLoop();
+            let msg = reason === "time" ? "⏰ Время вышло!" : "❄️ Еда испорчена!";
+            showToast(`${msg} Штраф -5.00 PLN`, 'warn');
+            state.balance -= 5.00;
+            currentOrder = null;
+            saveGame(); updateUI();
+            startSearching();
+        }
+
         // --- GAMEPLAY ---
         function pedal() {
             if (!currentOrder) return;
             
-            // Accept logic: first click accepts
-            if (!currentOrder.accepted) {
-                acceptOrder();
-                return;
-            }
+            // First click accepts order
+            if (!currentOrder.accepted) { acceptOrder(); return; }
 
             let fatigue = Math.max(0.3, state.needs.energy / 100);
             
@@ -405,29 +458,18 @@
                 return;
             }
 
-            // Consuming much less now
             state.needs.energy -= 0.15; 
             state.needs.water -= 0.10;
             state.needs.mood -= 0.05;
             state.items.bike -= 0.05;
             
             currentOrder.progress += (5 * fatigue);
+            // NOTE: Temperature decrease moved to orderLoop for realism!
             
-            // Temperature logic based on bag health
-            let bagFactor = 1 + ((100 - state.items.bag) / 100); // Broken bag = 2x cooling
-            currentOrder.foodTemp -= (0.15 * bagFactor);
-            
-            // Temp Warning
-            if (currentOrder.foodTemp < 50 && !currentOrder.tempWarned) {
-                showToast('❄️ Еда остывает! Поторопись!', 'warn');
-                currentOrder.tempWarned = true;
-            }
-
             updateTrack(currentOrder.progress);
-            document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%';
             
-            // Random Events (10% chance)
-            if (Math.random() < 0.1) triggerRandomEvent();
+            // Random Events (10%)
+            if (Math.random() < 0.1 && currentOrder.stage === 2) triggerRandomEvent();
 
             if (currentOrder.progress >= 100) nextStage();
             saveGame(); updateUI();
@@ -436,21 +478,21 @@
         function triggerRandomEvent() {
             const btn = document.getElementById('pedal-btn');
             const events = [
-                { text: "🚧 ПРОБКА! Стоим...", time: 2000 },
-                { text: "🚦 Красный свет...", time: 1500 },
-                { text: "🚕 Объезд аварии...", time: 2500 }
+                { text: "🚧 ПРОБКА!", time: 3000 },
+                { text: "🚦 СВЕТОФОР", time: 2000 },
+                { text: "🚕 ОБЪЕЗД", time: 4000 }
             ];
             const ev = events[Math.floor(Math.random()*events.length)];
             
             btn.disabled = true;
             btn.classList.add('blocked');
             btn.textContent = ev.text;
+            showToast('Задержка! Еда остывает!', 'warn');
             
-            // Extra cooling during traffic
-            currentOrder.foodTemp -= 2; 
+            // Food cools automatically via orderLoop while player waits!
 
             setTimeout(() => {
-                if (currentOrder) { // check if not finished
+                if (currentOrder) { 
                     btn.disabled = false;
                     btn.classList.remove('blocked');
                     btn.textContent = 'ЖМИ ГАЗ (PEDAL)';
@@ -463,11 +505,11 @@
             clearTimeout(acceptTimeout);
             document.getElementById('accept-timer').style.display = 'none';
             document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
-            document.getElementById('pedal-btn').classList.remove('blocked'); // Just in case
+            startOrderLoop(); // Start physics
         }
 
         function missOrder() {
-            state.isSearching = true; // Loop back
+            state.isSearching = true; 
             currentOrder = null;
             state.balance -= 0.10; // Fixed penalty
             showToast('Заказ упущен! Штраф -0.10 PLN', 'warn');
@@ -495,6 +537,7 @@
         }
 
         function completeOrder() {
+            stopOrderLoop();
             const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflationMult = 1 + (totalRepairs * 0.05);
             
@@ -518,6 +561,7 @@
         }
 
         function startSearching() {
+            stopOrderLoop();
             state.isSearching = true;
             document.getElementById('active-order-view').style.display = 'flex';
             document.getElementById('rest-name').textContent = 'Поиск...';
@@ -525,6 +569,7 @@
             document.getElementById('status-label').textContent = 'Ищем заказ...';
             document.getElementById('order-dest').textContent = 'Ожидание...';
             document.getElementById('accept-timer').style.display = 'none';
+            document.getElementById('delivery-timer').textContent = '';
             
             resetSlider('online');
             const box = document.getElementById('online-slider-box');
@@ -542,7 +587,9 @@
         function createOrder() {
             state.isSearching = false;
             const r = restaurants[Math.floor(Math.random() * restaurants.length)];
-            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false };
+            // Limit 60 seconds for delivery
+            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: 60, tempWarned: false };
+            
             document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
             document.getElementById('rest-icon').textContent = r.icon;
             document.getElementById('status-label').textContent = '🔥 ПРИМИ ЗАКАЗ! 🔥';
@@ -555,11 +602,10 @@
             const fill = document.getElementById('accept-timer-fill');
             bar.style.display = 'block';
             fill.style.width = '100%';
-            // Force redraw for animation
             void fill.offsetWidth;
             fill.style.width = '0%'; 
 
-            acceptTimeout = setTimeout(missOrder, 15000); // 15 sec to accept
+            acceptTimeout = setTimeout(missOrder, 15000); 
 
             resetSlider('online');
             const box = document.getElementById('online-slider-box');
@@ -572,6 +618,7 @@
             state.isOnline = false;
             state.isSearching = false;
             state.scheduledOffline = false;
+            stopOrderLoop();
             if (acceptTimeout) clearTimeout(acceptTimeout);
             document.getElementById('active-order-view').style.display = 'none';
             document.getElementById('offline-view').style.display = 'block';
@@ -701,7 +748,6 @@
         function renderDeflation(c) {
             const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflation = 1 + (levelSum * 0.1);
-            
             const cost1 = 2700 * inflation;
             const cost2 = 5000 * inflation;
 
@@ -709,11 +755,8 @@
                 <div style="text-align:center; padding:20px 0;">
                     <i class="fa-solid fa-scale-unbalanced-flip" style="font-size:40px; color:#90a4ae"></i>
                     <h2>Инфляция: ${((inflation-1)*100).toFixed(0)}%</h2>
-                    <p style="color:#666; font-size:14px">
-                        Снижение инфляции уменьшает цены в магазинах, но стоит больших денег.
-                    </p>
+                    <p style="color:#666; font-size:14px">Снижение инфляции уменьшает цены в магазинах, но стоит больших денег.</p>
                 </div>
-
                 <div class="shop-card">
                     <div>
                         <div style="font-weight:bold">Откат (-1 уровень)</div>
@@ -721,7 +764,6 @@
                     </div>
                     <button class="shop-btn govt-btn" onclick="buyDeflation(1, ${cost1})">-${cost1.toFixed(0)}</button>
                 </div>
-
                 <div class="shop-card">
                     <div>
                         <div style="font-weight:bold">Сильный откат (-2 ур.)</div>
@@ -817,3 +859,4 @@
     </script>
 </body>
 </html>
+
