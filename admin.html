@@ -3,38 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wolt Admin</title>
+    <title>Wolt Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; padding: 20px; overflow-y: auto; }
-        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+        body { background: #121212; color: #fff; font-family: sans-serif; padding: 20px; }
+        .box { background: #1e1e1e; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
         h2 { color: #00ccff; margin-top: 0; }
         .row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
         input { background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 5px; width: 100px; text-align: center; }
-        button { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; color: white; }
-        .btn-save { background: #00ccff; width: 100%; margin-top: 10px; }
-        .user-item { background: #252525; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #555; }
-        .user-item.online { border-left-color: #00e676; background: rgba(0, 230, 118, 0.05); }
-        .btn-mini { font-size: 12px; padding: 5px 10px; margin-left: 5px; }
-        .btn-blue { background: #009de0; } .btn-green { background: #00e676; color: #000; } .btn-red { background: #ff3d00; }
+        button { padding: 10px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; color: white; }
+        .btn-main { background: #00ccff; width: 100%; margin-top: 10px; }
+        .user-card { background: #252525; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid #555; cursor: pointer; }
+        .user-card.online { border-left-color: #00e676; }
+        
+        /* Модалка */
+        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #222; padding: 20px; border: 1px solid #555; border-radius: 10px; display: none; z-index: 1000; width: 300px; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; z-index: 999; }
+        .modal-btn { width: 100%; margin-bottom: 10px; background: #444; }
+        .btn-green { background: #00e676; color: black; }
+        .btn-red { background: #ff3d00; }
     </style>
 </head>
 <body>
-    <h1>🛡️ Admin Panel v2.0</h1>
+    <h1>🛠️ Админка</h1>
 
-    <div class="card">
-        <h2>🌍 Экономика</h2>
-        <div class="row"><span>База (PLN)</span> <input id="basePay" type="number"></div>
-        <div class="row"><span>Инфляция</span> <input id="infRate" type="number" step="0.01"></div>
-        <div class="row"><span>Множитель Цен</span> <input id="priceMult" type="number" step="0.1"></div>
-        <div class="row"><span>Шанс Пробки</span> <input id="chance" type="number" step="0.05"></div>
-        <div class="row"><span>Расход Энергии</span> <input id="energy" type="number" step="0.05"></div>
-        <button class="btn-save" onclick="saveConf()">СОХРАНИТЬ</button>
+    <div class="box">
+        <h2>🌍 Настройки Игры</h2>
+        <div class="row"><span>Зарплата (База)</span> <input id="basePay" type="number"></div>
+        <div class="row"><span>Инфляция (0.05)</span> <input id="infRate" type="number" step="0.01"></div>
+        <div class="row"><span>Цены в магазине (x)</span> <input id="priceMult" type="number" step="0.1"></div>
+        <div class="row"><span>Скорость курьера (x)</span> <input id="speedMult" type="number" step="0.1"></div>
+        <button class="btn-main" onclick="save()">СОХРАНИТЬ ВСЕМ</button>
     </div>
 
-    <div class="card">
-        <h2>👥 Игроки (<span id="online-cnt">0</span> online)</h2>
+    <div class="box">
+        <h2>👥 Игроки</h2>
         <div id="list">Загрузка...</div>
+    </div>
+
+    <div class="overlay" id="overlay" onclick="closeM()"></div>
+    <div class="modal" id="modal">
+        <h3 id="m-name">Игрок</h3>
+        <button class="modal-btn btn-green" onclick="act('money')">💰 Дать/Забрать Денег</button>
+        <button class="modal-btn" onclick="act('repair')">🔧 Починить Всё</button>
+        <button class="modal-btn" onclick="act('gift')">🎁 Дать Еды</button>
+        <button class="modal-btn btn-red" onclick="act('reset')">💀 Обнулить</button>
+        <button class="modal-btn btn-red" onclick="act('ban')">⛔ Бан/Разбан</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -43,52 +57,64 @@
         const firebaseConfig = { apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk", authDomain: "warszawa-courier.firebaseapp.com", databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app", projectId: "warszawa-courier", storageBucket: "warszawa-courier.firebasestorage.app", messagingSenderId: "295860613508", appId: "1:295860613508:web:86fe8364377d6875612dd1", measurementId: "G-TGSCHBVLX2" };
         firebase.initializeApp(firebaseConfig); const db = firebase.database();
 
+        let currentUid = null;
+
         db.ref('config').on('value', s => {
             const c = s.val() || {};
             document.getElementById('basePay').value = c.basePay || 12;
             document.getElementById('infRate').value = c.inflationRate || 0.05;
             document.getElementById('priceMult').value = c.priceMult || 1.0;
-            document.getElementById('chance').value = c.eventChance || 0.1;
-            document.getElementById('energy').value = c.energyCost || 0.15;
+            document.getElementById('speedMult').value = c.speedMult || 1.0;
         });
 
-        function saveConf() {
+        function save() {
             db.ref('config').update({
                 basePay: parseFloat(document.getElementById('basePay').value),
                 inflationRate: parseFloat(document.getElementById('infRate').value),
                 priceMult: parseFloat(document.getElementById('priceMult').value),
-                eventChance: parseFloat(document.getElementById('chance').value),
-                energyCost: parseFloat(document.getElementById('energy').value)
+                speedMult: parseFloat(document.getElementById('speedMult').value)
             });
-            alert('Настройки обновлены!');
+            alert('Сохранено!');
         }
 
         db.ref('users').on('value', s => {
             const list = document.getElementById('list'); list.innerHTML = '';
-            let on = 0;
             s.forEach(c => {
                 const u = c.val(); const uid = c.key;
                 const online = (Date.now() - u.lastActive) < 60000;
-                if(online) on++;
-                list.innerHTML += `
-                    <div class="user-item ${online?'online':''}">
-                        <div class="row"><b>${u.name}</b> <small>${uid}</small></div>
-                        <div class="row">💰 ${u.balance.toFixed(2)} | 🏦 ${u.debt.toFixed(0)}</div>
-                        <div class="row" style="justify-content:flex-end">
-                            <button class="btn-mini btn-blue" onclick="setBal('${uid}')">$</button>
-                            <button class="btn-mini btn-green" onclick="heal('${uid}')">🚑</button>
-                            <button class="btn-mini btn-green" onclick="fix('${uid}')">🔧</button>
-                            <button class="btn-mini btn-red" onclick="ban('${uid}', ${!u.isBanned})">${u.isBanned?'UNBAN':'BAN'}</button>
-                        </div>
-                    </div>`;
+                list.innerHTML += `<div class="user-card ${online?'online':''}" onclick="openM('${uid}','${u.name}')">
+                    <b>${u.name}</b> ${u.isBanned?'(БАН)':''} <br> 
+                    Баланс: ${u.balance.toFixed(2)} | Долг: ${u.debt}
+                </div>`;
             });
-            document.getElementById('online-cnt').textContent = on;
         });
 
-        function setBal(uid) { let v = prompt("Новый баланс:"); if(v) db.ref('users/'+uid).update({balance: parseFloat(v), adminEdit: true}); }
-        function heal(uid) { db.ref('users/'+uid+'/needs').set({energy:100,water:100,mood:100}); db.ref('users/'+uid+'/inventory').transaction(i=>{if(!i)i={water:0,bar:0,energy_drink:0,coffee:0}; i.water+=5; i.bar+=5; return i;}); }
-        function fix(uid) { db.ref('users/'+uid+'/items').set({bike:100,bag:100,phone:100,gear:100}); }
-        function ban(uid, b) { if(confirm(b?"Забанить?":"Разбанить?")) db.ref('users/'+uid).update({isBanned: b}); }
+        function openM(uid, name) { currentUid = uid; document.getElementById('m-name').innerText = name; document.getElementById('overlay').style.display='block'; document.getElementById('modal').style.display='block'; }
+        function closeM() { document.getElementById('overlay').style.display='none'; document.getElementById('modal').style.display='none'; }
+
+        function act(type) {
+            if(!currentUid) return;
+            if(type === 'money') {
+                let v = prompt("Сколько добавить? (или -100 чтобы забрать)");
+                if(v) db.ref('users/'+currentUid).update({balance: parseFloat(v), adminEdit: true});
+            }
+            if(type === 'repair') {
+                db.ref('users/'+currentUid+'/items').set({bike:100,bag:100,phone:100,gear:100});
+                alert('Починено');
+            }
+            if(type === 'gift') {
+                db.ref('users/'+currentUid+'/inventory').update({water:5, bar:5});
+                alert('Еда выдана');
+            }
+            if(type === 'reset') {
+                if(confirm('Точно обнулить?')) db.ref('users/'+currentUid).update({balance:0, debt:0, items:{bike:100,bag:100,phone:100,gear:100}, repairs:{bike:0,bag:0,phone:0,gear:0}, adminEdit: true});
+            }
+            if(type === 'ban') {
+                db.ref('users/'+currentUid+'/isBanned').transaction(v => !v);
+                alert('Статус бана изменен');
+            }
+            closeM();
+        }
     </script>
 </body>
 </html>
