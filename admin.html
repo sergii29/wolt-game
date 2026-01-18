@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wolt Admin Panel</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .admin-body { padding: 20px; color: #333; background: #f0f2f5; overflow-y: auto; height: 100vh; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .admin-section { background: white; padding: 20px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .stat-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .stat-input { width: 80px; padding: 5px; text-align: center; border: 1px solid #ddd; border-radius: 5px; }
+        .user-card { background: #f8f9fa; padding: 15px; margin-bottom: 10px; border-radius: 10px; border-left: 4px solid #ccc; }
+        .user-card.online { border-left-color: var(--accent-green); }
+        .btn-mini { padding: 5px 10px; font-size: 12px; cursor: pointer; border: none; border-radius: 4px; color: white; margin-left: 5px; }
+        .btn-green { background: var(--accent-green); }
+        .btn-red { background: var(--accent-red); }
+        .btn-blue { background: var(--wolt-blue); }
+    </style>
+</head>
+<body class="admin-body">
+
+    <div class="admin-header">
+        <h1>Wolt Admin 🛡️</h1>
+        <button class="shop-btn" onclick="location.href='index.html'">В ИГРУ</button>
+    </div>
+
+    <div class="admin-section">
+        <h3>🌍 Экономика Варшавы</h3>
+        <div class="stat-row">
+            <span>Базовая оплата (PLN)</span>
+            <input type="number" id="conf-pay" class="stat-input" value="12">
+        </div>
+        <div class="stat-row">
+            <span>Инфляция (коэфф)</span>
+            <input type="number" id="conf-inf" class="stat-input" value="0.05" step="0.01">
+        </div>
+        <div class="stat-row">
+            <span>Штраф за опоздание (PLN)</span>
+            <input type="number" id="conf-fine" class="stat-input" value="5.00">
+        </div>
+        <button class="shop-btn buy" onclick="saveConfig()" style="width:100%; margin-top:10px">СОХРАНИТЬ НАСТРОЙКИ</button>
+    </div>
+
+    <div class="admin-section">
+        <h3>👥 Курьеры (<span id="user-count">0</span>)</h3>
+        <div id="users-list">Loading...</div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="database.js"></script>
+    <script>
+        // Инициализация Админки
+        const dbRef = firebase.database().ref();
+
+        // 1. Загрузка конфига
+        dbRef.child('config').on('value', snap => {
+            const conf = snap.val();
+            if(conf) {
+                document.getElementById('conf-pay').value = conf.basePay || 12;
+                document.getElementById('conf-inf').value = conf.inflationRate || 0.05;
+                document.getElementById('conf-fine').value = conf.penaltyLate || 5;
+            }
+        });
+
+        function saveConfig() {
+            dbRef.child('config').set({
+                basePay: parseFloat(document.getElementById('conf-pay').value),
+                inflationRate: parseFloat(document.getElementById('conf-inf').value),
+                penaltyLate: parseFloat(document.getElementById('conf-fine').value)
+            });
+            alert('Настройки обновлены для всех игроков!');
+        }
+
+        // 2. Список игроков
+        dbRef.child('users').on('value', snap => {
+            const list = document.getElementById('users-list');
+            list.innerHTML = '';
+            let count = 0;
+            
+            snap.forEach(child => {
+                const uid = child.key;
+                const u = child.val();
+                count++;
+                
+                const isOnline = (Date.now() - u.lastActive) < 60000; // Online если был активен минуту назад
+                
+                const div = document.createElement('div');
+                div.className = 'user-card ' + (isOnline ? 'online' : '');
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between">
+                        <strong>${u.name || 'Unknown'}</strong>
+                        <span style="font-size:12px; color:${isOnline?'green':'gray'}">${isOnline?'● ONLINE':'○ Offline'}</span>
+                    </div>
+                    <div style="font-size:12px; margin:5px 0; color:#666">
+                        Баланс: <b>${(u.balance||0).toFixed(2)} PLN</b> | Долг: ${(u.debt||0).toFixed(2)}
+                    </div>
+                    <div style="display:flex; justify-content:flex-end">
+                        <button class="btn-mini btn-blue" onclick="giftMoney('${uid}', 100)">+100 PLN</button>
+                        <button class="btn-mini btn-green" onclick="repairUser('${uid}')">Починить</button>
+                        <button class="btn-mini btn-red" onclick="banUser('${uid}')">БАН</button>
+                        <button class="btn-mini btn-red" onclick="resetUser('${uid}')">СБРОС</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+            document.getElementById('user-count').textContent = count;
+        });
+
+        // Функции управления
+        function giftMoney(uid, amount) {
+            dbRef.child('users/'+uid+'/balance').transaction(bal => (bal||0) + amount);
+        }
+        function repairUser(uid) {
+            dbRef.child('users/'+uid+'/items').set({bike:100, bag:100, phone:100, gear:100});
+            dbRef.child('users/'+uid+'/needs').set({energy:100, water:100, mood:100});
+        }
+        function banUser(uid) {
+            if(confirm('Заблокировать игрока?')) dbRef.child('users/'+uid+'/isBanned').set(true);
+        }
+        function resetUser(uid) {
+            if(confirm('Обнулить игрока?')) {
+                dbRef.child('users/'+uid).update({ balance: 0, debt: 0, repairs: {bike:0,bag:0,phone:0,gear:0} });
+            }
+        }
+    </script>
+</body>
+</html>
