@@ -3,322 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wolt Control Center</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Wolt Admin</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #121212; color: #fff; padding: 20px; font-family: 'Segoe UI', sans-serif; overflow-y: scroll; }
-        
-        /* ВКЛАДКИ */
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        .tab-btn { background: transparent; border: none; color: #666; font-size: 16px; font-weight: bold; cursor: pointer; padding: 10px 20px; transition: 0.3s; }
-        .tab-btn.active { color: var(--wolt-blue); border-bottom: 3px solid var(--wolt-blue); }
-        .tab-content { display: none; animation: fadeIn 0.3s; }
-        .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* КАРТОЧКИ АДМИНКИ */
-        .admin-card { background: #1e1e1e; border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        .card-title { font-size: 14px; color: #888; text-transform: uppercase; font-weight: 700; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 10px; display: flex; justify-content: space-between; }
-        
-        /* СЛАЙДЕРЫ И ИНПУТЫ */
-        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .control-label { font-size: 14px; }
-        .control-input { background: #2c2c2c; border: 1px solid #444; color: white; padding: 5px 10px; border-radius: 8px; width: 80px; text-align: center; font-weight: bold; }
-        
-        /* СПИСОК ЮЗЕРОВ */
-        .user-list { display: flex; flex-direction: column; gap: 10px; }
-        .user-item { 
-            background: #252525; padding: 15px; border-radius: 12px; cursor: pointer; border-left: 4px solid #444;
-            display: flex; justify-content: space-between; align-items: center; transition: 0.2s;
-        }
-        .user-item:hover { background: #333; transform: translateX(5px); }
-        .user-item.online { border-left-color: var(--accent-green); box-shadow: 0 0 10px rgba(0,230,118,0.1); }
-        .user-item.banned { border-left-color: var(--accent-red); opacity: 0.5; }
-        
-        /* МОДАЛКА ЮЗЕРА (ДЕТАЛИ) */
-        .user-modal-content { text-align: left; }
-        .user-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0; }
-        .stat-box { background: #111; padding: 10px; border-radius: 8px; text-align: center; }
-        .stat-val { font-size: 18px; font-weight: 800; color: var(--wolt-blue); }
-        .stat-name { font-size: 10px; color: #777; text-transform: uppercase; }
-        
-        .history-list { max-height: 150px; overflow-y: auto; background: #111; border-radius: 8px; padding: 10px; margin-bottom: 15px; font-size: 12px; }
-        .hist-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #222; }
-
-        /* КНОПКИ ДЕЙСТВИЙ */
-        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .act-btn { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; }
-        .btn-money { background: var(--wolt-blue); grid-column: span 2; }
-        .btn-reset { background: #444; }
-        .btn-ban { background: var(--accent-red); }
-        .btn-heal { background: var(--accent-green); color: #004d40; }
-        .btn-fix { background: var(--accent-orange); color: #3e2723; }
-
+        body { background: #121212; color: white; font-family: sans-serif; padding: 20px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+        h2 { color: #00ccff; margin-top: 0; }
+        .row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+        input { background: #333; border: 1px solid #555; color: white; padding: 5px; border-radius: 5px; width: 80px; text-align: center; }
+        button { padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; color: white; }
+        .btn-save { background: #00ccff; width: 100%; margin-top: 10px; }
+        .btn-edit { background: #009de0; } .btn-ban { background: #ff3d00; } .btn-reset { background: #555; }
+        .user-item { background: #252525; padding: 10px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #555; }
+        .user-item.online { border-left-color: #00e676; }
     </style>
 </head>
 <body>
+    <h1>🛡️ Admin Panel v2.0</h1>
 
-    <h1 style="color:white; margin-bottom:20px"><i class="fa-solid fa-tower-broadcast" style="color:var(--wolt-blue)"></i> Center <span style="font-size:14px; color:#666">v2.0</span></h1>
-
-    <div class="tabs">
-        <button class="tab-btn active" onclick="openTab('economy')">ЭКОНОМИКА</button>
-        <button class="tab-btn" onclick="openTab('users')">ИГРОКИ <span id="online-badge" style="background:var(--accent-green); color:#000; padding:2px 6px; border-radius:10px; font-size:10px; vertical-align:top">0</span></button>
+    <div class="card">
+        <h2>🌍 Экономика</h2>
+        <div class="row"><span>База (PLN)</span> <input id="basePay" type="number"></div>
+        <div class="row"><span>Инфляция</span> <input id="infRate" type="number" step="0.01"></div>
+        <div class="row"><span>Множитель Цен</span> <input id="priceMult" type="number" step="0.1"></div>
+        <div class="row"><span>Шанс Пробки</span> <input id="chance" type="number" step="0.05"></div>
+        <div class="row"><span>Расход Энергии</span> <input id="energy" type="number" step="0.05"></div>
+        <button class="btn-save" onclick="saveConf()">СОХРАНИТЬ</button>
     </div>
 
-    <div id="tab-economy" class="tab-content active">
-        
-        <div class="admin-card">
-            <div class="card-title"><span>📊 Глобальные настройки</span> <i class="fa-solid fa-globe"></i></div>
-            
-            <div class="control-row">
-                <span class="control-label">💵 Базовая оплата (PLN)</span>
-                <input type="number" id="conf-pay" class="control-input">
-            </div>
-            
-            <div class="control-row">
-                <span class="control-label">📈 Инфляция (0.05 = 5%)</span>
-                <input type="number" id="conf-inf" class="control-input" step="0.01">
-            </div>
-
-            <div class="control-row">
-                <span class="control-label">🛒 Множитель Цен Магазина</span>
-                <input type="number" id="conf-price" class="control-input" step="0.1" value="1.0">
-            </div>
-
-            <div class="control-row">
-                <span class="control-label">🎲 Шанс пробки (0.1 = 10%)</span>
-                <input type="number" id="conf-chance" class="control-input" step="0.05">
-            </div>
-
-            <div class="control-row">
-                <span class="control-label">⚡ Расход энергии</span>
-                <input type="number" id="conf-energy" class="control-input" step="0.05">
-            </div>
-
-            <div class="control-row">
-                <span class="control-label">👮 Штраф за опоздание</span>
-                <input type="number" id="conf-fine" class="control-input" step="1">
-            </div>
-
-            <button class="shop-btn buy" onclick="saveConfig()" style="width:100%; margin-top:10px">СОХРАНИТЬ И ПРИМЕНИТЬ</button>
-        </div>
-
-        <div class="admin-card" style="border-color:var(--accent-red)">
-            <div class="card-title" style="color:var(--accent-red)"><span>🚨 Опасная Зона</span> <i class="fa-solid fa-triangle-exclamation"></i></div>
-            <p style="font-size:12px; color:#888; margin-bottom:15px">Действие необратимо. Удаляет всех игроков из базы.</p>
-            <button class="shop-btn" onclick="wipeServer()" style="width:100%; background:var(--accent-red); color:white; border:none">
-                <i class="fa-solid fa-skull"></i> ВАЙП СЕРВЕРА (WIPE)
-            </button>
-        </div>
-
-    </div>
-
-    <div id="tab-users" class="tab-content">
-        <input type="text" id="search-input" placeholder="🔍 Найти курьера..." style="width:100%; padding:15px; border-radius:12px; border:none; background:#252525; color:white; margin-bottom:20px; box-sizing:border-box" onkeyup="renderUsers()">
-        <div id="users-list" class="user-list">
-            </div>
-    </div>
-
-    <div id="overlay" class="edit-overlay" onclick="closeUserModal()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2999"></div>
-    <div id="user-modal" class="edit-modal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#1e1e1e; padding:20px; border-radius:16px; z-index:3000; width:90%; max-width:400px; border:1px solid #444; box-shadow:0 10px 40px rgba(0,0,0,0.8)">
-        <div id="modal-content" class="user-modal-content">
-            </div>
+    <div class="card">
+        <h2>👥 Игроки</h2>
+        <div id="list">Загрузка...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="database.js"></script> <script>
-        const dbRef = firebase.database().ref();
-        let allUsers = {};
-        let currentUser = null; // ID открытого юзера
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
+          authDomain: "warszawa-courier.firebaseapp.com",
+          databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "warszawa-courier",
+          storageBucket: "warszawa-courier.firebasestorage.app",
+          messagingSenderId: "295860613508",
+          appId: "1:295860613508:web:86fe8364377d6875612dd1",
+          measurementId: "G-TGSCHBVLX2"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-        // ТАБЫ
-        function openTab(id) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById('tab-'+id).classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        // 1. ЗАГРУЗКА КОНФИГА
-        dbRef.child('config').on('value', snap => {
-            const c = snap.val() || {};
-            document.getElementById('conf-pay').value = c.basePay || 12;
-            document.getElementById('conf-inf').value = c.inflationRate || 0.05;
-            document.getElementById('conf-price').value = c.priceMult || 1.0;
-            document.getElementById('conf-chance').value = c.eventChance || 0.1;
-            document.getElementById('conf-energy').value = c.energyCost || 0.15;
-            document.getElementById('conf-fine').value = c.penaltyLate || 5;
+        db.ref('config').on('value', s => {
+            const c = s.val() || {};
+            document.getElementById('basePay').value = c.basePay || 12;
+            document.getElementById('infRate').value = c.inflationRate || 0.05;
+            document.getElementById('priceMult').value = c.priceMult || 1.0;
+            document.getElementById('chance').value = c.eventChance || 0.1;
+            document.getElementById('energy').value = c.energyCost || 0.15;
         });
 
-        function saveConfig() {
-            dbRef.child('config').update({
-                basePay: parseFloat(document.getElementById('conf-pay').value),
-                inflationRate: parseFloat(document.getElementById('conf-inf').value),
-                priceMult: parseFloat(document.getElementById('conf-price').value),
-                eventChance: parseFloat(document.getElementById('conf-chance').value),
-                energyCost: parseFloat(document.getElementById('conf-energy').value),
-                penaltyLate: parseFloat(document.getElementById('conf-fine').value)
+        function saveConf() {
+            db.ref('config').update({
+                basePay: parseFloat(document.getElementById('basePay').value),
+                inflationRate: parseFloat(document.getElementById('infRate').value),
+                priceMult: parseFloat(document.getElementById('priceMult').value),
+                eventChance: parseFloat(document.getElementById('chance').value),
+                energyCost: parseFloat(document.getElementById('energy').value)
             });
-            alert('✅ Настройки сохранены!');
+            alert('Настройки обновлены!');
         }
 
-        // 2. СПИСОК ИГРОКОВ
-        dbRef.child('users').on('value', snap => {
-            allUsers = snap.val() || {};
-            renderUsers();
-        });
-
-        function renderUsers() {
-            const list = document.getElementById('users-list');
-            const search = document.getElementById('search-input').value.toLowerCase();
-            list.innerHTML = '';
-            let onlineCnt = 0;
-
-            Object.entries(allUsers).forEach(([uid, u]) => {
-                if (search && !u.name.toLowerCase().includes(search) && !uid.includes(search)) return;
-                
-                const isOnline = (Date.now() - u.lastActive) < 60000;
-                if(isOnline) onlineCnt++;
-
-                const div = document.createElement('div');
-                div.className = `user-item ${isOnline ? 'online' : ''} ${u.isBanned ? 'banned' : ''}`;
-                div.onclick = () => openUserModal(uid);
-                div.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold; font-size:16px; color:white">
-                            ${isOnline ? '🟢' : '⚫'} ${u.name || 'Гость'}
-                            ${u.isBanned ? '<span style="color:red; font-size:10px; border:1px solid red; padding:2px; border-radius:4px">BANNED</span>' : ''}
+        db.ref('users').on('value', s => {
+            const list = document.getElementById('list'); list.innerHTML = '';
+            s.forEach(c => {
+                const u = c.val(); const uid = c.key;
+                const online = (Date.now() - u.lastActive) < 60000;
+                list.innerHTML += `
+                    <div class="user-item ${online?'online':''}">
+                        <div class="row"><b>${u.name}</b> <small>${uid}</small></div>
+                        <div class="row">💰 ${u.balance.toFixed(2)} | 🏦 ${u.debt.toFixed(0)}</div>
+                        <div class="row" style="justify-content:flex-end; gap:5px">
+                            <button class="btn-edit" onclick="setBal('${uid}')">$</button>
+                            <button class="btn-reset" onclick="reset('${uid}')">♻️</button>
+                            <button class="btn-ban" onclick="ban('${uid}', ${!u.isBanned})">${u.isBanned?'UNBAN':'BAN'}</button>
                         </div>
-                        <div style="font-size:11px; color:#888">ID: ${uid}</div>
-                    </div>
-                    <div style="text-align:right">
-                        <div style="color:var(--wolt-blue); font-weight:800">${(u.balance||0).toFixed(2)} PLN</div>
-                        <div style="font-size:11px; color:#666">Долг: ${(u.debt||0).toFixed(0)}</div>
-                    </div>
-                `;
-                list.appendChild(div);
+                    </div>`;
             });
-            document.getElementById('online-badge').textContent = onlineCnt;
-            
-            // Если открыта модалка, обновить её данные в реальном времени
-            if(currentUser && allUsers[currentUser]) renderModalContent(currentUser);
+        });
+
+        function setBal(uid) {
+            let v = prompt("Новый баланс:");
+            if(v) db.ref('users/'+uid).update({balance: parseFloat(v), adminEdit: true});
         }
-
-        // 3. УПРАВЛЕНИЕ ЮЗЕРОМ (МОДАЛКА)
-        function openUserModal(uid) {
-            currentUser = uid;
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('user-modal').style.display = 'block';
-            renderModalContent(uid);
+        function reset(uid) {
+            if(confirm("Сбросить?")) db.ref('users/'+uid).update({balance:0, debt:0, items:{bike:100,bag:100,phone:100,gear:100}, repairs:{bike:0,bag:0,phone:0,gear:0}, adminEdit: true});
         }
-        function closeUserModal() {
-            currentUser = null;
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('user-modal').style.display = 'none';
+        function ban(uid, b) {
+            if(confirm(b?"Забанить?":"Разбанить?")) db.ref('users/'+uid).update({isBanned: b});
         }
-
-        function renderModalContent(uid) {
-            const u = allUsers[uid];
-            if(!u) return closeUserModal();
-
-            // История (последние 5)
-            let historyHtml = '<div style="color:#666; font-style:italic">Пусто...</div>';
-            if(u.history && u.history.length > 0) {
-                historyHtml = u.history.slice(-5).reverse().map(h => 
-                    `<div class="hist-item"><span>${h.rest}</span><span style="color:var(--accent-green)">+${h.earn}</span></div>`
-                ).join('');
-            }
-
-            const html = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-                    <h2 style="margin:0; color:white">${u.name}</h2>
-                    <i class="fa-solid fa-xmark" onclick="closeUserModal()" style="cursor:pointer; font-size:24px; color:#666"></i>
-                </div>
-
-                <div class="user-stat-grid">
-                    <div class="stat-box"><div class="stat-val">${(u.balance||0).toFixed(2)}</div><div class="stat-name">Баланс</div></div>
-                    <div class="stat-box"><div class="stat-val" style="color:var(--accent-red)">${(u.debt||0).toFixed(2)}</div><div class="stat-name">Долг</div></div>
-                    <div class="stat-box"><div class="stat-val" style="color:white">${u.repairs?.bike || 0}</div><div class="stat-name">Рейтинг (Lvl)</div></div>
-                    <div class="stat-box"><div class="stat-val" style="color:white">${u.items?.bike || 0}%</div><div class="stat-name">Байк</div></div>
-                </div>
-
-                <div style="font-size:12px; color:#888; text-transform:uppercase; font-weight:bold; margin-bottom:5px">История операций</div>
-                <div class="history-list">${historyHtml}</div>
-
-                <div class="action-grid">
-                    <button class="act-btn btn-money" onclick="editUserBalance('${uid}', ${u.balance})"><i class="fa-solid fa-money-bill-wave"></i> ИЗМЕНИТЬ БАЛАНС</button>
-                    
-                    <button class="act-btn btn-heal" onclick="giftSupplies('${uid}')"><i class="fa-solid fa-kit-medical"></i> ВЫДАТЬ ПАЁК</button>
-                    <button class="act-btn btn-fix" onclick="fixItems('${uid}')"><i class="fa-solid fa-wrench"></i> ЧИТ-РЕМОНТ</button>
-                    
-                    <button class="act-btn btn-fix" style="background:#546e7a" onclick="resetRating('${uid}')"><i class="fa-solid fa-arrow-down"></i> СБРОСИТЬ LVL</button>
-                    <button class="act-btn btn-reset" onclick="resetUser('${uid}', true)"><i class="fa-solid fa-skull"></i> НАКАЗАТЬ (СБРОС)</button>
-                    
-                    <button class="act-btn btn-ban" onclick="toggleBan('${uid}', ${!u.isBanned})" style="grid-column: span 2; background:${u.isBanned?'#444':'var(--accent-red)'}">
-                        ${u.isBanned ? '🔓 РАЗБАНИТЬ' : '⛔ ЗАБАНИТЬ ИГРОКА'}
-                    </button>
-                </div>
-            `;
-            document.getElementById('modal-content').innerHTML = html;
-        }
-
-        // --- ФУНКЦИИ ДЕЙСТВИЙ ---
-        function editUserBalance(uid, current) {
-            const newVal = prompt("Введите новый баланс (можно минус):", current);
-            if(newVal !== null) {
-                dbRef.child('users/'+uid).update({ balance: parseFloat(newBal), adminEdit: true });
-            }
-        }
-
-        function giftSupplies(uid) {
-            if(confirm("Выдать полный комплект еды и воды?")) {
-                dbRef.child('users/'+uid+'/needs').set({energy:100, water:100, mood:100});
-                dbRef.child('users/'+uid+'/inventory').transaction(inv => {
-                    if(!inv) inv = {water:0, bar:0, energy_drink:0, coffee:0};
-                    inv.water += 5; inv.bar += 5; inv.energy_drink += 2;
-                    return inv;
-                });
-                alert("Паёк выдан!");
-            }
-        }
-
-        function fixItems(uid) {
-            dbRef.child('users/'+uid+'/items').set({bike:100, bag:100, phone:100, gear:100});
-            alert("Вещи починены!");
-        }
-
-        function resetRating(uid) {
-            if(confirm("Сбросить уровень инфляции (рейтинг) игрока до 0?")) {
-                dbRef.child('users/'+uid+'/repairs').set({bike:0, bag:0, phone:0, gear:0});
-            }
-        }
-
-        function resetUser(uid, withPenalty) {
-            if(confirm(withPenalty ? "Сбросить игрока и повесить ДОЛГ 7000?" : "Просто сбросить?")) {
-                dbRef.child('users/'+uid).update({
-                    balance: 0,
-                    debt: withPenalty ? 7000 : 0,
-                    items: {bike:100, bag:100, phone:100, gear:100},
-                    repairs: {bike:0, bag:0, phone:0, gear:0},
-                    adminEdit: true
-                });
-            }
-        }
-
-        function toggleBan(uid, state) {
-            dbRef.child('users/'+uid+'/isBanned').set(state);
-        }
-
-        function wipeServer() {
-            const code = prompt("Введи 'WIPE' для удаления ВСЕХ игроков:");
-            if(code === 'WIPE') {
-                dbRef.child('users').remove();
-                alert("Сервер очищен.");
-            }
-        }
-
     </script>
 </body>
 </html>
