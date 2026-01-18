@@ -88,6 +88,15 @@
             color: var(--text-secondary);
             text-transform: uppercase;
         }
+        
+        .debt-warning {
+            color: var(--accent-red);
+            font-size: 10px;
+            font-weight: bold;
+            display: none;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
         /* --- BARS --- */
         .equip-bar {
@@ -132,26 +141,15 @@
             transition: width 0.3s;
         }
 
-        /* --- TOAST NOTIFICATIONS --- */
+        /* --- TOAST --- */
         .game-toast {
-            position: absolute;
-            top: 140px;
-            left: 50%;
+            position: absolute; top: 140px; left: 50%;
             transform: translateX(-50%) translateY(-20px);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-weight: bold;
-            font-size: 14px;
-            z-index: 1001;
-            opacity: 0;
-            transition: all 0.3s;
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
+            background: rgba(0, 0, 0, 0.9); color: white;
+            padding: 10px 20px; border-radius: 25px;
+            font-weight: bold; font-size: 14px; z-index: 1001;
+            opacity: 0; transition: all 0.3s; pointer-events: none;
+            display: flex; align-items: center; gap: 8px; white-space: nowrap;
             border: 1px solid #333;
         }
         .game-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -160,33 +158,18 @@
 
         /* --- BOTTOM SHEET --- */
         .bottom-sheet {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            border-top-left-radius: 24px;
-            border-top-right-radius: 24px;
-            padding: 20px;
-            z-index: 1002;
-            box-shadow: 0 -5px 30px rgba(0,0,0,0.3);
-            color: #333;
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: white; border-top-left-radius: 24px; border-top-right-radius: 24px;
+            padding: 20px; z-index: 1002;
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333;
         }
 
-        /* SLIDER */
+        /* SLIDER & CONTROLS */
         .slider-container {
-            position: relative;
-            width: 100%;
-            height: 60px;
-            background: #f0f0f0;
-            border-radius: 30px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 10px;
+            position: relative; width: 100%; height: 60px;
+            background: #f0f0f0; border-radius: 30px; overflow: hidden;
+            display: flex; align-items: center; justify-content: center; margin-top: 10px;
         }
-        
         .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; }
         .slider-knob {
             position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px;
@@ -199,18 +182,17 @@
             background: rgba(0, 157, 224, 0.2); z-index: 0;
         }
 
-        /* CONTROLS */
         .controls-row { display: flex; gap: 10px; margin-top: 15px; }
 
         .pedal-btn {
-            flex: 1;
-            background: var(--wolt-blue);
-            color: white; border: none; padding: 18px; border-radius: 16px;
-            font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
-            cursor: pointer; box-shadow: 0 4px 0 #007bb5; transition: all 0.1s;
+            flex: 1; background: var(--wolt-blue); color: white; border: none;
+            padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+            box-shadow: 0 4px 0 #007bb5; transition: all 0.1s;
         }
         .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
         .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
+        .pedal-btn.stop-btn { background: var(--accent-red); box-shadow: 0 4px 0 #b32a00; }
 
         .bag-btn {
             width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px;
@@ -228,34 +210,19 @@
             position: absolute; bottom: 90px; left: 20px; width: 220px;
             background: #252525; color: white; padding: 10px; border-radius: 16px;
             z-index: 1005; display: none; flex-direction: column; gap: 8px;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.6);
-            border: 1px solid #444;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.6); border: 1px solid #444;
         }
         .quick-inv.open { display: flex; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        
         .inv-item {
             display: flex; justify-content: space-between; align-items: center;
             padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px;
             cursor: pointer; border: 1px solid transparent; transition: background 0.2s;
         }
         .inv-item:active { background: rgba(255,255,255,0.2); }
-        
-        /* Recommended Item Highlight */
-        .inv-item.recommended {
-            border: 1px solid var(--accent-green);
-            background: rgba(0, 230, 118, 0.1);
-        }
-        .rec-tag {
-            font-size: 9px; color: var(--accent-green); font-weight: bold; text-transform: uppercase;
-            display: block; margin-bottom: 2px;
-        }
-
+        .inv-item.link-btn { background: var(--wolt-blue); justify-content: center; font-weight: bold; }
         .inv-count { background: var(--wolt-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
-
-        @keyframes popUp {
-            from { opacity: 0; transform: translateY(10px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
+        
+        @keyframes popUp { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
         /* --- MENUS --- */
         #side-menu-overlay {
@@ -269,7 +236,7 @@
             display: flex; flex-direction: column;
         }
         #side-menu.open { left: 0; }
-        .menu-item { padding: 15px 0; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 15px; font-size: 16px; }
+        .menu-item { padding: 15px 0; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 15px; font-size: 16px; align-items: center; }
 
         /* --- FULL MODAL --- */
         .full-modal {
@@ -282,7 +249,7 @@
         .modal-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; font-weight: bold; }
         .modal-content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* SHOP CARDS */
+        /* SHOP & BANK */
         .shop-section { margin-bottom: 25px; }
         .shop-section h3 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
         .shop-card {
@@ -290,13 +257,25 @@
             display: flex; justify-content: space-between; align-items: center;
             box-shadow: 0 4px 10px rgba(0,0,0,0.03);
         }
-        .shop-desc { font-size: 11px; color: #888; margin-top: 4px; }
         .shop-btn {
             padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer;
             border: 1px solid var(--wolt-blue); color: var(--wolt-blue); background: white; min-width: 80px;
         }
         .shop-btn.buy { background: var(--wolt-blue); color: white; }
-        .shop-btn:active { transform: scale(0.95); }
+        
+        .bank-input {
+            width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd;
+            font-size: 24px; font-weight: bold; margin-bottom: 15px; box-sizing: border-box;
+        }
+        .bank-actions { display: flex; gap: 10px; }
+        .bank-btn { flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-loan { background: var(--accent-green); color: #004d40; }
+        .btn-repay { background: var(--accent-orange); color: #3e2723; }
+        
+        .debt-alert-box {
+            background: #ffebee; color: #c62828; padding: 15px; border-radius: 12px;
+            margin-bottom: 20px; border: 1px solid #ef9a9a; display: none;
+        }
 
     </style>
 </head>
@@ -308,7 +287,7 @@
         <button class="menu-btn" onclick="toggleMenu()"><i class="fa-solid fa-bars"></i></button>
         <div class="balance-display">
             <div class="balance-amount" id="balance-val">0.00 PLN</div>
-            <div class="balance-label">Баланс</div>
+            <div class="balance-label">Баланс <span id="debt-warning" class="debt-warning">(ДОЛГ!)</span></div>
         </div>
         <button class="stats-btn" onclick="openModal('stats')"><i class="fa-solid fa-chart-simple"></i></button>
     </div>
@@ -328,7 +307,8 @@
     <div id="side-menu-overlay" onclick="toggleMenu()">
         <div id="side-menu" onclick="event.stopPropagation()">
             <h2 style="margin-bottom: 20px">Профиль</h2>
-            <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store"></i> Магазин / Инвентарь</div>
+            <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--wolt-blue)"></i> Магазин / Инвентарь</div>
+            <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
             <div class="menu-item" onclick="openModal('stats')"><i class="fa-solid fa-clock-rotate-left"></i> История</div>
             <div class="menu-item" onclick="resetGame()" style="color:red; margin-top:auto"><i class="fa-solid fa-trash"></i> Сброс</div>
         </div>
@@ -345,7 +325,7 @@
     <div class="bottom-sheet">
         <div id="offline-view">
             <h3 style="margin:0">Варшава</h3>
-            <p style="color:#888; font-size:13px">Спрос: Высокий • x1.2 к оплате</p>
+            <p style="color:#888; font-size:13px">Спрос: Высокий • Инфляция: Активна</p>
             <div class="slider-container" id="slider-box">
                 <div class="slider-fill" id="slider-fill"></div>
                 <div class="slider-text">СВАЙП ДЛЯ ОНЛАЙНА</div>
@@ -356,7 +336,7 @@
         <div id="active-order-view" style="display:none; flex-direction:column; gap:10px">
             <div style="display:flex; gap:15px; align-items:center">
                 <div style="font-size:24px; width:45px; height:45px; background:#f5f5f5; border-radius:10px; display:flex; align-items:center; justify-content:center" id="rest-icon">🍔</div>
-                <div><h3 style="margin:0" id="rest-name">Rest</h3><p style="margin:0; font-size:12px; color:#888" id="order-dest">Dest</p></div>
+                <div><h3 style="margin:0" id="rest-name">Поиск...</h3><p style="margin:0; font-size:12px; color:#888" id="order-dest">Ожидание</p></div>
             </div>
 
             <div style="position:relative; height:30px; margin:5px 0">
@@ -367,7 +347,7 @@
 
             <div style="display:flex; justify-content:space-between; font-size:12px; color:#666">
                 <span>Еда: <strong id="temp-val">100%</strong></span>
-                <span id="status-label">Статус</span>
+                <span id="status-label">Поиск...</span>
             </div>
 
             <div class="quick-inv" id="quick-inv"></div>
@@ -379,6 +359,9 @@
                 </div>
                 <button class="pedal-btn" id="pedal-btn">ЖМИ ГАЗ (PEDAL)</button>
             </div>
+            <div id="garnishment-info" style="font-size:11px; color:var(--accent-red); text-align:center; display:none">
+                Будет удержано 20% в счет долга
+            </div>
         </div>
     </div>
 
@@ -386,55 +369,35 @@
     <script>
         const SAVE_KEY = 'WARSZAWA_FOREVER';
         
-        // --- SMART ITEMS DATABASE ---
         const ITEMS_DB = {
-            // Service
             bike: { name: 'Велосипед', type: 'repair', baseCost: 5, icon: 'fa-bicycle', desc: 'Ремонт ходовой' },
             bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open', desc: 'Заплатка дыр' },
             phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen', desc: 'Оплата интернета' },
             gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt', desc: 'Химчистка' },
-            
-            // Consumables (The Smart Logic)
-            water: { 
-                name: 'Вода (0.5л)', type: 'buy', cost: 2.0, icon: 'fa-bottle-water',
-                effect: { water: 35, energy: 5 }, 
-                desc: 'Спасает от жажды. Немного бодрит.',
-                target: 'water' 
-            },
-            bar: { 
-                name: 'Сникерс', type: 'buy', cost: 4.5, icon: 'fa-cookie-bite',
-                effect: { energy: 20, mood: 15 }, 
-                desc: 'Баланс энергии и радости.',
-                target: 'energy' // Secondary mood
-            },
-            energy_drink: { 
-                name: 'Red Bull', type: 'buy', cost: 7.0, icon: 'fa-bolt',
-                effect: { energy: 50, mood: 5, water: -5 }, 
-                desc: 'МАКСИМУМ Энергии! Но сушит (-Вода).',
-                target: 'energy' 
-            },
-            coffee: { 
-                name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot',
-                effect: { mood: 30, energy: 10 }, 
-                desc: 'Лучшее для поднятия Настроения!',
-                target: 'mood' 
-            }
+            water: { name: 'Вода (0.5л)', type: 'buy', cost: 2.0, icon: 'fa-bottle-water', effect: { water: 35, energy: 5 }, desc: 'Спасает от жажды.', target: 'water' },
+            bar: { name: 'Сникерс', type: 'buy', cost: 4.5, icon: 'fa-cookie-bite', effect: { energy: 20, mood: 15 }, desc: 'Баланс энергии.', target: 'energy' },
+            energy_drink: { name: 'Red Bull', type: 'buy', cost: 7.0, icon: 'fa-bolt', effect: { energy: 50, mood: 5, water: -5 }, desc: 'МАКСИМУМ Энергии!', target: 'energy' },
+            coffee: { name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot', effect: { mood: 30, energy: 10 }, desc: 'Для Настроения!', target: 'mood' }
         };
 
         let state = {
             balance: 0,
+            debt: 0,
+            debtTimer: 0, // Timestamp when loan is due
+            debtOverdue: false,
             isOnline: false,
+            isSearching: false,
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
             needs: { energy: 100, water: 100, mood: 100 },
             inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
             repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
-            history: [],
-            totalOrders: 0
+            history: []
         };
 
         const restaurants = [
             { name: "McDonald's", icon: "🍔" }, { name: "KFC", icon: "🍗" },
-            { name: "Pasibus", icon: "🍔" }, { name: "Kebab King", icon: "🌯" }
+            { name: "Pasibus", icon: "🍔" }, { name: "Kebab King", icon: "🌯" },
+            { name: "Sushi Master", icon: "🍣" }, { name: "Pizza Hut", icon: "🍕" }
         ];
 
         let currentOrder = null;
@@ -445,44 +408,58 @@
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
             L.marker([52.2297, 21.0122]).addTo(map);
             loadGame();
-            document.getElementById('pedal-btn').addEventListener('click', pedal);
+            document.getElementById('pedal-btn').addEventListener('click', handleBtnAction);
             setupSlider();
+            
+            // Check debt status every 10s
+            setInterval(checkDebt, 10000);
         }
 
         function loadGame() {
             const saved = localStorage.getItem(SAVE_KEY);
             if (saved) {
                 state = { ...state, ...JSON.parse(saved) };
-                if (!state.needs.mood) state.needs.mood = 100; // Migration
-                if (!state.inventory) state.inventory = { water: 0, bar: 0, energy_drink: 0, coffee: 0 };
+                if(!state.needs.mood) state.needs.mood = 100;
+                if(!state.inventory) state.inventory = {water:0,bar:0,energy_drink:0,coffee:0};
             }
             updateUI();
         }
 
-        function saveGame() {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+        function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
+
+        function checkDebt() {
+            if (state.debt > 0 && Date.now() > state.debtTimer && !state.debtOverdue) {
+                state.debtOverdue = true;
+                showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn');
+                updateUI();
+            }
         }
 
         function updateUI() {
             document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN';
             
-            updateBar('bar-bike', state.items.bike);
-            updateBar('bar-bag', state.items.bag);
-            updateBar('bar-phone', state.items.phone);
-            updateBar('bar-gear', state.items.gear);
+            // Bars
+            ['bike','bag','phone','gear'].forEach(k => updateBar(`bar-${k}`, state.items[k]));
+            ['energy','water','mood'].forEach(k => updateBar(`bar-${k}`, state.needs[k]));
             
-            updateBar('bar-energy', state.needs.energy);
-            updateBar('bar-water', state.needs.water);
-            updateBar('bar-mood', state.needs.mood);
-            
+            // Inv Count
             const totalInv = Object.values(state.inventory).reduce((a,b)=>a+b, 0);
             document.getElementById('bag-count').textContent = totalInv;
             document.getElementById('bag-count').style.display = totalInv ? 'flex' : 'none';
+
+            // Debt Warning
+            const warn = document.getElementById('debt-warning');
+            const garnInfo = document.getElementById('garnishment-info');
+            if (state.debtOverdue && state.debt > 0) {
+                warn.style.display = 'inline';
+                garnInfo.style.display = 'block';
+            } else {
+                warn.style.display = 'none';
+                garnInfo.style.display = 'none';
+            }
         }
 
-        function updateBar(id, val) {
-            document.getElementById(id).style.width = Math.max(0, Math.min(100, val)) + '%';
-        }
+        function updateBar(id, val) { document.getElementById(id).style.width = Math.max(0, Math.min(100, val)) + '%'; }
 
         function showToast(msg, type='info') {
             const t = document.getElementById('toast');
@@ -492,24 +469,34 @@
         }
 
         // --- GAMEPLAY ---
+        function handleBtnAction() {
+            if (state.isSearching) {
+                // Stop Button Logic
+                goOffline();
+            } else {
+                pedal();
+            }
+        }
+
         function pedal() {
             if (!currentOrder) return;
             
-            // Logic: Tired = Slow
-            let fatigueMult = Math.max(0.3, state.needs.energy / 100);
+            let fatigue = Math.max(0.3, state.needs.energy / 100);
             
-            if (state.needs.energy <= 10 || state.needs.water <= 5) {
+            // Check limits
+            if (state.needs.energy <= 5 || state.needs.water <= 5) {
                 showToast('<i class="fa-solid fa-triangle-exclamation"></i> Сил нет! Открой рюкзак!', 'warn');
-                openQuickInv(true); // Auto-open with suggestion
+                openQuickInv(true);
                 return;
             }
 
+            // Consume
             state.needs.energy -= 0.6;
             state.needs.water -= 0.4;
-            state.needs.mood -= 0.15; // Slow burnout
+            state.needs.mood -= 0.1;
             state.items.bike -= 0.1;
-
-            currentOrder.progress += (4 * fatigueMult);
+            
+            currentOrder.progress += (5 * fatigue);
             currentOrder.foodTemp -= 0.15;
             
             updateTrack(currentOrder.progress);
@@ -519,172 +506,12 @@
             saveGame(); updateUI();
         }
 
-        // --- SMART INVENTORY LOGIC ---
-        function toggleQuickInv() {
-            const menu = document.getElementById('quick-inv');
-            menu.style.display === 'flex' ? menu.style.display = 'none' : openQuickInv();
-        }
-
-        function openQuickInv(auto = false) {
-            const menu = document.getElementById('quick-inv');
-            menu.innerHTML = '';
-            
-            // 1. Determine what is needed most
-            let lowestStat = 'none';
-            let minVal = 100;
-            
-            if (state.needs.water < minVal) { minVal = state.needs.water; lowestStat = 'water'; }
-            if (state.needs.energy < minVal) { minVal = state.needs.energy; lowestStat = 'energy'; }
-            if (state.needs.mood < minVal) { minVal = state.needs.mood; lowestStat = 'mood'; }
-
-            // 2. Filter & Sort Inventory
-            // We create an array of owned items
-            let ownedItems = [];
-            for (let [key, count] of Object.entries(state.inventory)) {
-                if (count > 0) ownedItems.push({ key, count, data: ITEMS_DB[key] });
-            }
-
-            // 3. Sorting Logic: Priority to items matching the lowest stat
-            ownedItems.sort((a, b) => {
-                const aMatch = (a.data.target === lowestStat);
-                const bMatch = (b.data.target === lowestStat);
-                return bMatch - aMatch; // True (1) comes first
-            });
-
-            if (ownedItems.length === 0) {
-                menu.innerHTML = '<div style="padding:10px; color:#888; font-size:12px; text-align:center">Рюкзак пуст.<br>Зайди в Магазин.</div>';
-            } else {
-                ownedItems.forEach((item, index) => {
-                    const isRecommended = (item.data.target === lowestStat) && (minVal < 50);
-                    const div = document.createElement('div');
-                    div.className = 'inv-item' + (isRecommended && index === 0 ? ' recommended' : '');
-                    
-                    let label = `<span><i class="fa-solid ${item.data.icon}"></i> ${item.data.name}</span>`;
-                    if (isRecommended && index === 0) {
-                        let reason = lowestStat === 'water' ? 'Жажда!' : (lowestStat === 'mood' ? 'Грустно...' : 'Усталость!');
-                        label = `<div><span class="rec-tag">${reason}</span>` + label + `</div>`;
-                    }
-
-                    div.innerHTML = `
-                        ${label}
-                        <span class="inv-count">x${item.count}</span>
-                    `;
-                    div.onclick = () => useItem(item.key);
-                    menu.appendChild(div);
-                });
-            }
-            
-            menu.style.display = 'flex';
-            menu.classList.add('open');
-        }
-
-        function useItem(key) {
-            if (state.inventory[key] <= 0) return;
-            const item = ITEMS_DB[key];
-            state.inventory[key]--;
-            
-            if (item.effect.energy) state.needs.energy += item.effect.energy;
-            if (item.effect.water) state.needs.water += item.effect.water;
-            if (item.effect.mood) state.needs.mood += item.effect.mood;
-            
-            // Cap at 100
-            ['energy','water','mood'].forEach(k => { if(state.needs[k]>100) state.needs[k]=100; });
-            
-            showToast(`${item.name} использован!`, 'success');
-            toggleQuickInv(); saveGame(); updateUI();
-        }
-
-        // --- SHOP & MENU ---
-        function toggleMenu() {
-            document.getElementById('side-menu-overlay').classList.toggle('open');
-            document.getElementById('side-menu').classList.toggle('open');
-        }
-
-        function openModal(type) {
-            toggleMenu(); 
-            document.getElementById('full-modal').classList.add('open');
-            const body = document.getElementById('modal-body');
-            document.getElementById('modal-title').textContent = type === 'shop' ? 'Магазин' : 'История';
-            
-            if (type === 'shop') renderShop(body);
-            else renderHistory(body);
-        }
-
-        function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
-
-        function renderShop(container) {
-            container.innerHTML = '';
-            
-            let html = '<div class="shop-section"><h3>🎒 Еда и Напитки (В рюкзак)</h3>';
-            ['water', 'bar', 'energy_drink', 'coffee'].forEach(key => {
-                const item = ITEMS_DB[key];
-                const owned = state.inventory[key] || 0;
-                html += `
-                <div class="shop-card">
-                    <div style="flex:1">
-                        <div style="font-weight:bold"><i class="fa-solid ${item.icon}"></i> ${item.name}</div>
-                        <div class="shop-desc">${item.desc}</div>
-                        <div style="font-size:11px; color:#444; margin-top:2px">В рюкзаке: ${owned}</div>
-                    </div>
-                    <button class="shop-btn buy" onclick="buyItem('${key}')">${item.cost.toFixed(1)}</button>
-                </div>`;
-            });
-            html += '</div>';
-
-            html += '<div class="shop-section"><h3>🛠 Сервис и Обслуживание</h3>';
-            ['bike', 'bag', 'phone', 'gear'].forEach(key => {
-                const item = ITEMS_DB[key];
-                const cost = item.baseCost + ((state.repairs[key]||0) * 0.5);
-                html += `
-                <div class="shop-card">
-                    <div>
-                        <div style="font-weight:bold"><i class="fa-solid ${item.icon}"></i> ${item.name}</div>
-                        <div class="shop-desc">${item.desc}</div>
-                        <div style="font-size:11px; color:#666">Состояние: ${Math.floor(state.items[key])}%</div>
-                    </div>
-                    <button class="shop-btn" onclick="buyRepair('${key}', ${cost})">-${cost.toFixed(1)}</button>
-                </div>`;
-            });
-            html += '</div>';
-            
-            container.innerHTML = html;
-        }
-
-        function buyItem(key) {
-            const item = ITEMS_DB[key];
-            if (state.balance >= item.cost) {
-                state.balance -= item.cost;
-                state.inventory[key] = (state.inventory[key]||0)+1;
-                showToast(`Куплено: ${item.name}`, 'success');
-                saveGame(); updateUI(); renderShop(document.getElementById('modal-body'));
-            } else showToast('Нет денег', 'warn');
-        }
-
-        function buyRepair(key, cost) {
-            if (state.balance >= cost) {
-                state.balance -= cost;
-                state.items[key] = 100;
-                state.repairs[key] = (state.repairs[key]||0)+1;
-                showToast('Восстановлено!', 'success');
-                saveGame(); updateUI(); renderShop(document.getElementById('modal-body'));
-            } else showToast('Нет денег', 'warn');
-        }
-
-        function renderHistory(c) {
-            c.innerHTML = state.history.slice().reverse().map(h => 
-                `<div style="padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between">
-                    <b>${h.rest}</b> <span style="color:green">+${h.earn} PLN</span>
-                </div>`
-            ).join('') || '<p style="text-align:center;color:#999">Нет заказов</p>';
-        }
-
-        // --- UTILS ---
         function nextStage() {
             currentOrder.stage++;
             currentOrder.progress = 0;
             updateTrack(0);
 
-            if (currentOrder.stage === 1) {
+            if (currentOrder.stage === 1) { // Waiting
                 setBtnState(true, 'ЖДЕМ ЗАКАЗ...');
                 document.getElementById('status-label').textContent = 'Ресторан готовит...';
                 setTimeout(() => {
@@ -692,79 +519,300 @@
                     document.getElementById('status-label').textContent = 'Везем клиенту';
                     currentOrder.stage = 2;
                 }, 2000);
-            } else if (currentOrder.stage === 3) completeOrder();
+            } else if (currentOrder.stage === 3) {
+                completeOrder();
+            }
         }
 
         function completeOrder() {
-            let pay = 12 + (Math.random() * 5);
-            if (state.needs.mood > 80 && Math.random() > 0.5) { pay += 4; showToast('Клиент оценил Позитив! +Чаевые', 'success'); }
+            // Inflation Calc: More repairs = Higher Base Pay
+            const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
+            const inflationMult = 1 + (totalRepairs * 0.05);
+            
+            let pay = (12 + (Math.random() * 6)) * inflationMult;
+            
+            // Mood Bonus
+            if (state.needs.mood > 80 && Math.random() > 0.5) {
+                pay += 5 * inflationMult;
+                showToast('Позитив! +Чаевые', 'success');
+            }
+
+            // Debt Penalty (Garnishment)
+            let penalty = 0;
+            if (state.debtOverdue && state.debt > 0) {
+                penalty = pay * 0.20;
+                // Don't take more than debt
+                if (penalty > state.debt) penalty = state.debt;
+                
+                state.debt -= penalty;
+                pay -= penalty;
+                showToast(`Долг: -${penalty.toFixed(2)} PLN`, 'warn');
+            }
+            
             state.balance += pay;
             state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
+            
+            showToast(`Заказ: +${pay.toFixed(2)} PLN`, 'success');
+            
+            // Auto-Search Mode
             currentOrder = null;
-            document.getElementById('active-order-view').style.display = 'none';
-            document.getElementById('offline-view').style.display = 'block';
-            state.isOnline = false;
-            resetSlider();
-            showToast(`Доставлено! +${pay.toFixed(2)} PLN`, 'success');
+            startSearching(); 
+            
             saveGame(); updateUI();
         }
 
-        function setBtnState(disabled, text) {
+        function startSearching() {
+            state.isSearching = true;
+            document.getElementById('active-order-view').style.display = 'flex';
+            document.getElementById('rest-name').textContent = 'Поиск...';
+            document.getElementById('rest-icon').textContent = '🔍';
+            document.getElementById('status-label').textContent = 'Ищем заказ...';
+            document.getElementById('order-dest').textContent = 'Ожидание...';
+            
+            // Set button to STOP (Red)
             const btn = document.getElementById('pedal-btn');
-            btn.disabled = disabled;
-            btn.textContent = text;
+            btn.disabled = false;
+            btn.textContent = 'ЗАКОНЧИТЬ СМЕНУ';
+            btn.className = 'pedal-btn stop-btn';
+            
+            updateTrack(0);
+
+            setTimeout(() => {
+                if (state.isOnline && state.isSearching) createOrder();
+            }, 2000);
         }
 
-        function updateTrack(p) {
-            document.getElementById('track-fill').style.width = p + '%';
-            document.getElementById('track-icon').style.left = p + '%';
+        function createOrder() {
+            state.isSearching = false;
+            const r = restaurants[Math.floor(Math.random() * restaurants.length)];
+            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100 };
+            
+            document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
+            document.getElementById('rest-icon').textContent = r.icon;
+            document.getElementById('status-label').textContent = 'Едем в ресторан';
+            document.getElementById('order-dest').textContent = 'Забрать: 2.5 km';
+            
+            // Reset button to Go (Blue)
+            const btn = document.getElementById('pedal-btn');
+            btn.textContent = 'ЖМИ ГАЗ (ЕХАТЬ)';
+            btn.className = 'pedal-btn';
+            btn.disabled = false;
         }
 
-        function resetSlider() {
-            document.getElementById('slider-knob').style.transform = 'translateX(0)';
-            document.getElementById('slider-fill').style.width = '0%';
+        function goOffline() {
+            state.isOnline = false;
+            state.isSearching = false;
+            document.getElementById('active-order-view').style.display = 'none';
+            document.getElementById('offline-view').style.display = 'block';
+            resetSlider();
+            saveGame();
+        }
+
+        // --- SMART INVENTORY ---
+        function toggleQuickInv() {
+            const menu = document.getElementById('quick-inv');
+            menu.style.display === 'flex' ? menu.style.display = 'none' : openQuickInv();
+        }
+
+        function openQuickInv() {
+            const menu = document.getElementById('quick-inv');
+            menu.innerHTML = '';
+            
+            // Find lowest stat
+            let lowest = 'none', min = 100;
+            if (state.needs.water < min) { min = state.needs.water; lowest = 'water'; }
+            if (state.needs.energy < min) { min = state.needs.energy; lowest = 'energy'; }
+            if (state.needs.mood < min) { min = state.needs.mood; lowest = 'mood'; }
+
+            // Get items
+            let owned = [];
+            for (let [k, c] of Object.entries(state.inventory)) {
+                if (c > 0) owned.push({ k, c, data: ITEMS_DB[k] });
+            }
+
+            if (owned.length === 0) {
+                // SMART LINK TO SHOP
+                menu.innerHTML = `
+                    <div style="padding:5px; color:#fff; text-align:center; font-size:12px">Рюкзак пуст!</div>
+                    <div class="inv-item link-btn" onclick="openModal('shop')">В МАГАЗИН</div>
+                `;
+            } else {
+                owned.sort((a,b) => (b.data.target === lowest) - (a.data.target === lowest));
+                owned.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'inv-item';
+                    div.innerHTML = `<span><i class="fa-solid ${item.data.icon}"></i> ${item.data.name}</span><span class="inv-count">x${item.c}</span>`;
+                    div.onclick = () => useItem(item.k);
+                    menu.appendChild(div);
+                });
+            }
+            menu.style.display = 'flex'; menu.classList.add('open');
+        }
+
+        function useItem(key) {
+            const item = ITEMS_DB[key];
+            state.inventory[key]--;
+            if (item.effect.energy) state.needs.energy += item.effect.energy;
+            if (item.effect.water) state.needs.water += item.effect.water;
+            if (item.effect.mood) state.needs.mood += item.effect.mood;
+            
+            // Clamp
+            ['energy','water','mood'].forEach(k => { if(state.needs[k]>100) state.needs[k]=100; });
+            
+            showToast(`${item.name} использован!`, 'success');
+            toggleQuickInv(); saveGame(); updateUI();
+        }
+
+        // --- BANK LOGIC ---
+        function takeLoan() {
+            const input = document.getElementById('loan-amount');
+            const amt = parseFloat(input.value);
+            if (!amt || amt <= 0) return;
+            
+            state.balance += amt;
+            state.debt += amt;
+            state.debtTimer = Date.now() + (5 * 60 * 1000); // 5 mins
+            state.debtOverdue = false;
+            
+            showToast(`Взят кредит: ${amt} PLN`, 'success');
+            input.value = '';
+            renderBank(document.getElementById('modal-body'));
+            saveGame(); updateUI();
+        }
+
+        function repayLoan() {
+            const input = document.getElementById('loan-amount');
+            let amt = parseFloat(input.value);
+            if (!amt || amt <= 0) return;
+            
+            if (amt > state.balance) amt = state.balance; // Pay max possible
+            if (amt > state.debt) amt = state.debt;       // Don't overpay
+            
+            state.balance -= amt;
+            state.debt -= amt;
+            if (state.debt <= 0.01) {
+                state.debt = 0;
+                state.debtOverdue = false;
+                showToast('Кредит полностью погашен!', 'success');
+            } else {
+                showToast(`Погашено: ${amt} PLN`, 'success');
+            }
+            input.value = '';
+            renderBank(document.getElementById('modal-body'));
+            saveGame(); updateUI();
+        }
+
+        // --- MODALS ---
+        function toggleMenu() { document.getElementById('side-menu-overlay').classList.toggle('open'); document.getElementById('side-menu').classList.toggle('open'); }
+        function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
+        
+        function openModal(type) {
+            toggleMenu(); 
+            const m = document.getElementById('full-modal');
+            const b = document.getElementById('modal-body');
+            m.classList.add('open');
+            
+            if (type === 'shop') { document.getElementById('modal-title').textContent = 'Магазин'; renderShop(b); }
+            else if (type === 'bank') { document.getElementById('modal-title').textContent = 'Банк (Кредит)'; renderBank(b); }
+            else { document.getElementById('modal-title').textContent = 'История'; renderHistory(b); }
+        }
+
+        function renderBank(c) {
+            c.innerHTML = `
+                <div class="debt-alert-box" style="display:${state.debtOverdue?'block':'none'}">
+                    ⚠️ <strong>ПРОСРОЧКА!</strong><br>
+                    Ваш долг просрочен. Удерживаем 20% с каждого заказа.
+                </div>
+                <div style="text-align:center; margin-bottom:20px">
+                    <div style="font-size:14px; color:#666">Текущий долг</div>
+                    <div style="font-size:32px; font-weight:800; color:${state.debt>0?'var(--accent-red)':'#333'}">${state.debt.toFixed(2)} PLN</div>
+                    <div style="font-size:12px; color:#888">${state.debt>0 && !state.debtOverdue ? 'Вернуть до: '+new Date(state.debtTimer).toLocaleTimeString() : ''}</div>
+                </div>
+                
+                <input type="number" id="loan-amount" class="bank-input" placeholder="Сумма...">
+                <div class="bank-actions">
+                    <button class="bank-btn btn-loan" onclick="takeLoan()">ВЗЯТЬ</button>
+                    ${state.debt > 0 ? '<button class="bank-btn btn-repay" onclick="repayLoan()">ВЕРНУТЬ</button>' : ''}
+                </div>
+                <p style="font-size:12px; color:#888; margin-top:15px; text-align:center">
+                    У вас есть 5 минут на возврат без процентов. Далее штраф 20% с доходов.
+                </p>
+            `;
+        }
+
+        function renderShop(c) {
+            let html = '';
+            // Determine price multiplier based on repairs (Inflation)
+            const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
+            const inflation = 1 + (levelSum * 0.1); 
+
+            // Shop logic same as before but prices * inflation
+            html += '<div class="shop-section"><h3>🎒 Еда (Цены растут!)</h3>';
+            ['water', 'bar', 'energy_drink', 'coffee'].forEach(k => {
+                const i = ITEMS_DB[k];
+                const price = i.cost * inflation;
+                html += `
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold">${i.name}</div>
+                        <div class="shop-desc">${i.desc}</div>
+                    </div>
+                    <button class="shop-btn buy" onclick="buyItem('${k}', ${price})">${price.toFixed(1)}</button>
+                </div>`;
+            });
+            html += '</div>';
+            
+            html += '<div class="shop-section"><h3>🛠 Сервис</h3>';
+            ['bike', 'bag', 'phone', 'gear'].forEach(k => {
+                const i = ITEMS_DB[k];
+                const base = i.baseCost + ((state.repairs[k]||0)*0.5);
+                const price = base * inflation;
+                html += `
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold">${i.name} (Lvl ${state.repairs[k]||0})</div>
+                        <div class="shop-desc">Состояние: ${Math.floor(state.items[k])}%</div>
+                    </div>
+                    <button class="shop-btn" onclick="buyRepair('${k}', ${price})">-${price.toFixed(1)}</button>
+                </div>`;
+            });
+            html += '</div>';
+            c.innerHTML = html;
+        }
+
+        function buyItem(k, cost) {
+            if(state.balance >= cost) { state.balance-=cost; state.inventory[k]=(state.inventory[k]||0)+1; showToast('Куплено!','success'); saveGame(); updateUI(); renderShop(document.getElementById('modal-body')); }
+            else showToast('Нет денег','warn');
+        }
+        function buyRepair(k, cost) {
+            if(state.balance >= cost) { state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; showToast('Починено!','success'); saveGame(); updateUI(); renderShop(document.getElementById('modal-body')); }
+            else showToast('Нет денег','warn');
         }
         
-        let isDragging = false, startX;
+        function renderHistory(c) { c.innerHTML = state.history.slice().reverse().map(h=>`<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between"><b>${h.rest}</b><span>+${h.earn}</span></div>`).join(''); }
+
+        function setBtnState(d, t) {
+            const b = document.getElementById('pedal-btn'); b.disabled=d; b.textContent=t;
+            if(d) b.className='pedal-btn'; // remove stop class if disabled
+        }
+        function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
+        
         function setupSlider() {
             const k = document.getElementById('slider-knob'), b = document.getElementById('slider-box');
-            k.onmousedown = k.ontouchstart = e => {
-                isDragging = true;
-                startX = (e.type==='mousedown'?e.clientX:e.touches[0].clientX);
-                document.onmousemove = document.ontouchmove = e => {
-                    if(!isDragging) return;
-                    let x = (e.type==='mousemove'?e.clientX:e.touches[0].clientX) - startX;
-                    let max = b.offsetWidth - k.offsetWidth - 8;
-                    x = Math.max(0, Math.min(x, max));
-                    k.style.transform = `translateX(${x}px)`;
-                    document.getElementById('slider-fill').style.width = `${(x/max)*100}%`;
-                    if(x >= max*0.9) { goOnline(); isDragging = false; }
-                };
-                document.onmouseup = document.ontouchend = () => { 
-                    isDragging = false; 
-                    if(!state.isOnline) resetSlider(); 
-                };
-            };
+            let drag=false, sx=0;
+            k.onmousedown=k.ontouchstart=e=>{ drag=true; sx=(e.type==='mousedown'?e.clientX:e.touches[0].clientX); }
+            document.onmousemove=document.ontouchmove=e=>{
+                if(!drag)return;
+                let x = (e.type==='mousemove'?e.clientX:e.touches[0].clientX)-sx;
+                let max = b.offsetWidth-k.offsetWidth-8;
+                x=Math.max(0,Math.min(x,max));
+                k.style.transform=`translateX(${x}px)`; document.getElementById('slider-fill').style.width=`${(x/max)*100}%`;
+                if(x>=max*0.9){ startSearching(); state.isOnline=true; drag=false; }
+            }
+            document.onmouseup=document.ontouchend=()=>{ drag=false; if(!state.isOnline) resetSlider(); }
         }
-
-        function goOnline() {
-            state.isOnline = true;
-            document.getElementById('offline-view').style.display = 'none';
-            document.getElementById('active-order-view').style.display = 'flex';
-            setTimeout(() => {
-                const r = restaurants[Math.floor(Math.random() * restaurants.length)];
-                currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100 };
-                document.getElementById('rest-name').textContent = r.name;
-                document.getElementById('rest-icon').textContent = r.icon;
-                document.getElementById('status-label').textContent = 'Едем в ресторан';
-                setBtnState(false, 'ЖМИ ГАЗ (PEDAL)');
-                updateTrack(0);
-            }, 1000);
-        }
-
-        function resetGame() {
-            if(confirm('Сбросить весь прогресс?')) { localStorage.removeItem(SAVE_KEY); location.reload(); }
-        }
+        function resetSlider() { document.getElementById('slider-knob').style.transform='translateX(0)'; document.getElementById('slider-fill').style.width='0%'; }
+        function resetGame() { if(confirm('Сброс?')) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
         init();
     </script>
