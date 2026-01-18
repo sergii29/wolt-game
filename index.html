@@ -84,29 +84,26 @@
             padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333;
         }
 
-        /* OFFLINE SCHEDULER (REPLACES SLIDER) */
-        .scheduler-container {
-            width: 100%; padding: 12px; background: #f0f8ff; border-radius: 12px;
-            text-align: center; margin-top: 10px; cursor: pointer; border: 1px solid #d1e3ff;
-            font-weight: bold; font-size: 14px; transition: background 0.2s;
-        }
-        .sch-active { background: #ffebee; color: var(--accent-red); border-color: #ffcdd2; }
-        .sch-normal { color: var(--wolt-blue); }
-
-        /* SLIDER */
+        /* SLIDER GENERIC */
         .slider-container {
             position: relative; width: 100%; height: 60px; background: #f0f0f0;
             border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px;
         }
-        .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; }
+        .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; }
         .slider-knob {
             position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px;
             background: var(--wolt-blue); border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 20px; cursor: grab; z-index: 2;
+            color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s;
         }
         .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 157, 224, 0.2); z-index: 0; }
+        
+        /* Scheduled State for Slider */
+        .slider-container.scheduled { background: #ffebee; border: 1px solid #ffcdd2; }
+        .slider-container.scheduled .slider-knob { background: var(--accent-red); }
+        .slider-container.scheduled .slider-text { color: var(--accent-red); }
 
+        /* CONTROLS */
         .controls-row { display: flex; gap: 10px; margin-top: 15px; }
 
         .pedal-btn {
@@ -241,10 +238,10 @@
         <div id="offline-view">
             <h3 style="margin:0">Варшава</h3>
             <p style="color:#888; font-size:13px">Спрос: Высокий • Инфляция: Активна</p>
-            <div class="slider-container" id="slider-box">
-                <div class="slider-fill" id="slider-fill"></div>
+            <div class="slider-container" id="offline-slider-box">
+                <div class="slider-fill" id="offline-slider-fill"></div>
                 <div class="slider-text">СВАЙП ДЛЯ ОНЛАЙНА</div>
-                <div class="slider-knob" id="slider-knob"><i class="fa-solid fa-chevron-right"></i></div>
+                <div class="slider-knob" id="offline-slider-knob"><i class="fa-solid fa-chevron-right"></i></div>
             </div>
         </div>
 
@@ -265,8 +262,10 @@
                 <span id="status-label">Поиск...</span>
             </div>
 
-            <div id="offline-scheduler" class="scheduler-container sch-normal" onclick="toggleOfflineSchedule()">
-                🟢 АВТО-ПРИЕМ ЗАКАЗОВ
+            <div class="slider-container" id="online-slider-box">
+                <div class="slider-fill" id="online-slider-fill"></div>
+                <div class="slider-text" id="online-slider-text">СВАЙП ДЛЯ ОФЛАЙНА</div>
+                <div class="slider-knob" id="online-slider-knob"><i class="fa-solid fa-chevron-right"></i></div>
             </div>
 
             <div class="quick-inv" id="quick-inv"></div>
@@ -302,7 +301,7 @@
         let state = {
             balance: 0,
             debt: 0, debtTimer: 0, debtOverdue: false,
-            isOnline: false, isSearching: false, scheduledOffline: false, scheduledTime: null,
+            isOnline: false, isSearching: false, scheduledOffline: false,
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
             needs: { energy: 100, water: 100, mood: 100 },
             inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
@@ -325,7 +324,7 @@
             L.marker([52.2297, 21.0122]).addTo(map);
             loadGame();
             document.getElementById('pedal-btn').addEventListener('click', pedal);
-            setupSlider();
+            initSliders();
             setInterval(checkDebt, 10000);
         }
 
@@ -336,7 +335,8 @@
                 if(!state.needs.mood) state.needs.mood = 100;
                 if(!state.inventory) state.inventory = {water:0,bar:0,energy_drink:0,coffee:0};
             }
-            state.scheduledOffline = false; // reset session
+            // Always reset scheduled on load
+            state.scheduledOffline = false;
             updateUI();
         }
 
@@ -377,7 +377,6 @@
         function pedal() {
             if (!currentOrder) return;
             
-            // BALANCE FIX: Reduce fatigue rate by 4x
             let fatigue = Math.max(0.3, state.needs.energy / 100);
             
             if (state.needs.energy <= 5 || state.needs.water <= 5) {
@@ -440,10 +439,11 @@
             state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
             showToast(`Заказ: +${pay.toFixed(2)} PLN`, 'success');
             
-            // OFFLINE LOGIC
+            // CHECK SCHEDULED OFFLINE
             if (state.scheduledOffline) {
                 goOffline();
             } else {
+                // Auto-search continues
                 startSearching(); 
             }
             
@@ -458,14 +458,22 @@
             document.getElementById('status-label').textContent = 'Ищем заказ...';
             document.getElementById('order-dest').textContent = 'Ожидание...';
             
-            // Reset Scheduler Btn visually
-            updateSchedulerBtn();
+            // UPDATE SLIDER TO "SWIPE FOR OFFLINE"
+            resetSlider('online');
+            const box = document.getElementById('online-slider-box');
+            const txt = document.getElementById('online-slider-text');
+            box.classList.remove('scheduled');
+            txt.textContent = "СВАЙП ДЛЯ ОФЛАЙНА";
             
             document.getElementById('pedal-btn').disabled = true;
             document.getElementById('pedal-btn').textContent = 'ПОИСК...';
             
             updateTrack(0);
-            setTimeout(() => { if (state.isOnline && state.isSearching) createOrder(); }, 2000);
+            
+            // Reliable Order Drop (2s delay)
+            setTimeout(() => { 
+                if (state.isOnline && state.isSearching) createOrder(); 
+            }, 2000);
         }
 
         function createOrder() {
@@ -478,30 +486,13 @@
             document.getElementById('order-dest').textContent = 'Забрать: 2.5 km';
             document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
             document.getElementById('pedal-btn').disabled = false;
-        }
 
-        // --- SCHEDULER LOGIC ---
-        function toggleOfflineSchedule() {
-            state.scheduledOffline = !state.scheduledOffline;
-            if (state.scheduledOffline) {
-                // Set time 5 mins from now
-                const d = new Date(Date.now() + 5 * 60000);
-                state.scheduledTime = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-            } else {
-                state.scheduledTime = null;
-            }
-            updateSchedulerBtn();
-        }
-
-        function updateSchedulerBtn() {
-            const btn = document.getElementById('offline-scheduler');
-            if (state.scheduledOffline) {
-                btn.className = 'scheduler-container sch-active';
-                btn.innerHTML = `🔴 ОФЛАЙН В ${state.scheduledTime}`;
-            } else {
-                btn.className = 'scheduler-container sch-normal';
-                btn.innerHTML = `🟢 АВТО-ПРИЕМ ЗАКАЗОВ`;
-            }
+            // UPDATE SLIDER TO "SCHEDULE OFFLINE"
+            resetSlider('online');
+            const box = document.getElementById('online-slider-box');
+            const txt = document.getElementById('online-slider-text');
+            box.classList.remove('scheduled');
+            txt.textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН";
         }
 
         function goOffline() {
@@ -510,8 +501,86 @@
             state.scheduledOffline = false;
             document.getElementById('active-order-view').style.display = 'none';
             document.getElementById('offline-view').style.display = 'block';
-            resetSlider();
+            resetSlider('offline');
             saveGame();
+        }
+
+        // --- SLIDERS LOGIC (NEW) ---
+        function initSliders() {
+            setupSlider('offline', () => {
+                // Action: Go Online
+                state.isOnline = true;
+                document.getElementById('offline-view').style.display = 'none';
+                startSearching();
+            });
+            
+            setupSlider('online', () => {
+                // Action: Context Dependent
+                if (state.isSearching) {
+                    // If searching -> Quit immediately
+                    goOffline();
+                } else {
+                    // If active order -> Schedule
+                    state.scheduledOffline = true;
+                    const box = document.getElementById('online-slider-box');
+                    const txt = document.getElementById('online-slider-text');
+                    box.classList.add('scheduled');
+                    txt.textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА";
+                    resetSlider('online'); // Snap back visually but state is set
+                }
+            });
+        }
+
+        function setupSlider(prefix, callback) {
+            const knob = document.getElementById(`${prefix}-slider-knob`);
+            const box = document.getElementById(`${prefix}-slider-box`);
+            const fill = document.getElementById(`${prefix}-slider-fill`);
+            let isDragging = false, startX = 0;
+
+            knob.addEventListener('mousedown', start);
+            knob.addEventListener('touchstart', start);
+
+            function start(e) {
+                isDragging = true;
+                startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX;
+                document.addEventListener('mousemove', move);
+                document.addEventListener('touchmove', move);
+                document.addEventListener('mouseup', end);
+                document.addEventListener('touchend', end);
+            }
+
+            function move(e) {
+                if (!isDragging) return;
+                const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX;
+                let x = clientX - startX;
+                let max = box.offsetWidth - knob.offsetWidth - 8;
+                x = Math.max(0, Math.min(x, max));
+                
+                knob.style.transform = `translateX(${x}px)`;
+                fill.style.width = `${(x / max) * 100}%`;
+
+                if (x >= max * 0.95) {
+                    isDragging = false;
+                    end(); // clean listeners
+                    callback();
+                }
+            }
+
+            function end() {
+                isDragging = false;
+                document.removeEventListener('mousemove', move);
+                document.removeEventListener('touchmove', move);
+                document.removeEventListener('mouseup', end);
+                document.removeEventListener('touchend', end);
+                // Reset visual if action wasn't triggered or just to snap back
+                knob.style.transform = 'translateX(0)';
+                fill.style.width = '0%';
+            }
+        }
+
+        function resetSlider(prefix) {
+            document.getElementById(`${prefix}-slider-knob`).style.transform = 'translateX(0)';
+            document.getElementById(`${prefix}-slider-fill`).style.width = '0%';
         }
 
         // --- SMART INVENTORY ---
@@ -610,17 +679,14 @@
             if(state.balance >= cost) { 
                 state.balance-=cost; 
                 state.inventory[k]=(state.inventory[k]||0)+1; 
-                
-                // Visual Feedback
                 const originalText = btn.textContent;
                 btn.textContent = 'КУПЛЕНО!';
                 btn.className = 'shop-btn bought';
                 setTimeout(() => { 
                     btn.textContent = originalText; 
                     btn.className = 'shop-btn buy';
-                    renderShop(document.getElementById('modal-body')); // Refresh counts
+                    renderShop(document.getElementById('modal-body')); 
                 }, 600);
-
                 saveGame(); updateUI(); 
             } else showToast('Нет денег','warn');
         }
@@ -664,20 +730,7 @@
         }
         function renderHistory(c) { c.innerHTML = state.history.slice().reverse().map(h=>`<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between"><b>${h.rest}</b><span>+${h.earn}</span></div>`).join(''); }
         
-        function setupSlider() {
-            const k = document.getElementById('slider-knob'), b = document.getElementById('slider-box');
-            let drag=false, sx=0;
-            k.onmousedown=k.ontouchstart=e=>{ drag=true; sx=(e.type==='mousedown'?e.clientX:e.touches[0].clientX); }
-            document.onmousemove=document.ontouchmove=e=>{
-                if(!drag)return;
-                let x = (e.type==='mousemove'?e.clientX:e.touches[0].clientX)-sx;
-                let max = b.offsetWidth-k.offsetWidth-8; x=Math.max(0,Math.min(x,max));
-                k.style.transform=`translateX(${x}px)`; document.getElementById('slider-fill').style.width=`${(x/max)*100}%`;
-                if(x>=max*0.9){ startSearching(); state.isOnline=true; drag=false; }
-            }
-            document.onmouseup=document.ontouchend=()=>{ drag=false; if(!state.isOnline) document.getElementById('slider-knob').style.transform='translateX(0)'; }
-        }
-        function resetSlider() { document.getElementById('slider-knob').style.transform='translateX(0)'; document.getElementById('slider-fill').style.width='0%'; }
+        function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
         function resetGame() { if(confirm('Сброс?')) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
         init();
