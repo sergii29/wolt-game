@@ -906,7 +906,7 @@
             if (reduced > 0) { state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success'); saveGame(); syncToCloud(true); updateUI(); renderDeflation(document.getElementById('modal-body')); } else { showToast('Инфляция уже на минимуме!', 'warn'); }
         }
 
-        // --- UPDATED BANK LOGIC (SOS + PROGRESSIVE) ---
+        // --- UPDATED BANK LOGIC (SOS + PROGRESSIVE + DYNAMIC BANNER) ---
 
         function renderBank(c) {
             let timeLeftStr = "00:00";
@@ -941,9 +941,12 @@
                 </div>`;
             }
 
+            // Calculate current Garnishment Rate for the Banner
+            const garnishmentPercent = (getGarnishmentRate() * 100).toFixed(0);
+
             c.innerHTML = `
                 <div id="bank-ui-root">
-                    <div class="debt-alert-box" id="bank-alert" style="display:${state.debtOverdue?'block':'none'}">⚠️ <strong>ПРОСРОЧЕНО!</strong><br>Удерживаем 20% с каждого заказа.</div>
+                    <div class="debt-alert-box" id="bank-alert" style="display:${state.debtOverdue?'block':'none'}">⚠️ <strong>ПРОСРОЧЕНО!</strong><br>Удерживаем ${garnishmentPercent}% с каждого заказа.</div>
                     
                     <div style="text-align:center; margin-bottom:20px">
                         <div style="font-size:14px; color:#666">Текущий долг</div>
