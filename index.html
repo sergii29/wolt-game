@@ -228,7 +228,10 @@
 
     <div id="side-menu-overlay" onclick="toggleMenu()">
         <div id="side-menu" onclick="event.stopPropagation()">
-            <h2 style="margin-bottom: 20px">Профиль <span id="player-id-display" style="font-size:10px; color:#666; display:block">Loading ID...</span></h2>
+            <h2 style="margin-bottom: 5px">Профиль</h2>
+            <div id="player-name-display" style="font-size:18px; color:var(--wolt-blue); font-weight:bold; margin-bottom:5px"></div>
+            <div id="player-id-display" style="font-size:10px; color:#666; display:block; margin-bottom:20px">Loading ID...</div>
+            
             <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--wolt-blue)"></i> Магазин / Инвентарь</div>
             <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
             <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
@@ -346,6 +349,7 @@
 
         let state = {
             id: 'u_' + Math.random().toString(36).substr(2, 9),
+            name: null, // NEW: Player Name
             balance: 0, debt: 0, debtTimer: 0, debtOverdue: false,
             isOnline: false, isSearching: false, scheduledOffline: false,
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
@@ -372,12 +376,35 @@
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([52.2297, 21.0122], 13);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
             L.marker([52.2297, 21.0122]).addTo(map);
+            
             loadGame();
+            
+            // Nickname Prompt if missing
+            if (!state.name) {
+                let nameInput = prompt("Введите ваше имя курьера:", "Курьер #" + Math.floor(Math.random() * 1000));
+                state.name = nameInput ? nameInput.substring(0, 15) : "Anon";
+                saveGame();
+            }
+
             document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
+            document.getElementById('player-name-display').textContent = state.name;
             document.getElementById('pedal-btn').addEventListener('click', pedal);
             initSliders();
             setInterval(checkDebt, 1000); 
             listenToCloud(); syncToCloud(true);
+        }
+
+        // --- NEW: LOGGING SYSTEM ---
+        function sendLog(msg, type='INFO') {
+            if(!db) return;
+            const logEntry = {
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                playerId: state.id,
+                playerName: state.name || 'Anon',
+                message: msg,
+                type: type
+            };
+            db.ref('logs').push(logEntry);
         }
 
         function syncToCloud(force = false) {
@@ -385,6 +412,7 @@
             const now = Date.now();
             if (force || now - lastSync > 3000) {
                 db.ref('players/' + state.id).update({
+                    name: state.name, // Sync Name
                     balance: state.balance, isOnline: state.isOnline, lastSeen: now,
                     stats: state.needs, inventory: state.inventory, debt: state.debt, items: state.items
                 });
@@ -575,6 +603,9 @@
                 state.debt -= penalty; pay -= penalty; showToast(`Долг: -${penalty.toFixed(2)} PLN`, 'warn');
             }
             state.balance += pay; state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
+            
+            sendLog(`Завершил заказ: +${pay.toFixed(2)} PLN (${currentOrder.rest.name})`, 'ORDER');
+
             setTimeout(() => { showToast(`Заказ: +${pay.toFixed(2)} PLN`, 'success'); }, 500);
             if (state.scheduledOffline) { goOffline(); } else { startSearching(); }
             saveGame(); updateUI();
@@ -637,10 +668,16 @@
             document.getElementById('active-order-view').style.display = 'none';
             document.getElementById('offline-view').style.display = 'block';
             resetSlider('offline'); saveGame(); syncToCloud();
+            sendLog('Ушел с линии (Офлайн)', 'STATUS');
         }
 
         function initSliders() {
-            setupSlider('offline', () => { state.isOnline = true; document.getElementById('offline-view').style.display = 'none'; startSearching(); });
+            setupSlider('offline', () => { 
+                state.isOnline = true; 
+                document.getElementById('offline-view').style.display = 'none'; 
+                startSearching(); 
+                sendLog('Вышел на линию (Онлайн)', 'STATUS');
+            });
             setupSlider('online', () => {
                 if (state.isSearching) { goOffline(); }
                 else {
@@ -747,12 +784,25 @@
         }
 
         function buyItem(k, cost, btn) {
-            if(state.balance >= cost) { state.balance-=cost; state.inventory[k]=(state.inventory[k]||0)+1; const originalText = btn.textContent; btn.textContent = 'КУПЛЕНО!'; btn.className = 'shop-btn bought'; setTimeout(() => { btn.textContent = originalText; btn.className = 'shop-btn buy'; renderShop(document.getElementById('modal-body')); }, 600); saveGame(); updateUI(); } else showToast('Нет денег','warn');
+            if(state.balance >= cost) { 
+                state.balance-=cost; 
+                state.inventory[k]=(state.inventory[k]||0)+1; 
+                const originalText = btn.textContent; btn.textContent = 'КУПЛЕНО!'; btn.className = 'shop-btn bought'; 
+                
+                sendLog(`Купил: ${ITEMS_DB[k].name} за ${cost.toFixed(2)}`, 'BUY');
+
+                setTimeout(() => { btn.textContent = originalText; btn.className = 'shop-btn buy'; renderShop(document.getElementById('modal-body')); }, 600); 
+                saveGame(); updateUI(); 
+            } else showToast('Нет денег','warn');
         }
 
         function buyRepair(k, cost, btn) {
             if (state.items[k] > 0) return;
-            if(state.balance >= cost) { state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; btn.textContent = 'ГОТОВО!'; btn.className = 'shop-btn bought'; setTimeout(() => { renderShop(document.getElementById('modal-body')); }, 600); saveGame(); updateUI(); } else showToast('Нет денег','warn');
+            if(state.balance >= cost) { 
+                state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; btn.textContent = 'ГОТОВО!'; btn.className = 'shop-btn bought'; 
+                sendLog(`Починил: ${ITEMS_DB[k].name}`, 'REPAIR');
+                setTimeout(() => { renderShop(document.getElementById('modal-body')); }, 600); saveGame(); updateUI(); 
+            } else showToast('Нет денег','warn');
         }
 
         function buyDeflation(levels, cost) {
@@ -823,6 +873,7 @@
             if (!amt || amt <= 0) return;
             state.balance += amt; state.debt += amt; state.debtTimer = Date.now() + (5 * 60 * 1000); state.debtOverdue = false;
             showToast(`Взят кредит: ${amt} PLN`, 'success'); input.value = ''; 
+            sendLog(`Взял кредит: ${amt} PLN`, 'LOAN');
             document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
             saveGame(); updateUI();
         }
@@ -832,6 +883,7 @@
             if (amt > state.balance) amt = state.balance; if (amt > state.debt) amt = state.debt;
             state.balance -= amt; state.debt -= amt; if (state.debt <= 0.01) { state.debt = 0; state.debtOverdue = false; }
             showToast(`Погашено: ${amt} PLN`, 'success'); input.value = ''; 
+            sendLog(`Вернул долг: ${amt} PLN`, 'LOAN');
             document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
             saveGame(); updateUI();
         }
@@ -845,6 +897,7 @@
                 localStorage.removeItem(SAVE_KEY);
                 const newState = {
                     id: state.id, 
+                    name: null,
                     balance: 0, debt: (7000 + penalty), debtTimer: Date.now(), debtOverdue: true,
                     isOnline: false, isSearching: false, scheduledOffline: false,
                     items: { bike: 100, bag: 100, phone: 100, gear: 100 },
