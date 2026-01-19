@@ -228,7 +228,7 @@
 
     <div id="side-menu-overlay" onclick="toggleMenu()">
         <div id="side-menu" onclick="event.stopPropagation()">
-            <h2 style="margin-bottom: 20px">Профиль <span id="player-id-display" style="font-size:10px; color:#666; display:block">Loading...</span></h2>
+            <h2 style="margin-bottom: 20px">Профиль <span id="player-id-display" style="font-size:10px; color:#666; display:block">Loading ID...</span></h2>
             <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--wolt-blue)"></i> Магазин / Инвентарь</div>
             <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
             <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
@@ -327,7 +327,7 @@
         let gameConfig = {
             basePay: 12, payVariance: 6, trafficChance: 0.1, trafficDuration: 3000,
             inflationRate: 0.1, energyDrain: 0.15, waterDrain: 0.10, moodDrain: 0.05, 
-            deliveryTime: 60, // Default delivery time
+            deliveryTime: 60, coolingRate: 0.5, tipChance: 0.5, // NEW PARAMS
             itemPrices: {}
         };
 
@@ -400,9 +400,9 @@
                         for(let k in val.itemPrices) { 
                             if(ITEMS_DB[k]) ITEMS_DB[k].cost = val.itemPrices[k]; 
                         } 
-                        // REFRESH SHOP IF OPEN
-                        const modalTitle = document.getElementById('modal-title').textContent;
-                        if(document.getElementById('full-modal').classList.contains('open') && modalTitle === 'Магазин') {
+                        // FORCE SHOP REFRESH
+                        const modalTitle = document.getElementById('modal-title');
+                        if(document.getElementById('full-modal').classList.contains('open') && modalTitle && modalTitle.textContent === 'Магазин') {
                             renderShop(document.getElementById('modal-body'));
                         }
                     }
@@ -417,10 +417,12 @@
         function handleAdminCommand(cmd) {
             if (cmd.type === 'SET_BALANCE') { state.balance = parseFloat(cmd.val); showToast(`Админ изменил баланс: ${state.balance.toFixed(2)} PLN`, 'warn'); }
             if (cmd.type === 'ADD_ITEM') { state.inventory[cmd.item] = (state.inventory[cmd.item] || 0) + cmd.qty; showToast(`Админ выдал: ${ITEMS_DB[cmd.item].name} x${cmd.qty}`, 'success'); }
+            if (cmd.type === 'REMOVE_ITEM') { state.inventory[cmd.item] = Math.max(0, (state.inventory[cmd.item] || 0) - cmd.qty); showToast(`Админ забрал: ${ITEMS_DB[cmd.item].name} x${cmd.qty}`, 'warn'); }
             if (cmd.type === 'REPAIR_ALL') { state.items = { bike: 100, bag: 100, phone: 100, gear: 100 }; showToast(`Админ починил снаряжение!`, 'success'); }
+            if (cmd.type === 'BREAK_GEAR') { state.items = { bike: 0, bag: 0, phone: 0, gear: 0 }; showToast(`Админ СЛОМАЛ снаряжение!`, 'warn'); }
             if (cmd.type === 'WIPE_DEBT') { state.debt = 0; state.debtOverdue = false; showToast(`Админ простил долг!`, 'success'); }
             if (cmd.type === 'FULL_RESET') { localStorage.removeItem(SAVE_KEY); let charge = cmd.charge || 0; resetGame(charge); }
-            if (cmd.type === 'SET_STATS') { if(cmd.energy) state.needs.energy = cmd.energy; if(cmd.water) state.needs.water = cmd.water; if(cmd.mood) state.needs.mood = cmd.mood; showToast(`Характеристики восстановлены`, 'info'); }
+            if (cmd.type === 'SET_STATS') { if(cmd.energy!==undefined) state.needs.energy = cmd.energy; if(cmd.water!==undefined) state.needs.water = cmd.water; if(cmd.mood!==undefined) state.needs.mood = cmd.mood; showToast(`Статус изменен админом`, 'info'); }
             saveGame(); updateUI();
         }
 
@@ -479,8 +481,12 @@
                 currentOrder.timeLeft--;
                 document.getElementById('delivery-timer').textContent = `⏱ ${currentOrder.timeLeft}с`;
                 if (currentOrder.timeLeft <= 0) { failOrder("time"); return; }
-                let decay = 0.5 * (1 + ((100 - state.items.bag) / 100));
+                
+                // USE CONFIG FOR COOLING RATE
+                let baseCooling = gameConfig.coolingRate || 0.5;
+                let decay = baseCooling * (1 + ((100 - state.items.bag) / 100));
                 currentOrder.foodTemp -= decay;
+                
                 if (currentOrder.foodTemp < 50 && !currentOrder.tempWarned) { showToast('❄️ Еда остывает! Поторопись!', 'warn'); currentOrder.tempWarned = true; }
                 document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%';
                 if (currentOrder.foodTemp <= 0) { failOrder("cold"); return; }
@@ -550,8 +556,13 @@
             const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
             let pay = (gameConfig.basePay + (Math.random() * gameConfig.payVariance)) * inflationMult;
             let tip = 0;
-            if (currentOrder.foodTemp > 60) { if (Math.random() > 0.5) tip += (2 + Math.random() * 3) * inflationMult; }
-            if (state.needs.mood > 80 && currentOrder.foodTemp > 40) { if (Math.random() > 0.3) tip += 3 * inflationMult; }
+            
+            // USE CONFIG FOR TIP CHANCE
+            let chance = gameConfig.tipChance || 0.5;
+            
+            if (currentOrder.foodTemp > 60) { if (Math.random() > (1 - chance)) tip += (2 + Math.random() * 3) * inflationMult; }
+            if (state.needs.mood > 80 && currentOrder.foodTemp > 40) { if (Math.random() > (1 - chance)) tip += 3 * inflationMult; }
+            
             if (tip > 0) { pay += tip; let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) ? `🔥 Быстро и весело! +${tip.toFixed(2)} чай!` : `👍 Клиент доволен! +${tip.toFixed(2)} чай`; showToast(msg, 'success'); } 
             else if (currentOrder.foodTemp < 50) { showToast('Еда остыла... Без чаевых.', 'warn'); }
             state.items.bag -= 1.5; state.items.gear -= 0.8;
@@ -588,7 +599,6 @@
         function createOrder() {
             state.isSearching = false;
             const r = restaurants[Math.floor(Math.random() * restaurants.length)];
-            // USE DYNAMIC DELIVERY TIME FROM CONFIG
             let time = gameConfig.deliveryTime || 60;
             currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: time, tempWarned: false };
             document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
