@@ -34,6 +34,7 @@
         /* Settings Inputs */
         .setting-group { background: #252525; padding: 15px; margin-bottom: 15px; border-radius: 10px; }
         .setting-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+        .setting-desc { font-size: 10px; color: #aaa; margin-top: -5px; margin-bottom: 5px; }
         input[type="number"] { background: #333; border: 1px solid #444; color: #00ccff; font-weight:bold; padding: 8px; width: 80px; text-align: right; border-radius: 4px; }
         
         /* Modal */
@@ -60,30 +61,54 @@
     </div>
 
     <div id="settings" class="panel">
+        
         <div class="setting-group">
-            <h3>💸 Экономика и Тарифы</h3>
-            <div class="setting-row"><span>Базовая оплата (PLN)</span> <input type="number" id="basePay" placeholder="12"></div>
-            <div class="setting-row"><span>Разброс оплаты (+/- PLN)</span> <input type="number" id="payVariance" placeholder="6"></div>
-            <div class="setting-row"><span>Шанс Чаевых (0.0 - 1.0)</span> <input type="number" id="tipChance" step="0.1" placeholder="0.5"></div>
-            <div class="setting-row"><span>Инфляция за уровень (%)</span> <input type="number" id="inflationRate" placeholder="10"></div>
+            <h3>💸 Экономика</h3>
+            
+            <div class="setting-row"><span>💰 Оплата за 1 заказ (PLN)</span> <input type="number" id="basePay" placeholder="12"></div>
+            <div class="setting-desc">Сколько курьер получает гарантированно</div>
+
+            <div class="setting-row"><span>🎲 Случайная надбавка (+/-)</span> <input type="number" id="payVariance" placeholder="6"></div>
+            <div class="setting-desc">Плюс-минус к оплате (рандом)</div>
+
+            <div class="setting-row"><span>📈 Инфляция (%)</span> <input type="number" id="inflationRate" placeholder="10"></div>
+            <div class="setting-desc">На сколько растут цены с каждым уровнем</div>
+        </div>
+
+        <div class="setting-group">
+            <h3>☕ Настроение и Чаевые</h3>
+            
+            <div class="setting-row"><span>🌡 Мин. Температура для чая</span> <input type="number" id="tipMinTemp" placeholder="60"></div>
+            <div class="setting-desc">Еда должна быть горячее этого % (0-100)</div>
+
+            <div class="setting-row"><span>😎 Мин. Настроение (Бонус)</span> <input type="number" id="tipMinMood" placeholder="80"></div>
+            <div class="setting-desc">Если настроение выше, шанс на двойной чай</div>
+
+            <div class="setting-row"><span>🤞 Шанс чаевых (0.1 - 1.0)</span> <input type="number" id="tipChance" step="0.1" placeholder="0.5"></div>
+            <div class="setting-desc">Вероятность получить обычные чаевые</div>
         </div>
 
         <div class="setting-group">
             <h3>🛣 Город и Доставка</h3>
-            <div class="setting-row"><span>Время на доставку (сек)</span> <input type="number" id="deliveryTime" placeholder="60"></div>
-            <div class="setting-row"><span>Скорость остывания еды</span> <input type="number" id="coolingRate" step="0.1" placeholder="0.5"></div>
-            <div class="setting-row"><span>Шанс пробки/светофора (%)</span> <input type="number" id="trafficChance" placeholder="10"></div>
-            <div class="setting-row"><span>Длительность пробки (мс)</span> <input type="number" id="trafficDuration" placeholder="3000"></div>
+            
+            <div class="setting-row"><span>⏱ Время на заказ (сек)</span> <input type="number" id="deliveryTime" placeholder="60"></div>
+            <div class="setting-desc">Сколько секунд дается на доставку</div>
+
+            <div class="setting-row"><span>❄️ Скорость остывания еды</span> <input type="number" id="coolingRate" step="0.1" placeholder="0.5"></div>
+            <div class="setting-desc">Чем больше число, тем быстрее стынет (0.1 - 1.0)</div>
+
+            <div class="setting-row"><span>🚦 Шанс пробки (%)</span> <input type="number" id="trafficChance" placeholder="10"></div>
+            <div class="setting-desc">Вероятность застрять в пробке</div>
         </div>
 
         <div class="setting-group">
-            <h3>⚡ Потребление (0.1 - 1.0)</h3>
-            <div class="setting-row"><span>Расход Энергии (клик)</span> <input type="number" id="energyDrain" step="0.01" placeholder="0.15"></div>
-            <div class="setting-row"><span>Расход Воды (клик)</span> <input type="number" id="waterDrain" step="0.01" placeholder="0.10"></div>
+            <h3>⚡ Усталость (За 1 клик)</h3>
+            <div class="setting-row"><span>Расход Энергии</span> <input type="number" id="energyDrain" step="0.01" placeholder="0.15"></div>
+            <div class="setting-row"><span>Расход Воды</span> <input type="number" id="waterDrain" step="0.01" placeholder="0.10"></div>
         </div>
 
         <div class="setting-group">
-            <h3>🍎 Цены на продукты (База)</h3>
+            <h3>🍎 Цены в Магазине (База)</h3>
             <div class="setting-row"><span>Вода</span> <input type="number" class="price-input" data-item="water" placeholder="2.0"></div>
             <div class="setting-row"><span>Сникерс</span> <input type="number" class="price-input" data-item="bar" placeholder="4.5"></div>
             <div class="setting-row"><span>Энергетик</span> <input type="number" class="price-input" data-item="energy_drink" placeholder="7.0"></div>
@@ -152,7 +177,8 @@
         // DEFAULTS
         const DEFAULTS = {
             basePay: 12, payVariance: 6, inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 3000,
-            energyDrain: 0.15, waterDrain: 0.10, deliveryTime: 60, coolingRate: 0.5, tipChance: 0.5,
+            energyDrain: 0.15, waterDrain: 0.10, deliveryTime: 60, coolingRate: 0.5, 
+            tipChance: 0.5, tipMinTemp: 60, tipMinMood: 80,
             itemPrices: { water: 2.0, bar: 4.5, energy_drink: 7.0, coffee: 9.0 }
         };
 
@@ -211,6 +237,8 @@
                 // NEW PARAMS
                 document.getElementById('coolingRate').value = cfg.coolingRate ?? DEFAULTS.coolingRate;
                 document.getElementById('tipChance').value = cfg.tipChance ?? DEFAULTS.tipChance;
+                document.getElementById('tipMinTemp').value = cfg.tipMinTemp ?? DEFAULTS.tipMinTemp;
+                document.getElementById('tipMinMood').value = cfg.tipMinMood ?? DEFAULTS.tipMinMood;
 
                 const prices = cfg.itemPrices || DEFAULTS.itemPrices;
                 document.querySelectorAll('.price-input').forEach(inp => {
@@ -229,8 +257,10 @@
                 deliveryTime: parseInt(document.getElementById('deliveryTime').value), 
                 energyDrain: parseFloat(document.getElementById('energyDrain').value),
                 waterDrain: parseFloat(document.getElementById('waterDrain').value),
-                coolingRate: parseFloat(document.getElementById('coolingRate').value), // NEW
-                tipChance: parseFloat(document.getElementById('tipChance').value), // NEW
+                coolingRate: parseFloat(document.getElementById('coolingRate').value),
+                tipChance: parseFloat(document.getElementById('tipChance').value),
+                tipMinTemp: parseInt(document.getElementById('tipMinTemp').value),
+                tipMinMood: parseInt(document.getElementById('tipMinMood').value),
                 itemPrices: {}
             };
             document.querySelectorAll('.price-input').forEach(inp => { data.itemPrices[inp.dataset.item] = parseFloat(inp.value); });
@@ -268,3 +298,4 @@
     </script>
 </body>
 </html>
+
