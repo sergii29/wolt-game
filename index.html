@@ -332,11 +332,10 @@
 
         const SAVE_KEY = 'WARSZAWA_FOREVER';
         
-        // GAME CONFIG (New defaults)
         let gameConfig = {
-            basePickupPay: 4.0, perKmPay: 1.5, payVariance: 2.0, // NEW ECONOMY
-            trafficChance: 0.1, trafficDuration: 3000,
-            inflationRate: 0.1, energyDrain: 0.15, waterDrain: 0.10, moodDrain: 0.05, 
+            basePickupPay: 4.0, perKmPay: 1.5, payVariance: 2.0, 
+            inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 3000,
+            energyDrain: 0.15, waterDrain: 0.10, moodDrain: 0.05, 
             deliveryTime: 60, coolingRate: 0.5, 
             tipChance: 0.5, tipBonusChance: 0.3, tipMinTemp: 60, tipMinMood: 80,
             itemPrices: {}
@@ -585,17 +584,12 @@
         function completeOrder() {
             stopOrderLoop();
             
-            // USE CALCULATED OFFER PRICE
-            let pay = currentOrder.offerPrice || 10;
+            // PAY IS NOW EXACTLY WHAT WAS OFFERED
+            let pay = currentOrder.offerPrice; 
 
+            // Calculate Tip Separately
             const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
-            
-            // Apply Inflation to the Base Offer
-            pay = pay * inflationMult;
-
-            // Small variance around that offer
-            pay += (Math.random() * gameConfig.payVariance) - (gameConfig.payVariance / 2);
 
             let tip = 0;
             let minTemp = gameConfig.tipMinTemp || 60;
@@ -609,18 +603,36 @@
                 if (Math.random() <= 0.3) tip += 3 * inflationMult; 
             }
             
-            if (tip > 0) { pay += tip; let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) ? `🔥 Быстро и весело! +${tip.toFixed(2)} чай!` : `👍 Клиент доволен! +${tip.toFixed(2)} чай`; showToast(msg, 'success'); } 
-            else if (currentOrder.foodTemp < 50) { showToast('Еда остыла... Без чаевых.', 'warn'); }
-            state.items.bag -= 1.5; state.items.gear -= 0.8;
-            if (state.debtOverdue && state.debt > 0) {
-                let penalty = pay * 0.20; if (penalty > state.debt) penalty = state.debt;
-                state.debt -= penalty; pay -= penalty; showToast(`Долг: -${penalty.toFixed(2)} PLN`, 'warn');
-            }
-            state.balance += pay; state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
-            
-            sendLog(`Завершил заказ: +${pay.toFixed(2)} PLN (${currentOrder.rest.name})`, 'ORDER');
+            let totalEarn = pay + tip;
 
-            setTimeout(() => { showToast(`Заказ: +${pay.toFixed(2)} PLN`, 'success'); }, 500);
+            if (tip > 0) { 
+                let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) ? `🔥 Быстро и весело! +${tip.toFixed(2)} napiwek!` : `👍 Клиент доволен! +${tip.toFixed(2)} napiwek`; 
+                showToast(msg, 'success'); 
+            } 
+            else if (currentOrder.foodTemp < 50) { 
+                showToast('Еда остыла... Без чаевых.', 'warn'); 
+            }
+
+            state.items.bag -= 1.5; state.items.gear -= 0.8;
+            
+            if (state.debtOverdue && state.debt > 0) {
+                let penalty = totalEarn * 0.20; if (penalty > state.debt) penalty = state.debt;
+                state.debt -= penalty; totalEarn -= penalty; showToast(`Долг: -${penalty.toFixed(2)} PLN`, 'warn');
+            }
+            
+            state.balance += totalEarn; 
+            
+            // HISTORY with TIP SPLIT
+            state.history.push({ 
+                rest: currentOrder.rest.name, 
+                pay: pay, 
+                tip: tip, 
+                total: pay + tip 
+            });
+            
+            sendLog(`Завершил заказ: +${(pay+tip).toFixed(2)} PLN (${currentOrder.rest.name})`, 'ORDER');
+
+            setTimeout(() => { showToast(`Заказ: +${(pay+tip).toFixed(2)} PLN`, 'success'); }, 500);
             if (state.scheduledOffline) { goOffline(); } else { startSearching(); }
             saveGame(); updateUI();
         }
@@ -656,12 +668,20 @@
             state.isSearching = false;
             const r = restaurants[Math.floor(Math.random() * restaurants.length)];
             
-            // 1. RANDOM DISTANCE (0.8km to 6.5km)
+            // 1. RANDOM DISTANCE
             const dist = (0.8 + Math.random() * 5.7).toFixed(1);
             
-            // 2. CALCULATE PRICE (Base + Dist*Rate)
-            let estimatedPay = (gameConfig.basePickupPay || 4.0) + (dist * (gameConfig.perKmPay || 1.5));
+            // 2. CALCULATE EXACT PAY (including inflation NOW)
+            const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
+            const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
             
+            let rawPay = (gameConfig.basePickupPay || 4.0) + (dist * (gameConfig.perKmPay || 1.5));
+            let finalOffer = rawPay * inflationMult;
+            
+            // Add variance NOW, so the offer is final
+            finalOffer += (Math.random() * gameConfig.payVariance) - (gameConfig.payVariance / 2);
+            if(finalOffer < 2) finalOffer = 2; // Min pay safety
+
             let time = gameConfig.deliveryTime || 60;
             currentOrder = { 
                 rest: r, 
@@ -672,18 +692,17 @@
                 timeLeft: time, 
                 tempWarned: false,
                 distance: dist,
-                offerPrice: estimatedPay // Store for later
+                offerPrice: finalOffer // STORE EXACT PROMISED AMOUNT
             };
 
             document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
             document.getElementById('rest-icon').textContent = r.icon;
             document.getElementById('status-label').textContent = '🔥 ПРИМИ ЗАКАЗ! 🔥';
             
-            // UPDATE UI WITH PRICE AND DISTANCE
             document.getElementById('order-dest').textContent = `Забрать: ${dist} km`;
             const offerEl = document.getElementById('order-offer');
             offerEl.style.display = 'block';
-            offerEl.textContent = `💰 ${estimatedPay.toFixed(2)} PLN`;
+            offerEl.textContent = `💰 ${finalOffer.toFixed(2)} PLN`;
 
             document.getElementById('pedal-btn').textContent = 'ПРИНЯТЬ ЗАКАЗ';
             document.getElementById('pedal-btn').disabled = false;
@@ -924,7 +943,30 @@
             document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
             saveGame(); updateUI();
         }
-        function renderHistory(c) { c.innerHTML = state.history.slice().reverse().map(h=>`<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between"><b>${h.rest}</b><span>+${h.earn}</span></div>`).join(''); }
+
+        function renderHistory(c) { 
+            c.innerHTML = state.history.slice().reverse().map(h => {
+                let amount = 0;
+                let tipStr = "";
+
+                // Handle both old format (string/simple) and new format (object with tip)
+                if (h.total) {
+                    amount = h.total;
+                    if (h.tip > 0) {
+                        tipStr = `<span style="color:#00e676; font-size:10px; margin-left:5px">(+${h.tip.toFixed(2)} napiwek)</span>`;
+                    }
+                } else {
+                    // Fallback for old history data
+                    amount = parseFloat(h.earn); 
+                }
+
+                return `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center">
+                    <div><b>${h.rest}</b>${tipStr}</div>
+                    <span style="font-weight:bold">+${amount.toFixed(2)}</span>
+                </div>`;
+            }).join(''); 
+        }
+
         function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
         
         function resetGame(penalty = 0) {
@@ -952,4 +994,3 @@
     </script>
 </body>
 </html>
-
