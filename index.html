@@ -6,82 +6,208 @@
     <title>Warsaw Courier Sim</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
     <style>
-        /* ОРИГИНАЛЬНЫЙ ДИЗАЙН */
-        :root { --bg-dark: #1a1a1a; --text-primary: #ffffff; --text-secondary: #a0a0a0; --wolt-blue: #009de0; --accent-green: #00e676; --accent-red: #ff3d00; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif; background-color: var(--bg-dark); color: var(--text-primary); user-select: none; overflow: hidden; }
+        :root {
+            --bg-dark: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent-blue: #00ccff;
+            --accent-green: #00e676;
+            --accent-orange: #ff9100;
+            --accent-red: #ff3d00;
+            --accent-purple: #d500f9;
+            --wolt-blue: #009de0;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark); color: var(--text-primary);
+            overflow: hidden; user-select: none;
+        }
+
         #map { height: 100%; width: 100%; z-index: 1; filter: brightness(0.8) contrast(1.2); }
 
-        /* ВЕРХНЯЯ ПАНЕЛЬ */
-        .top-bar { position: absolute; top: 0; left: 0; right: 0; padding: 15px; display: flex; justify-content: space-between; z-index: 1000; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); pointer-events: none; }
-        .menu-btn, .stats-btn { background: white; color: black; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; pointer-events: auto; cursor: pointer; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        
-        .balance-display { background: rgba(0,0,0,0.8); padding: 8px 16px; border-radius: 20px; text-align: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
+        /* --- TOP UI --- */
+        .top-bar {
+            position: absolute; top: 0; left: 0; right: 0; padding: 15px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            z-index: 1000; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            pointer-events: none;
+        }
+
+        .menu-btn, .stats-btn {
+            background: white; color: black; width: 45px; height: 45px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: auto; cursor: pointer; border: none;
+        }
+
+        .balance-display {
+            background: rgba(0, 0, 0, 0.8); padding: 8px 16px; border-radius: 20px;
+            text-align: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1);
+        }
         .balance-amount { font-size: 18px; font-weight: 800; color: white; }
         .balance-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; }
         .debt-warning { color: var(--accent-red); font-size: 10px; font-weight: bold; display: none; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        /* ШКАЛЫ */
-        .equip-bar { position: absolute; top: 70px; left: 15px; right: 15px; display: flex; gap: 4px; z-index: 999; pointer-events: none; }
-        .equip-item { flex: 1; background: rgba(0,0,0,0.8); border-radius: 6px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(4px); }
+        /* --- BARS & LABELS --- */
+        .equip-bar {
+            position: absolute; top: 70px; left: 15px; right: 15px;
+            display: flex; gap: 4px; z-index: 999; pointer-events: none;
+        }
+
+        .equip-item {
+            flex: 1; background: rgba(0,0,0,0.8); border-radius: 6px; padding: 4px 2px;
+            display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(4px);
+        }
         .equip-icon { font-size: 10px; margin-bottom: 2px; color: #ccc; }
         .progress-mini { width: 80%; height: 3px; background: #444; border-radius: 2px; overflow: hidden; margin-bottom: 2px; }
         .progress-mini-fill { height: 100%; background: var(--accent-green); transition: width 0.3s; }
-        .equip-label { font-size: 7px; color: #888; font-weight: 700; }
+        .equip-label { font-size: 7px; text-transform: uppercase; color: #888; font-weight: 700; letter-spacing: 0.5px; }
 
-        /* НИЖНЯЯ ПАНЕЛЬ (БЕЛАЯ) */
-        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333; }
-        
-        .slider-container { position: relative; width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
-        .slider-text { color: #999; font-weight: 600; z-index: 1; text-transform: uppercase; font-size: 14px; }
-        .slider-knob { position: absolute; left: 4px; width: 52px; height: 52px; background: var(--wolt-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; }
+        /* --- TOAST --- */
+        .game-toast {
+            position: absolute; top: 140px; left: 50%; transform: translateX(-50%) translateY(-20px);
+            background: rgba(0, 0, 0, 0.9); color: white; padding: 10px 20px; border-radius: 25px;
+            font-weight: bold; font-size: 14px; z-index: 1001; opacity: 0; transition: all 0.3s;
+            pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 1px solid #333;
+        }
+        .game-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast-warn { border-color: var(--accent-orange); color: var(--accent-orange); }
+        .toast-success { border-color: var(--accent-green); color: var(--accent-green); }
+
+        /* --- BOTTOM SHEET --- */
+        .bottom-sheet {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: white; border-top-left-radius: 24px; border-top-right-radius: 24px;
+            padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333;
+        }
+
+        /* SLIDER GENERIC */
+        .slider-container {
+            position: relative; width: 100%; height: 60px; background: #f0f0f0;
+            border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px;
+        }
+        .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; }
+        .slider-knob {
+            position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px;
+            background: var(--wolt-blue); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s;
+        }
         .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 157, 224, 0.2); z-index: 0; }
-        .slider-container.scheduled { background: #ffebee; } .slider-container.scheduled .slider-knob { background: var(--accent-red); } .slider-container.scheduled .slider-text { color: var(--accent-red); }
-
-        /* КНОПКИ */
-        .controls-row { display: flex; gap: 10px; margin-top: 15px; }
-        .pedal-btn { flex: 1; background: var(--wolt-blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 0 #007bb5; transition: 0.1s; }
-        .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
-        .pedal-btn:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
-        .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
         
-        .bag-btn { width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #333; cursor: pointer; position: relative; }
-        .bag-badge { position: absolute; top: -5px; right: -5px; background: var(--accent-red); color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        /* Scheduled State for Slider */
+        .slider-container.scheduled { background: #ffebee; border: 1px solid #ffcdd2; }
+        .slider-container.scheduled .slider-knob { background: var(--accent-red); }
+        .slider-container.scheduled .slider-text { color: var(--accent-red); }
 
-        /* МОДАЛКИ (БЕЛЫЕ) */
-        .full-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f5f5f5; color: black; z-index: 3000; transform: translateY(100%); transition: 0.3s; display: flex; flex-direction: column; }
+        /* CONTROLS */
+        .controls-row { display: flex; gap: 10px; margin-top: 15px; }
+
+        .pedal-btn {
+            flex: 1; background: var(--wolt-blue); color: white; border: none; padding: 18px;
+            border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 0 #007bb5; transition: all 0.1s;
+        }
+        .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
+        .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
+        .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
+
+        .bag-btn {
+            width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center; font-size: 24px;
+            color: #333; cursor: pointer; position: relative;
+        }
+        .bag-badge {
+            position: absolute; top: -5px; right: -5px; background: var(--accent-red);
+            color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-weight: bold;
+        }
+
+        /* INVENTORY POPUP */
+        .quick-inv {
+            position: absolute; bottom: 90px; left: 20px; width: 220px; background: #252525;
+            color: white; padding: 10px; border-radius: 16px; z-index: 1005; display: none;
+            flex-direction: column; gap: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.6); border: 1px solid #444;
+        }
+        .quick-inv.open { display: flex; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .inv-item {
+            display: flex; justify-content: space-between; align-items: center; padding: 10px;
+            background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer;
+            border: 1px solid transparent; transition: background 0.2s;
+        }
+        .inv-item:active { background: rgba(255,255,255,0.2); }
+        .inv-item.link-btn { background: var(--wolt-blue); justify-content: center; font-weight: bold; }
+        .inv-count { background: var(--wolt-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+
+        @keyframes popUp { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        /* MODALS */
+        #side-menu-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #side-menu-overlay.open { opacity: 1; pointer-events: auto; }
+        #side-menu {
+            position: absolute; top: 0; left: -85%; width: 85%; max-width: 320px; height: 100%;
+            background: #1e1e1e; transition: left 0.3s; padding: 20px; box-sizing: border-box;
+            display: flex; flex-direction: column;
+        }
+        #side-menu.open { left: 0; }
+        .menu-item { padding: 15px 0; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 15px; font-size: 16px; align-items: center; }
+
+        .full-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f5f5f5;
+            color: black; z-index: 3000; transform: translateY(100%); transition: transform 0.3s;
+            display: flex; flex-direction: column;
+        }
         .full-modal.open { transform: translateY(0); }
         .modal-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; font-weight: bold; }
         .modal-content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* МАГАЗИН И БАНК */
-        .shop-card { background: white; padding: 15px; border-radius: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
-        .shop-btn { padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; border: 1px solid var(--wolt-blue); color: var(--wolt-blue); background: white; min-width: 80px; transition: 0.2s; }
+        /* SHOP & DEFLATION CARDS */
+        .shop-section { margin-bottom: 25px; }
+        .shop-section h3 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
+        .shop-card {
+            background: white; padding: 15px; border-radius: 14px; margin-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+        .shop-btn {
+            padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer;
+            border: 1px solid var(--wolt-blue); color: var(--wolt-blue); background: white; min-width: 80px;
+            transition: all 0.2s;
+        }
         .shop-btn.buy { background: var(--wolt-blue); color: white; }
         .shop-btn.bought { background: var(--accent-green); border-color: var(--accent-green); color: white; transform: scale(1.05); }
-        .shop-btn:disabled { background: #eee; color: #aaa; border: 1px solid #eee; cursor: not-allowed; }
+        .shop-btn:disabled { background: #eee; color: #aaa; border-color: #eee; cursor: not-allowed; }
+
+        .bank-input { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; font-size: 24px; font-weight: bold; margin-bottom: 15px; box-sizing: border-box; }
+        .bank-actions { display: flex; gap: 10px; }
+        .bank-btn { flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-loan { background: var(--accent-green); color: #004d40; }
+        .btn-repay { background: var(--accent-orange); color: #3e2723; }
+        .debt-alert-box { background: #ffebee; color: #c62828; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #ef9a9a; display: none; }
+
+        /* GOVT BTN */
+        .govt-btn { background: #37474f; color: white; border-color: #37474f; }
         
-        /* SIDE MENU */
-        #side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: 0.3s; }
-        #side-menu-overlay.open { opacity: 1; pointer-events: auto; }
-        #side-menu { position: absolute; top: 0; left: -85%; width: 85%; height: 100%; background: #1e1e1e; transition: left 0.3s; padding: 20px; display: flex; flex-direction: column; box-sizing: border-box; }
-        #side-menu.open { left: 0; }
-        .menu-item { padding: 15px 0; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 15px; font-size: 16px; align-items: center; }
-
-        .game-toast { position: absolute; top: 140px; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(0,0,0,0.9); color: white; padding: 10px 20px; border-radius: 25px; font-weight: bold; font-size: 14px; z-index: 2000; opacity: 0; transition: 0.3s; pointer-events: none; white-space: nowrap; }
-        .game-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-        .toast-warn { border:1px solid var(--accent-orange); color: var(--accent-orange); }
-        .toast-success { border:1px solid var(--accent-green); color: var(--accent-green); }
-
+        /* TIMERS UI */
         .accept-timer-bg { width: 100%; height: 6px; background: #eee; margin-top: 8px; border-radius: 3px; overflow: hidden; display: none; }
         .accept-timer-fill { height: 100%; background: var(--accent-red); width: 100%; }
+        
+        /* ANIMATION for Timer */
         @keyframes shrinkTimer { from { width: 100%; } to { width: 0%; } }
         .animate-timer { animation: shrinkTimer 15s linear forwards; }
-        .quick-inv { position: absolute; bottom: 90px; left: 20px; width: 220px; background: #252525; color: white; padding: 10px; border-radius: 16px; z-index: 1005; display: none; flex-direction: column; gap: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.6); }
-        .inv-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; }
-        .inv-count { background: var(--wolt-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+
+        .delivery-timer { font-size: 11px; color: #666; margin-top: 2px; font-weight: bold; }
+
     </style>
 </head>
 <body>
@@ -111,12 +237,12 @@
 
     <div id="side-menu-overlay" onclick="toggleMenu()">
         <div id="side-menu" onclick="event.stopPropagation()">
-            <h2 style="margin-bottom: 20px; color:white">Профиль</h2>
+            <h2 style="margin-bottom: 20px">Профиль <span id="player-id-display" style="font-size:10px; color:#666; display:block">Loading ID...</span></h2>
             <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--wolt-blue)"></i> Магазин / Инвентарь</div>
             <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
-            <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство</div>
+            <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
             <div class="menu-item" onclick="openModal('stats')"><i class="fa-solid fa-clock-rotate-left"></i> История</div>
-            <div class="menu-item" onclick="resetGame()" style="color:var(--accent-red); margin-top:auto"><i class="fa-solid fa-trash"></i> Сброс</div>
+            <div class="menu-item" onclick="resetGame()" style="color:red; margin-top:auto"><i class="fa-solid fa-trash"></i> Сброс</div>
         </div>
     </div>
 
@@ -146,7 +272,7 @@
                     <h3 style="margin:0" id="rest-name">Поиск...</h3>
                     <div style="display:flex; justify-content:space-between; align-items:center">
                         <p style="margin:0; font-size:12px; color:#888" id="order-dest">Ожидание</p>
-                        <span id="delivery-timer" style="font-size:11px; font-weight:bold; color:#666"></span>
+                        <span id="delivery-timer" class="delivery-timer"></span>
                     </div>
                     <div class="accept-timer-bg" id="accept-timer"><div class="accept-timer-fill" id="accept-timer-fill"></div></div>
                 </div>
@@ -174,7 +300,7 @@
             <div class="controls-row">
                 <div class="bag-btn" onclick="toggleQuickInv()">
                     <i class="fa-solid fa-bag-shopping"></i>
-                    <div class="bag-badge" id="bag-count" style="display:none">0</div>
+                    <div class="bag-badge" id="bag-count">0</div>
                 </div>
                 <button class="pedal-btn" id="pedal-btn">ЖМИ ГАЗ (PEDAL)</button>
             </div>
@@ -184,124 +310,740 @@
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // === 1. FIREBASE ===
+        // ==========================================
+        // НАСТРОЙКИ FIREBASE (Адаптировано под CDN)
+        // ==========================================
         const firebaseConfig = {
-          apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
-          authDomain: "warszawa-courier.firebaseapp.com",
-          databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
-          projectId: "warszawa-courier",
-          storageBucket: "warszawa-courier.firebasestorage.app",
-          messagingSenderId: "295860613508",
-          appId: "1:295860613508:web:86fe8364377d6875612dd1",
-          measurementId: "G-TGSCHBVLX2"
+            apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
+            authDomain: "warszawa-courier.firebaseapp.com",
+            databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "warszawa-courier",
+            storageBucket: "warszawa-courier.firebasestorage.app",
+            messagingSenderId: "295860613508",
+            appId: "1:295860613508:web:86fe8364377d6875612dd1",
+            measurementId: "G-TGSCHBVLX2"
         };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        window.db = db;
+        // ==========================================
 
-        // === 2. ЛОГИКА ===
+        let db = null;
+        try {
+            // Инициализация Firebase через глобальный объект 'firebase'
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            console.log("Firebase Connected");
+        } catch(e) { console.error("Firebase Error:", e); }
+
         const SAVE_KEY = 'WARSZAWA_FOREVER';
-        let tg = window.Telegram.WebApp; tg.expand();
-        let userId = (tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user.id.toString() : (localStorage.getItem('wolt_user_id') || 'user_' + Math.floor(Math.random()*100000));
-        if (!tg.initDataUnsafe.user) localStorage.setItem('wolt_user_id', userId);
-
-        let GLOBAL = { basePay: 12, inflationRate: 0.05, penaltyLate: 5.00, energyCost: 0.15, eventChance: 0.1, priceMult: 1.0, speedMult: 1.0 };
-        const ITEMS_DB = {
-            bike: { name: 'Велосипед', type: 'repair', baseCost: 5, icon: 'fa-bicycle' },
-            bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open' },
-            phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen' },
-            gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt' },
-            water: { name: 'Вода (0.5л)', type: 'buy', cost: 2.0, effect: {water:35, energy:5}, icon: 'fa-bottle-water', target:'water' },
-            bar: { name: 'Сникерс', type: 'buy', cost: 4.5, effect: {energy:20, mood:15}, icon: 'fa-cookie-bite', target:'energy' },
-            energy_drink: { name: 'Red Bull', type: 'buy', cost: 7.0, effect: {energy:50, mood:5, water:-5}, icon: 'fa-bolt', target:'energy' },
-            coffee: { name: 'Латте', type: 'buy', cost: 9.0, effect: {mood:30, energy:10}, icon: 'fa-mug-hot', target:'mood' }
+        
+        // Переменные игры (синхронизируются с Админкой)
+        let gameConfig = {
+            basePay: 12,
+            payVariance: 6,
+            trafficChance: 0.1,
+            trafficDuration: 3000,
+            inflationRate: 0.1, // 10%
+            energyDrain: 0.15,
+            waterDrain: 0.10,
+            moodDrain: 0.05,
+            itemPrices: {} // Цены из админки
         };
 
-        let state = { name: (tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user.first_name : "Гость", balance: 0, debt: 0, debtTimer: 0, debtOverdue: false, isBanned: false, isOnline: false, isSearching: false, scheduledOffline: false, items: { bike: 100, bag: 100, phone: 100, gear: 100 }, needs: { energy: 100, water: 100, mood: 100 }, inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 }, repairs: { bike: 0, bag: 0, phone: 0, gear: 0 }, history: [] };
-        let currentOrder = null, acceptTimeout, orderInterval, map, searchTimeout;
+        const ITEMS_DB = {
+            bike: { name: 'Велосипед', type: 'repair', baseCost: 5, icon: 'fa-bicycle', desc: 'Ремонт ходовой' },
+            bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open', desc: 'Заплатка дыр' },
+            phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen', desc: 'Оплата интернета' },
+            gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt', desc: 'Химчистка' },
+            water: { name: 'Вода (0.5л)', type: 'buy', cost: 2.0, icon: 'fa-bottle-water', effect: { water: 35, energy: 5 }, desc: 'Спасает от жажды.', target: 'water' },
+            bar: { name: 'Сникерс', type: 'buy', cost: 4.5, icon: 'fa-cookie-bite', effect: { energy: 20, mood: 15 }, desc: 'Баланс энергии.', target: 'energy' },
+            energy_drink: { name: 'Red Bull', type: 'buy', cost: 7.0, icon: 'fa-bolt', effect: { energy: 50, mood: 5, water: -5 }, desc: 'Энергетик временно останавливает расход энергии!', target: 'energy', special: 'no_drain' },
+            coffee: { name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot', effect: { mood: 30, energy: 10 }, desc: 'Для Настроения!', target: 'mood' }
+        };
+
+        let state = {
+            id: 'u_' + Math.random().toString(36).substr(2, 9),
+            balance: 0,
+            debt: 0, debtTimer: 0, debtOverdue: false,
+            isOnline: false, isSearching: false, scheduledOffline: false,
+            items: { bike: 100, bag: 100, phone: 100, gear: 100 },
+            needs: { energy: 100, water: 100, mood: 100 },
+            inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
+            repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
+            history: [],
+            energyBoostActive: false // Red Bull effect
+        };
+
+        const restaurants = [
+            { name: "McDonald's", icon: "🍔" }, { name: "KFC", icon: "🍗" },
+            { name: "Pasibus", icon: "🍔" }, { name: "Kebab King", icon: "🌯" },
+            { name: "Sushi Master", icon: "🍣" }, { name: "Pizza Hut", icon: "🍕" }
+        ];
+
+        let currentOrder = null;
+        let acceptTimeout = null;
+        let orderInterval = null;
+        let map;
+        let lastSync = 0;
 
         function init() {
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([52.2297, 21.0122], 13);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
             L.marker([52.2297, 21.0122]).addTo(map);
-            loadGame(); initSliders(); document.getElementById('pedal-btn').addEventListener('click', pedal); setInterval(checkDebt, 1000);
-            if (window.db) {
-                db.ref('users/' + userId).on('value', snap => {
-                    const val = snap.val();
-                    if (val) {
-                        if (val.isBanned) { localStorage.clear(); location.reload(); }
-                        if (val.adminEdit) { 
-                            if(val.balance !== undefined) state.balance = val.balance;
-                            if(val.inventory) state.inventory = val.inventory;
-                            if(val.repairs) state.repairs = val.repairs;
-                            if(val.items) state.items = val.items;
-                            if(val.needs) state.needs = val.needs;
-                            if(val.debt !== undefined) state.debt = val.debt;
-                            showToast('⚠️ Данные изменены Админом!', 'warn'); db.ref('users/'+userId+'/adminEdit').set(false); updateUI(); 
-                        }
-                    }
+            
+            loadGame();
+            document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
+
+            document.getElementById('pedal-btn').addEventListener('click', pedal);
+            initSliders();
+            setInterval(checkDebt, 1000); 
+            
+            listenToCloud(); // Подключаем слушатели админки
+            syncToCloud(true); // Первый синк
+        }
+
+        // --- СИНХРОНИЗАЦИЯ С FIREBASE ---
+        function syncToCloud(force = false) {
+            if (!db) return;
+            const now = Date.now();
+            if (force || now - lastSync > 3000) { // Отправляем данные не чаще раза в 3 сек
+                db.ref('players/' + state.id).update({
+                    balance: state.balance,
+                    isOnline: state.isOnline,
+                    lastSeen: now,
+                    stats: state.needs,
+                    inventory: state.inventory,
+                    debt: state.debt,
+                    items: state.items
                 });
-                db.ref('config').on('value', snap => { const c = snap.val(); if(c) GLOBAL = {...GLOBAL, ...c}; });
-                syncToCloud(); setInterval(syncToCloud, 5000);
+                lastSync = now;
             }
         }
 
-        function loadGame() { const s = localStorage.getItem(SAVE_KEY); if (s) state = { ...state, ...JSON.parse(s) }; state.scheduledOffline = false; state.isSearching = false; updateUI(); }
-        function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); syncToCloud(); }
-        function syncToCloud() { if(window.db) db.ref('users/' + userId).update({ name: state.name, balance: state.balance, debt: state.debt, items: state.items, needs: state.needs, isOnline: state.isOnline, repairs: state.repairs, history: state.history, lastActive: Date.now() }); }
+        function listenToCloud() {
+            if (!db) return;
+            
+            // 1. Слушаем глобальные настройки (цены, инфляция)
+            db.ref('config').on('value', (snap) => {
+                const val = snap.val();
+                if (val) {
+                    gameConfig = { ...gameConfig, ...val };
+                    if (val.itemPrices) {
+                        for(let k in val.itemPrices) {
+                            if(ITEMS_DB[k]) ITEMS_DB[k].cost = val.itemPrices[k];
+                        }
+                    }
+                }
+            });
 
-        function checkDebt() { if (state.debt > 0 && !state.debtOverdue) { if (Date.now() > state.debtTimer) { state.debtOverdue = true; showToast('СРОК ВЫШЕЛ! ШТРАФ 20%', 'warn'); updateUI(); if(document.getElementById('full-modal').classList.contains('open')) renderBank(document.getElementById('modal-body')); } else { if(document.getElementById('full-modal').classList.contains('open')) renderBank(document.getElementById('modal-body')); } } }
-        function updateUI() { document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN'; ['bike','bag','phone','gear'].forEach(k => document.getElementById(`bar-${k}`).style.width = state.items[k] + '%'); ['energy','water','mood'].forEach(k => document.getElementById(`bar-${k}`).style.width = state.needs[k] + '%'); const totalInv = Object.values(state.inventory).reduce((a,b)=>a+b, 0); document.getElementById('bag-count').textContent = totalInv; document.getElementById('bag-count').style.display = totalInv ? 'flex' : 'none'; const warn = document.getElementById('debt-warning'); const garn = document.getElementById('garnishment-info'); if (state.debtOverdue && state.debt > 0) { warn.style.display = 'inline'; garn.style.display = 'block'; } else { warn.style.display = 'none'; garn.style.display = 'none'; } }
-        function showToast(msg, type='info') { const t = document.getElementById('toast'); t.innerHTML = msg; t.className = 'game-toast show ' + (type === 'warn' ? 'toast-warn' : (type==='success' ? 'toast-success' : '')); setTimeout(() => t.className = 'game-toast', 3000); }
+            // 2. Слушаем личные команды от Админа
+            db.ref('players/' + state.id + '/adminInbox').on('child_added', (snap) => {
+                const cmd = snap.val();
+                handleAdminCommand(cmd);
+                snap.ref.remove(); // Удаляем команду после выполнения
+            });
+        }
 
-        function startSearching() { stopOrderLoop(); if(searchTimeout) clearTimeout(searchTimeout); state.isSearching = true; document.getElementById('active-order-view').style.display = 'flex'; document.getElementById('rest-name').textContent = 'Поиск...'; document.getElementById('rest-icon').textContent = '🔍'; document.getElementById('status-label').textContent = 'Ищем заказ...'; document.getElementById('order-dest').textContent = 'Ожидание...'; document.getElementById('accept-timer').style.display = 'none'; document.getElementById('delivery-timer').textContent = ''; const btn = document.getElementById('pedal-btn'); btn.disabled = true; btn.textContent = 'ПОИСК...'; btn.className = 'pedal-btn'; resetSlider('online'); document.getElementById('online-slider-text').textContent = "СВАЙП ДЛЯ ОФЛАЙНА"; document.getElementById('online-slider-box').classList.remove('scheduled'); updateTrack(0); searchTimeout = setTimeout(() => { if (state.isOnline && state.isSearching) createOrder(); }, 1500); }
-        function createOrder() { state.isSearching = false; const r = [{name:"McDonald's",icon:"🍔"},{name:"KFC",icon:"🍗"},{name:"Pasibus",icon:"🍔"},{name:"Kebab King",icon:"🌯"},{name:"Sushi Master",icon:"🍣"},{name:"Pizza Hut",icon:"🍕"}][Math.floor(Math.random()*6)]; currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: 60, tempWarned: false }; document.getElementById('rest-name').textContent = `Едем в ${r.name}`; document.getElementById('rest-icon').textContent = r.icon; document.getElementById('status-label').textContent = '🔥 ПРИМИ ЗАКАЗ! 🔥'; document.getElementById('order-dest').textContent = 'Забрать: 2.5 km'; const btn = document.getElementById('pedal-btn'); btn.textContent = 'ПРИНЯТЬ ЗАКАЗ'; btn.disabled = false; const bar = document.getElementById('accept-timer'); const fill = document.getElementById('accept-timer-fill'); bar.style.display = 'block'; fill.classList.remove('animate-timer'); void fill.offsetWidth; fill.classList.add('animate-timer'); acceptTimeout = setTimeout(missOrder, 15000); resetSlider('online'); document.getElementById('online-slider-text').textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН"; }
-        
-        function pedal() { if (!currentOrder) return; if (!currentOrder.accepted) { acceptOrder(); return; } let fatigue = Math.max(0.3, state.needs.energy / 100); if (state.needs.energy <= 5 || state.needs.water <= 5) { showToast('Сил нет! Открой рюкзак!', 'warn'); openQuickInv(true); return; } state.needs.energy -= GLOBAL.energyCost; state.needs.water -= 0.10; state.needs.mood -= 0.05; state.items.bike -= 0.1; state.items.phone -= 0.05; 
-        // СКОРОСТЬ 1.2 = ЧУТЬ БЫСТРЕЕ ХАРДКОРА (БЫЛО 0.8)
-        let speed = 1.2 * fatigue * (GLOBAL.speedMult || 1.0); currentOrder.progress += speed; updateTrack(currentOrder.progress); if (Math.random() < (GLOBAL.eventChance || 0.1) && currentOrder.stage === 2) triggerRandomEvent(); if (currentOrder.progress >= 100) nextStage(); saveGame(); updateUI(); }
-        
-        function acceptOrder() { currentOrder.accepted = true; clearTimeout(acceptTimeout); document.getElementById('accept-timer').style.display = 'none'; document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)'; startOrderLoop(); }
-        function missOrder() { state.isSearching = true; currentOrder = null; state.balance -= GLOBAL.penaltyMiss || 0.10; showToast('Заказ упущен! Штраф -0.10 PLN', 'warn'); saveGame(); updateUI(); startSearching(); }
-        function nextStage() { currentOrder.stage++; currentOrder.progress = 0; updateTrack(0); if (currentOrder.stage === 1) { const btn = document.getElementById('pedal-btn'); btn.disabled = true; btn.textContent = 'ЖДЕМ ЗАКАЗ...'; document.getElementById('status-label').textContent = 'Ресторан готовит...'; setTimeout(() => { btn.disabled = false; btn.textContent = 'ЖМИ ГАЗ (PEDAL)'; document.getElementById('status-label').textContent = 'Везем клиенту'; currentOrder.stage = 2; }, 2000); } else if (currentOrder.stage === 3) completeOrder(); }
-        function completeOrder() { stopOrderLoop(); const lvl = Object.values(state.repairs).reduce((a,b)=>a+b,0); const inf = 1 + (lvl * GLOBAL.inflationRate); let pay = (GLOBAL.basePay + (Math.random() * 6)) * inf; let tip = 0; if (currentOrder.foodTemp > 60 && Math.random() > 0.5) tip += (2 + Math.random()*3) * inf; if (state.needs.mood > 80 && currentOrder.foodTemp > 40 && Math.random() > 0.3) tip += 3 * inf; if (tip > 0) { pay += tip; showToast(`👍 Доставка! +${tip.toFixed(2)} чай`, 'success'); } else if (currentOrder.foodTemp < 50) showToast('Еда остыла... Без чаевых.', 'warn'); state.items.bag -= 1.5; state.items.gear -= 0.8; if (state.debtOverdue && state.debt > 0) { let p = pay * 0.20; if (p > state.debt) p = state.debt; state.debt -= p; pay -= p; showToast(`Долг: -${p.toFixed(2)} PLN`, 'warn'); } state.balance += pay; state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) }); setTimeout(() => { showToast(`Заказ: +${pay.toFixed(2)} PLN`, 'success'); }, 500); if (state.scheduledOffline) { goOffline(); } else { startSearching(); } saveGame(); updateUI(); }
-        function startOrderLoop() { if(orderInterval) clearInterval(orderInterval); orderInterval = setInterval(() => { if (!currentOrder || !currentOrder.accepted) return; currentOrder.timeLeft--; document.getElementById('delivery-timer').textContent = `⏱ ${currentOrder.timeLeft}с`; if (currentOrder.timeLeft <= 0) { failOrder("time"); return; } let decay = 0.5 * (1 + ((100 - state.items.bag) / 100)); currentOrder.foodTemp -= decay; document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%'; if (currentOrder.foodTemp <= 0) { failOrder("cold"); return; } }, 1000); }
-        function stopOrderLoop() { if (orderInterval) clearInterval(orderInterval); orderInterval = null; document.getElementById('delivery-timer').textContent = ''; }
-        function failOrder(reason) { stopOrderLoop(); let msg = reason === "time" ? "⏰ Время вышло!" : "❄️ Еда испорчена!"; showToast(`${msg} Штраф -${GLOBAL.penaltyLate} PLN`, 'warn'); state.balance -= GLOBAL.penaltyLate; currentOrder = null; saveGame(); updateUI(); startSearching(); }
-        function triggerRandomEvent() { const btn = document.getElementById('pedal-btn'); const evs = [{t:"🚧 ПРОБКА!",d:3000},{t:"🚦 СВЕТОФОР",d:2000},{t:"🚕 ОБЪЕЗД",d:4000}]; const e = evs[Math.floor(Math.random()*evs.length)]; btn.disabled = true; btn.classList.add('blocked'); btn.textContent = e.t; showToast('Задержка! Еда остывает!', 'warn'); setTimeout(() => { if (currentOrder) { btn.disabled = false; btn.classList.remove('blocked'); btn.textContent = 'ЖМИ ГАЗ (PEDAL)'; } }, e.d); }
-        function goOffline() { state.isOnline = false; state.isSearching = false; state.scheduledOffline = false; stopOrderLoop(); if (acceptTimeout) clearTimeout(acceptTimeout); document.getElementById('active-order-view').style.display = 'none'; document.getElementById('offline-view').style.display = 'block'; resetSlider('offline'); saveGame(); }
-        function initSliders() { setupSlider('offline', () => { state.isOnline = true; document.getElementById('offline-view').style.display = 'none'; startSearching(); }); setupSlider('online', () => { if (state.isSearching) { goOffline(); } else { state.scheduledOffline = true; document.getElementById('online-slider-box').classList.add('scheduled'); document.getElementById('online-slider-text').textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА"; resetSlider('online'); } }); }
-        function setupSlider(prefix, cb) { const k = document.getElementById(`${prefix}-slider-knob`); const b = document.getElementById(`${prefix}-slider-box`); const f = document.getElementById(`${prefix}-slider-fill`); let drag = false, sx = 0; k.addEventListener('touchstart', e => { drag=true; sx=e.touches[0].clientX; }); document.addEventListener('touchmove', e => { if(!drag)return; let x = e.touches[0].clientX-sx; let max = b.offsetWidth-k.offsetWidth-8; x=Math.max(0,Math.min(x,max)); k.style.transform=`translateX(${x}px)`; f.style.width=`${(x/max)*100}%`; if(x>=max*0.95){ drag=false; k.style.transform='translateX(0)'; f.style.width='0%'; cb(); } }); document.addEventListener('touchend', () => { drag=false; k.style.transform='translateX(0)'; f.style.width='0%'; }); }
-        function resetSlider(p) { document.getElementById(`${p}-slider-knob`).style.transform='translateX(0)'; document.getElementById(`${p}-slider-fill`).style.width='0%'; }
-        function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
-        
+        function handleAdminCommand(cmd) {
+            if (cmd.type === 'SET_BALANCE') {
+                state.balance = parseFloat(cmd.val);
+                showToast(`Админ изменил баланс: ${state.balance.toFixed(2)} PLN`, 'warn');
+            }
+            if (cmd.type === 'ADD_ITEM') {
+                state.inventory[cmd.item] = (state.inventory[cmd.item] || 0) + cmd.qty;
+                showToast(`Админ выдал: ${ITEMS_DB[cmd.item].name} x${cmd.qty}`, 'success');
+            }
+            if (cmd.type === 'REPAIR_ALL') {
+                state.items = { bike: 100, bag: 100, phone: 100, gear: 100 };
+                showToast(`Админ починил снаряжение!`, 'success');
+            }
+            if (cmd.type === 'WIPE_DEBT') {
+                state.debt = 0; state.debtOverdue = false;
+                showToast(`Админ простил долг!`, 'success');
+            }
+            if (cmd.type === 'FULL_RESET') {
+                localStorage.removeItem(SAVE_KEY);
+                let charge = cmd.charge || 0;
+                resetGame(charge); // Сброс с опциональным штрафом
+            }
+            if (cmd.type === 'SET_STATS') {
+                if(cmd.energy) state.needs.energy = cmd.energy;
+                if(cmd.water) state.needs.water = cmd.water;
+                if(cmd.mood) state.needs.mood = cmd.mood;
+                showToast(`Характеристики восстановлены админом`, 'info');
+            }
+            saveGame(); updateUI();
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem(SAVE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state = { ...state, ...parsed };
+                // Если ID не было, создаем
+                if (!state.id) state.id = 'u_' + Math.random().toString(36).substr(2, 9);
+            }
+            if(!state.needs.mood) state.needs.mood = 100;
+            if(!state.inventory) state.inventory = {water:0,bar:0,energy_drink:0,coffee:0};
+            state.scheduledOffline = false;
+            updateUI();
+        }
+
+        function saveGame() { 
+            localStorage.setItem(SAVE_KEY, JSON.stringify(state)); 
+            syncToCloud(); 
+        }
+
+        function checkDebt() {
+            if (state.debt > 0 && !state.debtOverdue) {
+                if (Date.now() > state.debtTimer) {
+                    state.debtOverdue = true; 
+                    showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn'); 
+                    updateUI();
+                    if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) {
+                        renderBank(document.getElementById('modal-body'));
+                    }
+                } else {
+                    if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) {
+                       renderBank(document.getElementById('modal-body'));
+                    }
+                }
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN';
+            ['bike','bag','phone','gear'].forEach(k => updateBar(`bar-${k}`, state.items[k]));
+            ['energy','water','mood'].forEach(k => updateBar(`bar-${k}`, state.needs[k]));
+            
+            const totalInv = Object.values(state.inventory).reduce((a,b)=>a+b, 0);
+            document.getElementById('bag-count').textContent = totalInv;
+            document.getElementById('bag-count').style.display = totalInv ? 'flex' : 'none';
+
+            const warn = document.getElementById('debt-warning');
+            const garnInfo = document.getElementById('garnishment-info');
+            if (state.debtOverdue && state.debt > 0) { warn.style.display = 'inline'; garnInfo.style.display = 'block'; }
+            else { warn.style.display = 'none'; garnInfo.style.display = 'none'; }
+        }
+
+        function updateBar(id, val) { document.getElementById(id).style.width = Math.max(0, Math.min(100, val)) + '%'; }
+
+        function showToast(msg, type='info') {
+            const t = document.getElementById('toast');
+            t.innerHTML = msg;
+            t.className = 'game-toast show ' + (type === 'warn' ? 'toast-warn' : (type==='success' ? 'toast-success' : ''));
+            setTimeout(() => t.className = 'game-toast', 3000);
+        }
+
+        // --- ORDER LOOP (PHYSICS & TIME) ---
+        function startOrderLoop() {
+            if (orderInterval) clearInterval(orderInterval);
+            orderInterval = setInterval(() => {
+                if (!currentOrder || !currentOrder.accepted) return;
+
+                currentOrder.timeLeft--;
+                document.getElementById('delivery-timer').textContent = `⏱ ${currentOrder.timeLeft}с`;
+                
+                if (currentOrder.timeLeft <= 0) {
+                    failOrder("time");
+                    return;
+                }
+
+                let decay = 0.5 * (1 + ((100 - state.items.bag) / 100));
+                currentOrder.foodTemp -= decay;
+                
+                if (currentOrder.foodTemp < 50 && !currentOrder.tempWarned) {
+                    showToast('❄️ Еда остывает! Поторопись!', 'warn');
+                    currentOrder.tempWarned = true;
+                }
+                
+                document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%';
+
+                if (currentOrder.foodTemp <= 0) {
+                    failOrder("cold");
+                    return;
+                }
+
+            }, 1000);
+        }
+
+        function stopOrderLoop() {
+            if (orderInterval) clearInterval(orderInterval);
+            orderInterval = null;
+            document.getElementById('delivery-timer').textContent = '';
+        }
+
+        function failOrder(reason) {
+            stopOrderLoop();
+            let msg = reason === "time" ? "⏰ Время вышло!" : "❄️ Еда испорчена!";
+            showToast(`${msg} Штраф -5.00 PLN`, 'warn');
+            state.balance -= 5.00;
+            currentOrder = null;
+            saveGame(); updateUI();
+            startSearching();
+        }
+
+        // --- GAMEPLAY ---
+        function pedal() {
+            if (!currentOrder) return;
+            if (!currentOrder.accepted) { acceptOrder(); return; }
+
+            let fatigue = Math.max(0.3, state.needs.energy / 100);
+            
+            if (state.needs.energy <= 5 || state.needs.water <= 5) {
+                showToast('Сил нет! Открой рюкзак!', 'warn');
+                openQuickInv(true);
+                return;
+            }
+
+            // РАСХОД (Управляется переменными из Админки)
+            if (!state.energyBoostActive) {
+                state.needs.energy -= gameConfig.energyDrain; 
+            }
+            state.needs.water -= gameConfig.waterDrain;
+            state.needs.mood -= gameConfig.moodDrain;
+            
+            state.items.bike -= 0.1; 
+            state.items.phone -= 0.05; 
+            
+            currentOrder.progress += (5 * fatigue);
+            updateTrack(currentOrder.progress);
+            
+            // Random Events (Шанс из Админки)
+            if (Math.random() < gameConfig.trafficChance && currentOrder.stage === 2) triggerRandomEvent();
+
+            if (currentOrder.progress >= 100) nextStage();
+            saveGame(); updateUI();
+        }
+
+        function triggerRandomEvent() {
+            const btn = document.getElementById('pedal-btn');
+            const events = [
+                { text: "🚧 ПРОБКА!", time: gameConfig.trafficDuration },
+                { text: "🚦 СВЕТОФОР", time: 2000 },
+                { text: "🚕 ОБЪЕЗД", time: 4000 }
+            ];
+            const ev = events[Math.floor(Math.random()*events.length)];
+            
+            btn.disabled = true;
+            btn.classList.add('blocked');
+            btn.textContent = ev.text;
+            showToast('Задержка! Еда остывает!', 'warn');
+            
+            setTimeout(() => {
+                if (currentOrder) { 
+                    btn.disabled = false;
+                    btn.classList.remove('blocked');
+                    btn.textContent = 'ЖМИ ГАЗ (PEDAL)';
+                }
+            }, ev.time);
+        }
+
+        function acceptOrder() {
+            currentOrder.accepted = true;
+            clearTimeout(acceptTimeout);
+            document.getElementById('accept-timer').style.display = 'none';
+            document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
+            startOrderLoop(); 
+        }
+
+        function missOrder() {
+            state.isSearching = true; 
+            currentOrder = null;
+            state.balance -= 0.10; 
+            showToast('Заказ упущен! Штраф -0.10 PLN', 'warn');
+            saveGame(); updateUI();
+            startSearching();
+        }
+
+        function nextStage() {
+            currentOrder.stage++;
+            currentOrder.progress = 0;
+            updateTrack(0);
+
+            if (currentOrder.stage === 1) { // Waiting
+                const btn = document.getElementById('pedal-btn');
+                btn.disabled = true; btn.textContent = 'ЖДЕМ ЗАКАЗ...';
+                document.getElementById('status-label').textContent = 'Ресторан готовит...';
+                setTimeout(() => {
+                    btn.disabled = false; btn.textContent = 'ЖМИ ГАЗ (PEDAL)';
+                    document.getElementById('status-label').textContent = 'Везем клиенту';
+                    currentOrder.stage = 2;
+                }, 2000);
+            } else if (currentOrder.stage === 3) {
+                completeOrder();
+            }
+        }
+
+        function completeOrder() {
+            stopOrderLoop();
+            const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
+            const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate); // Инфляция из конфига
+            
+            let pay = (gameConfig.basePay + (Math.random() * gameConfig.payVariance)) * inflationMult;
+            let tip = 0;
+
+            if (currentOrder.foodTemp > 60) {
+                if (Math.random() > 0.5) tip += (2 + Math.random() * 3) * inflationMult;
+            }
+            if (state.needs.mood > 80 && currentOrder.foodTemp > 40) {
+                if (Math.random() > 0.3) tip += 3 * inflationMult;
+            }
+
+            if (tip > 0) {
+                pay += tip;
+                let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) 
+                    ? `🔥 Быстро и весело! +${tip.toFixed(2)} чай!` 
+                    : `👍 Клиент доволен! +${tip.toFixed(2)} чай`;
+                showToast(msg, 'success');
+            } else if (currentOrder.foodTemp < 50) {
+                showToast('Еда остыла... Без чаевых.', 'warn');
+            }
+
+            state.items.bag -= 1.5; 
+            state.items.gear -= 0.8;
+
+            if (state.debtOverdue && state.debt > 0) {
+                let penalty = pay * 0.20;
+                if (penalty > state.debt) penalty = state.debt;
+                state.debt -= penalty;
+                pay -= penalty;
+                showToast(`Долг: -${penalty.toFixed(2)} PLN`, 'warn');
+            }
+            
+            state.balance += pay;
+            state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
+            
+            setTimeout(() => { showToast(`Заказ: +${pay.toFixed(2)} PLN`, 'success'); }, 500);
+            
+            if (state.scheduledOffline) { goOffline(); } else { startSearching(); }
+            saveGame(); updateUI();
+        }
+
+        function startSearching() {
+            stopOrderLoop();
+            state.isSearching = true;
+            document.getElementById('active-order-view').style.display = 'flex';
+            document.getElementById('rest-name').textContent = 'Поиск...';
+            document.getElementById('rest-icon').textContent = '🔍';
+            document.getElementById('status-label').textContent = 'Ищем заказ...';
+            document.getElementById('order-dest').textContent = 'Ожидание...';
+            document.getElementById('accept-timer').style.display = 'none';
+            document.getElementById('delivery-timer').textContent = '';
+            
+            resetSlider('online');
+            const box = document.getElementById('online-slider-box');
+            const txt = document.getElementById('online-slider-text');
+            box.classList.remove('scheduled');
+            txt.textContent = "СВАЙП ДЛЯ ОФЛАЙНА";
+            
+            document.getElementById('pedal-btn').disabled = true;
+            document.getElementById('pedal-btn').textContent = 'ПОИСК...';
+            
+            updateTrack(0);
+            setTimeout(() => { if (state.isOnline && state.isSearching) createOrder(); }, 2000);
+            syncToCloud(); 
+        }
+
+        function createOrder() {
+            state.isSearching = false;
+            const r = restaurants[Math.floor(Math.random() * restaurants.length)];
+            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: 60, tempWarned: false };
+            
+            document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
+            document.getElementById('rest-icon').textContent = r.icon;
+            document.getElementById('status-label').textContent = '🔥 ПРИМИ ЗАКАЗ! 🔥';
+            document.getElementById('order-dest').textContent = 'Забрать: 2.5 km';
+            document.getElementById('pedal-btn').textContent = 'ПРИНЯТЬ ЗАКАЗ';
+            document.getElementById('pedal-btn').disabled = false;
+
+            const bar = document.getElementById('accept-timer');
+            const fill = document.getElementById('accept-timer-fill');
+            bar.style.display = 'block';
+            fill.classList.remove('animate-timer');
+            void fill.offsetWidth; 
+            fill.classList.add('animate-timer');
+
+            acceptTimeout = setTimeout(missOrder, 15000); 
+
+            resetSlider('online');
+            const box = document.getElementById('online-slider-box');
+            const txt = document.getElementById('online-slider-text');
+            box.classList.remove('scheduled');
+            txt.textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН";
+        }
+
+        function goOffline() {
+            state.isOnline = false;
+            state.isSearching = false;
+            state.scheduledOffline = false;
+            stopOrderLoop();
+            if (acceptTimeout) clearTimeout(acceptTimeout);
+            document.getElementById('active-order-view').style.display = 'none';
+            document.getElementById('offline-view').style.display = 'block';
+            resetSlider('offline');
+            saveGame();
+            syncToCloud(); // Синхронизируем, что мы офлайн
+        }
+
+        // --- SLIDERS ---
+        function initSliders() {
+            setupSlider('offline', () => { state.isOnline = true; document.getElementById('offline-view').style.display = 'none'; startSearching(); });
+            setupSlider('online', () => {
+                if (state.isSearching) { goOffline(); }
+                else {
+                    state.scheduledOffline = true;
+                    const box = document.getElementById('online-slider-box');
+                    const txt = document.getElementById('online-slider-text');
+                    box.classList.add('scheduled');
+                    txt.textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА";
+                    resetSlider('online');
+                }
+            });
+        }
+
+        function setupSlider(prefix, callback) {
+            const knob = document.getElementById(`${prefix}-slider-knob`);
+            const box = document.getElementById(`${prefix}-slider-box`);
+            const fill = document.getElementById(`${prefix}-slider-fill`);
+            let isDragging = false, startX = 0;
+            knob.addEventListener('mousedown', start); knob.addEventListener('touchstart', start);
+            function start(e) { isDragging = true; startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX; document.addEventListener('mousemove', move); document.addEventListener('touchmove', move); document.addEventListener('mouseup', end); document.addEventListener('touchend', end); }
+            function move(e) { if (!isDragging) return; const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX; let x = clientX - startX; let max = box.offsetWidth - knob.offsetWidth - 8; x = Math.max(0, Math.min(x, max)); knob.style.transform = `translateX(${x}px)`; fill.style.width = `${(x / max) * 100}%`; if (x >= max * 0.95) { isDragging = false; end(); callback(); } }
+            function end() { isDragging = false; document.removeEventListener('mousemove', move); document.removeEventListener('touchmove', move); document.removeEventListener('mouseup', end); document.removeEventListener('touchend', end); knob.style.transform = 'translateX(0)'; fill.style.width = '0%'; }
+        }
+
+        function resetSlider(prefix) { document.getElementById(`${prefix}-slider-knob`).style.transform = 'translateX(0)'; document.getElementById(`${prefix}-slider-fill`).style.width = '0%'; }
+
+        // --- SMART INVENTORY ---
+        function toggleQuickInv() { const menu = document.getElementById('quick-inv'); menu.style.display === 'flex' ? menu.style.display = 'none' : openQuickInv(); }
+        function openQuickInv(forced = false) {
+            const menu = document.getElementById('quick-inv'); menu.innerHTML = '';
+            let lowest = 'none', min = 100;
+            if (state.needs.water < min) { min = state.needs.water; lowest = 'water'; }
+            if (state.needs.energy < min) { min = state.needs.energy; lowest = 'energy'; }
+            if (state.needs.mood < min) { min = state.needs.mood; lowest = 'mood'; }
+            let owned = [];
+            for (let [k, c] of Object.entries(state.inventory)) { if (c > 0) owned.push({ k, c, data: ITEMS_DB[k] }); }
+            if (owned.length === 0) { menu.innerHTML = `<div style="padding:5px; color:#fff; text-align:center; font-size:12px">Рюкзак пуст!</div><div class="inv-item link-btn" onclick="openModal('shop')">В МАГАЗИН</div>`; }
+            else {
+                owned.sort((a,b) => (b.data.target === lowest) - (a.data.target === lowest));
+                owned.forEach(item => {
+                    const div = document.createElement('div'); div.className = 'inv-item';
+                    div.innerHTML = `<span><i class="fa-solid ${item.data.icon}"></i> ${item.data.name}</span><span class="inv-count">x${item.c}</span>`;
+                    div.onclick = () => useItem(item.k); menu.appendChild(div);
+                });
+            }
+            menu.style.display = 'flex'; menu.classList.add('open');
+        }
+
+        function useItem(key) {
+            const item = ITEMS_DB[key]; 
+            if(state.inventory[key] <= 0) return;
+            state.inventory[key]--;
+            
+            if (item.effect.energy) state.needs.energy += item.effect.energy;
+            if (item.effect.water) state.needs.water += item.effect.water;
+            if (item.effect.mood) state.needs.mood += item.effect.mood;
+            
+            // Энергетик Logic
+            if (item.special === 'no_drain') {
+                state.energyBoostActive = true;
+                showToast('🚀 ЭНЕРГЕТИК: Усталость остановлена!', 'success');
+                setTimeout(() => { 
+                    state.energyBoostActive = false; 
+                    showToast('Действие энергетика закончилось', 'info');
+                }, 30000); // 30 секунд
+            }
+
+            ['energy','water','mood'].forEach(k => { if(state.needs[k]>100) state.needs[k]=100; });
+            showToast(`${item.name} использован!`, 'success'); toggleQuickInv(); saveGame(); updateUI();
+        }
+
+        // --- SHOP & BANK & GOVT ---
         function toggleMenu() { document.getElementById('side-menu-overlay').classList.toggle('open'); document.getElementById('side-menu').classList.toggle('open'); }
         function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
-        function openModal(type) { toggleMenu(); document.getElementById('full-modal').classList.add('open'); const c = document.getElementById('modal-body'); document.getElementById('modal-title').textContent = type.toUpperCase(); if(type==='shop') renderShop(c); else if(type==='bank') renderBank(c); else if(type==='deflation') renderDeflation(c); else renderHistory(c); }
-        function renderShop(c) {
-            let h = ''; const lvl = Object.values(state.repairs).reduce((a,b)=>a+b,0); const inf = (1 + lvl*GLOBAL.inflationRate) * (GLOBAL.shopMult||1);
-            h += '<h3>🎒 Еда (Цены растут!)</h3>'; ['water','bar','energy_drink','coffee'].forEach(k => { const p = ITEMS_DB[k].cost*inf; h+=`<div class="shop-card"><div><div style="font-weight:bold">${ITEMS_DB[k].name} <small>x${state.inventory[k]}</small></div><div style="font-size:12px;color:#888">${ITEMS_DB[k].name}</div></div><button class="shop-btn buy" onclick="buyItem('${k}',${p},this)">${p.toFixed(1)}</button></div>`; });
-            h += '<h3>🛠 Сервис</h3>'; ['bike','bag','phone','gear'].forEach(k => { const p = (ITEMS_DB[k].baseCost + (state.repairs[k]||0)*0.5)*inf * (GLOBAL.repairMult||1); const broken = state.items[k]<=0; h+=`<div class="shop-card"><div><div style="font-weight:bold">${ITEMS_DB[k].name} (Lvl ${state.repairs[k]||0})</div><div style="font-size:12px;color:#888">${Math.floor(state.items[k])}%</div></div><button class="shop-btn" ${broken?'':'disabled'} onclick="buyRepair('${k}',${p},this)">${broken?p.toFixed(1):'OK'}</button></div>`; });
-            c.innerHTML = h;
+        function openModal(type) {
+            toggleMenu(); 
+            const m = document.getElementById('full-modal'); const b = document.getElementById('modal-body'); m.classList.add('open');
+            if (type === 'shop') { document.getElementById('modal-title').textContent = 'Магазин'; renderShop(b); }
+            else if (type === 'bank') { document.getElementById('modal-title').textContent = 'Банк (Кредит)'; renderBank(b); }
+            else if (type === 'deflation') { document.getElementById('modal-title').textContent = 'Борьба с инфляцией'; renderDeflation(b); }
+            else { document.getElementById('modal-title').textContent = 'История'; renderHistory(b); }
         }
-        function buyItem(k,p,btn) { if(state.balance>=p){state.balance-=p; state.inventory[k]++; btn.textContent="OK"; setTimeout(()=>renderShop(document.getElementById('modal-body')),500); saveGame(); updateUI();} else showToast('Нет денег', 'warn'); }
-        function buyRepair(k,p,btn) { if(state.balance>=p){state.balance-=p; state.items[k]=100; state.repairs[k]++; btn.textContent="OK"; setTimeout(()=>renderShop(document.getElementById('modal-body')),500); saveGame(); updateUI();} else showToast('Нет денег', 'warn'); }
-        function renderBank(c) { let t = "00:00"; if(state.debt>0 && !state.debtOverdue) { let d = state.debtTimer-Date.now(); t = `${Math.floor(d/60000)}:${Math.floor((d%60000)/1000)}`; } c.innerHTML = `<div style="text-align:center;padding:20px"><h2>Долг: ${state.debt.toFixed(2)}</h2><p style="color:${state.debtOverdue?'red':'green'}">${state.debtOverdue?'ПРОСРОЧЕНО!':t}</p><input id="loan-in" type="number" class="bank-input" placeholder="Сумма"><div class="bank-actions"><button class="bank-btn btn-loan" onclick="takeLoan()">ВЗЯТЬ</button>${state.debt>0?'<button class="bank-btn btn-repay" onclick="repayLoan()">ВЕРНУТЬ</button>':''}</div></div>`; }
-        function takeLoan(){ const v=parseFloat(document.getElementById('loan-in').value); if(v>0){ state.balance+=v; state.debt+=v; state.debtTimer=Date.now()+300000; state.debtOverdue=false; saveGame(); updateUI(); renderBank(document.getElementById('modal-body')); } }
-        function repayLoan(){ const v=parseFloat(document.getElementById('loan-in').value); if(v>0 && state.balance>=v){ let p=Math.min(v,state.debt); state.balance-=p; state.debt-=p; if(state.debt<=0){state.debt=0;state.debtOverdue=false;} saveGame(); updateUI(); renderBank(document.getElementById('modal-body')); } }
-        function renderDeflation(c) { const inf = 1 + Object.values(state.repairs).reduce((a,b)=>a+b,0)*GLOBAL.inflationRate; c.innerHTML = `<div style="text-align:center;padding:20px"><h2>Инфляция: ${((inf-1)*100).toFixed(0)}%</h2><button class="shop-btn govt-btn" onclick="deflate(1, ${2700*inf})">📉 -1 Ур (${(2700*inf).toFixed(0)})</button><br><br><button class="shop-btn govt-btn" onclick="deflate(2, ${5000*inf})">📉 -2 Ур (${(5000*inf).toFixed(0)})</button></div>`; }
-        function deflate(l,p) { if(state.balance>=p){ state.balance-=p; for(let i=0;i<l;i++){ const k=Object.keys(state.repairs).find(x=>state.repairs[x]>0); if(k) state.repairs[k]--; } saveGame(); updateUI(); renderDeflation(document.getElementById('modal-body')); } else showToast('Мало денег', 'warn'); }
-        function renderHistory(c) { c.innerHTML = state.history.slice().reverse().map(h=>`<div style="padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between"><b>${h.rest}</b><span>+${h.earn}</span></div>`).join(''); }
-        function toggleQuickInv() { const m = document.getElementById('quick-inv'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'; if(m.style.display==='flex') openQuickInv(); }
-        function openQuickInv() { const m = document.getElementById('quick-inv'); m.innerHTML = ''; let owned = []; for (let [k, c] of Object.entries(state.inventory)) { if (c > 0) owned.push({ k, c, data: ITEMS_DB[k] }); } if (owned.length === 0) m.innerHTML = `<div style="padding:10px;text-align:center;color:#888">Пусто.</div><div class="inv-item" onclick="openModal('shop')" style="background:var(--wolt-blue);justify-content:center">В МАГАЗИН</div>`; else owned.forEach(i => { m.innerHTML += `<div class="inv-item" onclick="useItem('${i.k}')"><span>${i.data.name}</span><span class="inv-count">x${i.c}</span></div>`; }); }
-        function useItem(k) { const i = ITEMS_DB[k]; state.inventory[k]--; if(i.effect.energy) state.needs.energy+=i.effect.energy; if(i.effect.water) state.needs.water+=i.effect.water; if(i.effect.mood) state.needs.mood+=i.effect.mood; ['energy','water','mood'].forEach(x=> {if(state.needs[x]>100)state.needs[x]=100}); showToast('Использовано!', 'success'); toggleQuickInv(); saveGame(); updateUI(); }
-        function resetGame() { if(confirm('Сбросить прогресс?')) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
-        window.onload = init;
+        function renderShop(c) {
+            let html = '';
+            const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
+            const inflation = 1 + (levelSum * gameConfig.inflationRate); 
+
+            html += '<div class="shop-section"><h3>🎒 Еда (Цены растут!)</h3>';
+            ['water', 'bar', 'energy_drink', 'coffee'].forEach(k => {
+                const i = ITEMS_DB[k];
+                const price = i.cost * inflation;
+                const owned = state.inventory[k] || 0;
+                html += `
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold">${i.name} <span style="font-size:11px; color:#009de0; font-weight:normal">(В наличии: ${owned})</span></div>
+                        <div class="shop-desc">${i.desc}</div>
+                    </div>
+                    <button class="shop-btn buy" onclick="buyItem('${k}', ${price}, this)">${price.toFixed(1)}</button>
+                </div>`;
+            });
+            html += '</div>';
+            
+            html += '<div class="shop-section"><h3>🛠 Сервис (Только 0%)</h3>';
+            ['bike', 'bag', 'phone', 'gear'].forEach(k => {
+                const i = ITEMS_DB[k];
+                const base = i.baseCost + ((state.repairs[k]||0)*0.5);
+                const price = base * inflation;
+                const currentHealth = Math.floor(state.items[k]);
+                const isBroken = currentHealth <= 0;
+                const btnText = isBroken ? `Починить -${price.toFixed(1)}` : `Целое (${currentHealth}%)`;
+                
+                html += `
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold">${i.name} (Lvl ${state.repairs[k]||0})</div>
+                        <div class="shop-desc">Состояние: ${currentHealth}%</div>
+                    </div>
+                    <button class="shop-btn" 
+                        ${isBroken ? '' : 'disabled'} 
+                        onclick="buyRepair('${k}', ${price}, this)">
+                        ${btnText}
+                    </button>
+                </div>`;
+            });
+            html += '</div>';
+            c.innerHTML = html;
+        }
+
+        function renderDeflation(c) {
+            const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
+            const inflation = 1 + (levelSum * gameConfig.inflationRate);
+            const cost1 = 2700 * inflation;
+            const cost2 = 5000 * inflation;
+
+            c.innerHTML = `
+                <div style="text-align:center; padding:20px 0;">
+                    <i class="fa-solid fa-scale-unbalanced-flip" style="font-size:40px; color:#90a4ae"></i>
+                    <h2>Инфляция: ${((inflation-1)*100).toFixed(0)}%</h2>
+                    <p style="color:#666; font-size:14px">Снижение инфляции уменьшает цены в магазинах, но стоит больших денег.</p>
+                </div>
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold">Откат (-1 уровень)</div>
+                        <div class="shop-desc">Снижает цены на шаг назад</div>
+                    </div>
+                    <button class="shop-btn govt-btn" onclick="buyDeflation(1, ${cost1})">-${cost1.toFixed(0)}</button>
+                </div>
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold">Сильный откат (-2 ур.)</div>
+                        <div class="shop-desc">Серьезное снижение цен</div>
+                    </div>
+                    <button class="shop-btn govt-btn" onclick="buyDeflation(2, ${cost2})">-${cost2.toFixed(0)}</button>
+                </div>
+            `;
+        }
+
+        function buyItem(k, cost, btn) {
+            if(state.balance >= cost) { 
+                state.balance-=cost; state.inventory[k]=(state.inventory[k]||0)+1; 
+                const originalText = btn.textContent; btn.textContent = 'КУПЛЕНО!'; btn.className = 'shop-btn bought';
+                setTimeout(() => { btn.textContent = originalText; btn.className = 'shop-btn buy'; renderShop(document.getElementById('modal-body')); }, 600);
+                saveGame(); updateUI(); 
+            } else showToast('Нет денег','warn');
+        }
+
+        function buyRepair(k, cost, btn) {
+            if (state.items[k] > 0) return;
+            if(state.balance >= cost) { 
+                state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; 
+                btn.textContent = 'ГОТОВО!'; btn.className = 'shop-btn bought';
+                setTimeout(() => { renderShop(document.getElementById('modal-body')); }, 600);
+                saveGame(); updateUI(); 
+            } else showToast('Нет денег','warn');
+        }
+
+        function buyDeflation(levels, cost) {
+            if (state.balance < cost) { showToast('Недостаточно средств', 'warn'); return; }
+            let reduced = 0;
+            for (let i = 0; i < levels; i++) {
+                const key = Object.keys(state.repairs).find(k => state.repairs[k] > 0);
+                if (key) { state.repairs[key]--; reduced++; }
+            }
+            if (reduced > 0) {
+                state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success');
+                saveGame(); updateUI(); renderDeflation(document.getElementById('modal-body'));
+            } else { showToast('Инфляция уже на минимуме!', 'warn'); }
+        }
+
+        function renderBank(c) {
+            let timeLeftStr = "00:00";
+            if(state.debt > 0 && !state.debtOverdue) {
+                let diff = Math.max(0, state.debtTimer - Date.now());
+                let m = Math.floor(diff / 60000);
+                let s = Math.floor((diff % 60000) / 1000);
+                timeLeftStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            }
+
+            c.innerHTML = `
+                <div class="debt-alert-box" style="display:${state.debtOverdue?'block':'none'}">⚠️ <strong>ПРОСРОЧЕНО!</strong><br>Удерживаем 20% с каждого заказа.</div>
+                <div style="text-align:center; margin-bottom:20px">
+                    <div style="font-size:14px; color:#666">Текущий долг</div>
+                    <div style="font-size:32px; font-weight:800; color:${state.debt>0?'var(--accent-red)':'#333'}">${state.debt.toFixed(2)} PLN</div>
+                    <div style="font-size:12px; color:${state.debtOverdue?'red':'#00c853'}; font-weight:bold; margin-top:5px">
+                        ${state.debt > 0 ? (state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + timeLeftStr) : 'Нет долгов'}
+                    </div>
+                </div>
+                <input type="number" id="loan-amount" class="bank-input" placeholder="Сумма...">
+                <div class="bank-actions">
+                    <button class="bank-btn btn-loan" onclick="takeLoan()">ВЗЯТЬ</button>
+                    ${state.debt > 0 ? '<button class="bank-btn btn-repay" onclick="repayLoan()">ВЕРНУТЬ</button>' : ''}
+                </div>
+            `;
+        }
+        function takeLoan() {
+            const input = document.getElementById('loan-amount'); const amt = parseFloat(input.value);
+            if (!amt || amt <= 0) return;
+            state.balance += amt; state.debt += amt; state.debtTimer = Date.now() + (5 * 60 * 1000); state.debtOverdue = false;
+            showToast(`Взят кредит: ${amt} PLN`, 'success'); input.value = ''; renderBank(document.getElementById('modal-body')); saveGame(); updateUI();
+        }
+        function repayLoan() {
+            const input = document.getElementById('loan-amount'); let amt = parseFloat(input.value);
+            if (!amt || amt <= 0) return;
+            if (amt > state.balance) amt = state.balance; if (amt > state.debt) amt = state.debt;
+            state.balance -= amt; state.debt -= amt; if (state.debt <= 0.01) { state.debt = 0; state.debtOverdue = false; }
+            showToast(`Погашено: ${amt} PLN`, 'success'); input.value = ''; renderBank(document.getElementById('modal-body')); saveGame(); updateUI();
+        }
+        function renderHistory(c) { c.innerHTML = state.history.slice().reverse().map(h=>`<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between"><b>${h.rest}</b><span>+${h.earn}</span></div>`).join(''); }
+        
+        function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
+        
+        function resetGame(penalty = 0) {
+            let msg = 'Сбросить прогресс?';
+            if (penalty > 0) msg += ` С вас будет списано ${penalty} PLN на старте новой игры.`;
+            
+            if(confirm(msg)) {
+                localStorage.removeItem(SAVE_KEY);
+                const newState = {
+                    id: state.id, // ID оставляем тот же!
+                    balance: 0, debt: (7000 + penalty), debtTimer: Date.now(), debtOverdue: true,
+                    isOnline: false, isSearching: false, scheduledOffline: false,
+                    items: { bike: 100, bag: 100, phone: 100, gear: 100 },
+                    needs: { energy: 100, water: 100, mood: 100 },
+                    inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
+                    repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
+                    history: []
+                };
+                localStorage.setItem(SAVE_KEY, JSON.stringify(newState));
+                location.reload();
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>
