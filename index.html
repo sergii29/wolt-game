@@ -23,6 +23,8 @@
             --accent-red: #ff3d00;
             --accent-purple: #d500f9;
             --wolt-blue: #009de0;
+            --taxi-yellow: #ffcc00; /* NEW: Taxi Color */
+            --taxi-black: #111;
         }
 
         body, html {
@@ -103,6 +105,13 @@
             color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s;
         }
         .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 157, 224, 0.2); z-index: 0; }
+        
+        /* NEW: TAXI SLIDER STYLES */
+        .slider-container.taxi-mode { background: #fff9c4; border: 1px solid #fbc02d; }
+        .slider-container.taxi-mode .slider-knob { background: var(--taxi-yellow); color: black; }
+        .slider-container.taxi-mode .slider-fill { background: rgba(255, 204, 0, 0.3); }
+        .slider-container.taxi-mode .slider-text { color: #f57f17; }
+
         .slider-container.scheduled { background: #ffebee; border: 1px solid #ffcdd2; }
         .slider-container.scheduled .slider-knob { background: var(--accent-red); }
         .slider-container.scheduled .slider-text { color: var(--accent-red); }
@@ -155,10 +164,17 @@
         #side-menu {
             position: absolute; top: 0; left: -85%; width: 85%; max-width: 320px; height: 100%;
             background: #1e1e1e; transition: left 0.3s; padding: 20px; box-sizing: border-box;
-            display: flex; flex-direction: column;
+            display: flex; flex-direction: column; overflow-y: auto;
         }
         #side-menu.open { left: 0; }
         .menu-item { padding: 15px 0; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 15px; font-size: 16px; align-items: center; }
+        
+        /* NEW MENU STYLES */
+        .menu-divider { height: 20px; border-bottom: 1px solid #333; margin-bottom: 20px; }
+        .menu-section-title { font-size: 12px; color: var(--taxi-yellow); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; margin-top: 10px; }
+        .menu-item.locked { opacity: 0.5; cursor: not-allowed; color: #777; }
+        .menu-item.taxi-item { border-bottom: 1px solid #444; }
+        .menu-item.taxi-item i { width: 25px; text-align: center; }
 
         .full-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f5f5f5;
@@ -239,6 +255,18 @@
             <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
             <div class="menu-item" onclick="openModal('stats')"><i class="fa-solid fa-clock-rotate-left"></i> История</div>
             
+            <div class="menu-divider"></div>
+            <div class="menu-section-title">🚖 Такси Департамент</div>
+            <div class="menu-item taxi-item locked" id="taxi-showroom-btn" onclick="showLockedMsg()">
+                <i class="fa-solid fa-car" style="color:var(--taxi-yellow)"></i> Автосалон
+            </div>
+            <div class="menu-item taxi-item locked" id="taxi-licenses-btn" onclick="showLockedMsg()">
+                <i class="fa-solid fa-id-card" style="color:#aaa"></i> Лицензии / Права
+            </div>
+            <div id="taxi-lock-msg" style="font-size:10px; color:#666; margin-left:15px; margin-top:5px; font-style:italic">
+                <i class="fa-solid fa-lock"></i> Требуется 50 доставок (У вас: <span id="career-count">0</span>)
+            </div>
+
             <div class="menu-item" onclick="resetGame()" style="color:var(--accent-red); margin-top:auto; display:flex; flex-direction:column; align-items:flex-start; gap:0">
                 <div style="display:flex; gap:15px; align-items:center"><i class="fa-solid fa-trash"></i> Сброс прогресса</div>
                 <div style="font-size:10px; opacity:0.7; margin-left:35px">Начать заново. Цена: 7000 PLN (Долг)</div>
@@ -337,6 +365,7 @@
         } catch(e) { console.error("Firebase Error:", e); }
 
         const SAVE_KEY = 'WARSZAWA_FOREVER';
+        const TAXI_UNLOCK_REQ = 50; // Required orders to unlock taxi menu
         
         let gameConfig = {
             basePickupPay: 4.0, perKmPay: 1.5, payVariance: 2.0, 
@@ -368,7 +397,11 @@
             inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
             repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
             history: [],
-            energyBoostActive: false
+            energyBoostActive: false,
+            // NEW: Career Tracking
+            career: { totalOrders: 0 },
+            // NEW: Taxi State (dormant for now)
+            taxi: { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
         };
 
         const restaurants = [
@@ -394,7 +427,6 @@
             
             loadGame();
 
-            // Auto-detect Telegram User
             if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 state.id = tg.initDataUnsafe.user.id.toString();
                 state.name = tg.initDataUnsafe.user.first_name;
@@ -403,11 +435,9 @@
                 }
                 saveGame();
             } else if (!state.name) {
-                // FALLBACK IF NOT IN TELEGRAM: NO PROMPT, JUST ANON
                 state.name = "Guest Courier";
                 saveGame();
             }
-            // ---------------------
 
             document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
             document.getElementById('player-name-display').textContent = state.name;
@@ -415,6 +445,7 @@
             initSliders();
             setInterval(checkDebt, 1000); 
             listenToCloud(); syncToCloud(true);
+            updateMenuState();
         }
 
         function sendLog(msg, type='INFO') {
@@ -436,7 +467,8 @@
                 db.ref('players/' + state.id).update({
                     name: state.name, 
                     balance: state.balance, isOnline: state.isOnline, lastSeen: now,
-                    stats: state.needs, inventory: state.inventory, debt: state.debt, items: state.items
+                    stats: state.needs, inventory: state.inventory, debt: state.debt, items: state.items,
+                    career: state.career // Sync career stats
                 });
                 lastSync = now;
             }
@@ -472,17 +504,12 @@
             if (cmd.type === 'REPAIR_ALL') { state.items = { bike: 100, bag: 100, phone: 100, gear: 100 }; showToast(`Админ починил снаряжение!`, 'success'); }
             if (cmd.type === 'BREAK_GEAR') { state.items = { bike: 0, bag: 0, phone: 0, gear: 0 }; showToast(`Админ СЛОМАЛ снаряжение!`, 'warn'); }
             if (cmd.type === 'WIPE_DEBT') { state.debt = 0; state.debtOverdue = false; showToast(`Админ простил долг!`, 'success'); }
-            
-            // --- UPDATE: FORCED RESET ---
             if (cmd.type === 'FULL_RESET') { 
                 let charge = cmd.charge || 0; 
                 localStorage.removeItem(SAVE_KEY);
-                // Save penalty marker for next init
                 if(charge > 0) localStorage.setItem('ADMIN_PENALTY', charge);
                 location.reload(); 
             }
-            // ----------------------------
-
             if (cmd.type === 'SET_STATS') { if(cmd.energy!==undefined) state.needs.energy = cmd.energy; if(cmd.water!==undefined) state.needs.water = cmd.water; if(cmd.mood!==undefined) state.needs.mood = cmd.mood; showToast(`Статус изменен админом`, 'info'); }
             saveGame(); updateUI();
         }
@@ -495,7 +522,10 @@
                 if (!state.id) state.id = 'u_' + Math.random().toString(36).substr(2, 9);
             }
             
-            // CHECK FOR FORCED RESET PENALTY
+            // INIT NEW FIELDS SAFELY
+            if(!state.career) state.career = { totalOrders: 0 };
+            if(!state.taxi) state.taxi = { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
+
             const penalty = localStorage.getItem('ADMIN_PENALTY');
             if(penalty) {
                 state.debt += parseFloat(penalty);
@@ -660,6 +690,10 @@
             
             state.balance += totalEarn; 
             
+            // UPDATE CAREER STATS
+            state.career.totalOrders++;
+            updateMenuState(); // Check if this unlocked Taxi
+
             // HISTORY with TIP SPLIT
             state.history.push({ 
                 rest: currentOrder.rest.name, 
@@ -834,7 +868,11 @@
             showToast(`${item.name} использован!`, 'success'); toggleQuickInv(); saveGame(); updateUI();
         }
 
-        function toggleMenu() { document.getElementById('side-menu-overlay').classList.toggle('open'); document.getElementById('side-menu').classList.toggle('open'); }
+        function toggleMenu() { 
+            updateMenuState();
+            document.getElementById('side-menu-overlay').classList.toggle('open'); 
+            document.getElementById('side-menu').classList.toggle('open'); 
+        }
         function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
         function openModal(type) {
             toggleMenu(); 
@@ -844,6 +882,29 @@
             else if (type === 'deflation') { document.getElementById('modal-title').textContent = 'Борьба с инфляцией'; renderDeflation(b); }
             else { document.getElementById('modal-title').textContent = 'История'; renderHistory(b); }
         }
+
+        // --- NEW TAXI LOGIC ---
+        function updateMenuState() {
+            const total = state.career.totalOrders;
+            document.getElementById('career-count').textContent = total;
+            
+            const locked = total < TAXI_UNLOCK_REQ;
+            const btns = document.querySelectorAll('.taxi-item');
+            const msg = document.getElementById('taxi-lock-msg');
+            
+            if (locked) {
+                btns.forEach(b => { b.classList.add('locked'); b.onclick = showLockedMsg; });
+                msg.style.display = 'block';
+            } else {
+                btns.forEach(b => { b.classList.remove('locked'); b.onclick = () => showToast("Раздел в разработке (Скоро!)", "info"); }); // Will act later
+                msg.style.display = 'none';
+            }
+        }
+
+        function showLockedMsg() {
+            showToast(`Нужно ${TAXI_UNLOCK_REQ} выполненных заказов!`, 'warn');
+        }
+        // -----------------------
 
         function renderShop(c) {
             let html = '';
@@ -1008,7 +1069,7 @@
         function resetGame(penalty = 0) {
             let msg = 'Вы уверены, что хотите начать заново?';
             if (penalty > 0) {
-                // Admin forced reset logic
+                // Admin forced reset
             } else {
                 msg += '\n\nЦена сброса: 7000 PLN (Долг)';
             }
@@ -1017,14 +1078,16 @@
                 localStorage.removeItem(SAVE_KEY);
                 const newState = {
                     id: state.id, 
-                    name: null, // Will re-fetch from TG on next load
+                    name: null, 
                     balance: 0, debt: (7000 + penalty), debtTimer: Date.now(), debtOverdue: true,
                     isOnline: false, isSearching: false, scheduledOffline: false,
                     items: { bike: 100, bag: 100, phone: 100, gear: 100 },
                     needs: { energy: 100, water: 100, mood: 100 },
                     inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
                     repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
-                    history: []
+                    history: [],
+                    career: { totalOrders: 0 },
+                    taxi: { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
                 };
                 localStorage.setItem(SAVE_KEY, JSON.stringify(newState));
                 location.reload();
