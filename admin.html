@@ -38,7 +38,7 @@
         
         /* Modal */
         #editModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .modal-box { background: #1a1a1a; padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; border: 1px solid #444; }
+        .modal-box { background: #1a1a1a; padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; border: 1px solid #444; max-height: 90vh; overflow-y: auto; }
         .modal-box h3 { margin-top: 0; }
         .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
     </style>
@@ -46,7 +46,7 @@
 <body>
 
     <div style="display:flex; justify-content:space-between; align-items:center">
-        <h1>ADMIN <span style="font-size:12px; color:#666">v1.2</span></h1>
+        <h1>ADMIN <span style="font-size:12px; color:#666">v1.3</span></h1>
         <div style="font-size:12px; color:#aaa" id="connection-status">Disconnected</div>
     </div>
 
@@ -64,12 +64,14 @@
             <h3>💸 Экономика и Тарифы</h3>
             <div class="setting-row"><span>Базовая оплата (PLN)</span> <input type="number" id="basePay" placeholder="12"></div>
             <div class="setting-row"><span>Разброс оплаты (+/- PLN)</span> <input type="number" id="payVariance" placeholder="6"></div>
+            <div class="setting-row"><span>Шанс Чаевых (0.0 - 1.0)</span> <input type="number" id="tipChance" step="0.1" placeholder="0.5"></div>
             <div class="setting-row"><span>Инфляция за уровень (%)</span> <input type="number" id="inflationRate" placeholder="10"></div>
         </div>
 
         <div class="setting-group">
             <h3>🛣 Город и Доставка</h3>
             <div class="setting-row"><span>Время на доставку (сек)</span> <input type="number" id="deliveryTime" placeholder="60"></div>
+            <div class="setting-row"><span>Скорость остывания еды</span> <input type="number" id="coolingRate" step="0.1" placeholder="0.5"></div>
             <div class="setting-row"><span>Шанс пробки/светофора (%)</span> <input type="number" id="trafficChance" placeholder="10"></div>
             <div class="setting-row"><span>Длительность пробки (мс)</span> <input type="number" id="trafficDuration" placeholder="3000"></div>
         </div>
@@ -102,7 +104,7 @@
                 <button class="btn btn-blue" onclick="adminSetBalance()">OK</button>
             </div>
 
-            <label>Выдать предмет:</label>
+            <label>Инвентарь:</label>
             <div style="display:flex; gap:5px; margin-bottom:10px">
                 <select id="m-item-select" style="flex:1; background:#333; color:white; border:none; padding:5px">
                     <option value="water">Вода</option>
@@ -111,7 +113,8 @@
                     <option value="coffee">Кофе</option>
                 </select>
                 <input type="number" id="m-item-qty" value="1" style="width:40px; color:white">
-                <button class="btn btn-green" onclick="adminGiveItem()">+</button>
+                <button class="btn btn-green" onclick="adminGiveItem('ADD')">+</button>
+                <button class="btn btn-red" onclick="adminGiveItem('REMOVE')">-</button>
             </div>
             
             <div style="border-top:1px solid #444; margin:10px 0"></div>
@@ -120,6 +123,11 @@
                 <button class="btn btn-green" onclick="adminSetStats(100)">⚡ Полная Энергия</button>
                 <button class="btn btn-blue" onclick="adminRepairAll()">🛠 Починить все</button>
                 <button class="btn btn-blue" onclick="adminWipeDebt()">💰 Простить Долг</button>
+                
+                <button class="btn btn-red" onclick="adminBreakGear()">☠️ Сломать вещи</button>
+                <button class="btn btn-red" onclick="adminDrainStat('energy')">😴 Усталость (0%)</button>
+                <button class="btn btn-red" onclick="adminDrainStat('mood')">😭 Депрессия (0%)</button>
+
                 <button class="btn btn-red" onclick="adminResetPlayer(0)">♻️ Сброс (Бесплатно)</button>
                 <button class="btn btn-red" onclick="adminResetPlayer(7000)">☠️ Сброс (-7000)</button>
             </div>
@@ -144,7 +152,7 @@
         // DEFAULTS
         const DEFAULTS = {
             basePay: 12, payVariance: 6, inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 3000,
-            energyDrain: 0.15, waterDrain: 0.10, deliveryTime: 60,
+            energyDrain: 0.15, waterDrain: 0.10, deliveryTime: 60, coolingRate: 0.5, tipChance: 0.5,
             itemPrices: { water: 2.0, bar: 4.5, energy_drink: 7.0, coffee: 9.0 }
         };
 
@@ -196,9 +204,14 @@
                 document.getElementById('inflationRate').value = ((cfg.inflationRate ?? DEFAULTS.inflationRate) * 100).toFixed(0);
                 document.getElementById('trafficChance').value = ((cfg.trafficChance ?? DEFAULTS.trafficChance) * 100).toFixed(0);
                 document.getElementById('trafficDuration').value = cfg.trafficDuration ?? DEFAULTS.trafficDuration;
-                document.getElementById('deliveryTime').value = cfg.deliveryTime ?? DEFAULTS.deliveryTime; // New field
+                document.getElementById('deliveryTime').value = cfg.deliveryTime ?? DEFAULTS.deliveryTime; 
                 document.getElementById('energyDrain').value = cfg.energyDrain ?? DEFAULTS.energyDrain;
                 document.getElementById('waterDrain').value = cfg.waterDrain ?? DEFAULTS.waterDrain;
+                
+                // NEW PARAMS
+                document.getElementById('coolingRate').value = cfg.coolingRate ?? DEFAULTS.coolingRate;
+                document.getElementById('tipChance').value = cfg.tipChance ?? DEFAULTS.tipChance;
+
                 const prices = cfg.itemPrices || DEFAULTS.itemPrices;
                 document.querySelectorAll('.price-input').forEach(inp => {
                     const item = inp.dataset.item; if(prices[item]) inp.value = prices[item];
@@ -213,9 +226,11 @@
                 inflationRate: parseFloat(document.getElementById('inflationRate').value) / 100,
                 trafficChance: parseFloat(document.getElementById('trafficChance').value) / 100,
                 trafficDuration: parseInt(document.getElementById('trafficDuration').value),
-                deliveryTime: parseInt(document.getElementById('deliveryTime').value), // Save new field
+                deliveryTime: parseInt(document.getElementById('deliveryTime').value), 
                 energyDrain: parseFloat(document.getElementById('energyDrain').value),
                 waterDrain: parseFloat(document.getElementById('waterDrain').value),
+                coolingRate: parseFloat(document.getElementById('coolingRate').value), // NEW
+                tipChance: parseFloat(document.getElementById('tipChance').value), // NEW
                 itemPrices: {}
             };
             document.querySelectorAll('.price-input').forEach(inp => { data.itemPrices[inp.dataset.item] = parseFloat(inp.value); });
@@ -236,9 +251,17 @@
         }
 
         function adminSetBalance() { sendCmd('SET_BALANCE', { val: document.getElementById('m-balance').value }); }
-        function adminGiveItem() { sendCmd('ADD_ITEM', { item: document.getElementById('m-item-select').value, qty: parseInt(document.getElementById('m-item-qty').value) }); }
+        function adminGiveItem(mode) { 
+            const type = mode === 'ADD' ? 'ADD_ITEM' : 'REMOVE_ITEM';
+            sendCmd(type, { item: document.getElementById('m-item-select').value, qty: parseInt(document.getElementById('m-item-qty').value) }); 
+        }
         function adminRepairAll() { sendCmd('REPAIR_ALL'); }
         function adminWipeDebt() { sendCmd('WIPE_DEBT'); }
+        function adminBreakGear() { sendCmd('BREAK_GEAR'); } // NEW
+        function adminDrainStat(stat) { 
+            let payload = {}; payload[stat] = 0;
+            sendCmd('SET_STATS', payload); 
+        } // NEW
         function adminResetPlayer(charge) { sendCmd('FULL_RESET', { charge: charge }); }
         function adminSetStats(val) { sendCmd('SET_STATS', { energy: val, water: val, mood: val }); }
 
