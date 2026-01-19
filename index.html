@@ -12,17 +12,19 @@
 
     <style>
         :root { --bg-dark: #1a1a1a; --text-primary: #ffffff; --text-secondary: #a0a0a0; --accent-blue: #00ccff; --accent-green: #00e676; --accent-orange: #ff9100; --accent-red: #ff3d00; --wolt-blue: #009de0; --taxi-yellow: #ffcc00; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-dark); color: var(--text-primary); overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: var(--bg-dark); color: var(--text-primary); overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
         #map { height: 100%; width: 100%; z-index: 1; filter: brightness(0.8) contrast(1.2); }
 
+        /* TOP BAR */
         .top-bar { position: absolute; top: 0; left: 0; right: 0; padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 1000; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); pointer-events: none; }
         .menu-btn, .stats-btn { background: white; color: black; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: auto; cursor: pointer; border: none; }
-        .balance-display { background: rgba(0, 0, 0, 0.8); padding: 8px 16px; border-radius: 20px; text-align: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
+        .balance-display { background: rgba(0, 0, 0, 0.8); padding: 5px 15px; border-radius: 20px; text-align: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
         .balance-amount { font-size: 18px; font-weight: 800; color: white; }
-        .balance-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; }
+        .player-id-label { font-size: 10px; color: #ccc; margin-top: 2px; font-family: monospace; }
         .debt-warning { color: var(--accent-red); font-size: 10px; font-weight: bold; display: none; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
+        /* BARS */
         .equip-bar { position: absolute; top: 70px; left: 15px; right: 15px; display: flex; gap: 4px; z-index: 999; pointer-events: none; }
         .equip-item { flex: 1; background: rgba(0,0,0,0.8); border-radius: 6px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(4px); }
         .equip-icon { font-size: 10px; margin-bottom: 2px; color: #ccc; }
@@ -30,47 +32,43 @@
         .progress-mini-fill { height: 100%; background: var(--accent-green); transition: width 0.3s; }
         .equip-label { font-size: 7px; text-transform: uppercase; color: #888; font-weight: 700; letter-spacing: 0.5px; }
 
+        /* TOAST */
         .game-toast { position: absolute; top: 140px; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(0, 0, 0, 0.9); color: white; padding: 10px 20px; border-radius: 25px; font-weight: bold; font-size: 14px; z-index: 1001; opacity: 0; transition: all 0.3s; pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 1px solid #333; }
         .game-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         .toast-warn { border-color: var(--accent-orange); color: var(--accent-orange); }
         .toast-success { border-color: var(--accent-green); color: var(--accent-green); }
 
+        /* BOTTOM SHEET */
         .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333; }
 
-        /* --- СЛАЙДЕР (ИСПРАВЛЕННЫЙ) --- */
-        .slider-container { position: relative; width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px; touch-action: none; cursor: pointer; }
-        .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; pointer-events: none; }
-        .slider-knob { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px; background: var(--wolt-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; touch-action: none; }
-        .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 157, 224, 0.2); z-index: 0; transition: width 0.1s; }
+        /* --- CONTROLS REPLACEMENT (NO SWIPE) --- */
+        .big-btn { width: 100%; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: 900; text-transform: uppercase; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; box-shadow: 0 4px 0 rgba(0,0,0,0.2); transition: transform 0.1s; }
+        .big-btn:active { transform: translateY(4px); box-shadow: none; }
+        .btn-start { background: var(--accent-green); color: #003300; }
+        .btn-stop { background: #cfd8dc; color: #455a64; font-size: 12px; padding: 12px; }
         
-        .slider-container.taxi-mode { background: #fff9c4; border: 1px solid #fbc02d; }
-        .slider-container.taxi-mode .slider-knob { background: var(--taxi-yellow); color: black; }
-        .slider-container.taxi-mode .slider-fill { background: rgba(255, 204, 0, 0.3); }
-        .slider-container.taxi-mode .slider-text { color: #f57f17; }
-        
-        .slider-container.scheduled { background: #ffebee; border: 1px solid #ffcdd2; }
-        .slider-container.scheduled .slider-knob { background: var(--accent-red); }
-        .slider-container.scheduled .slider-text { color: var(--accent-red); }
-
-        .controls-row { display: flex; gap: 10px; margin-top: 15px; }
-        .pedal-btn { flex: 1; background: var(--wolt-blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 0 #007bb5; transition: all 0.1s; }
+        /* PEDAL */
+        .pedal-btn { flex: 1; background: var(--wolt-blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 0 #007bb5; }
         .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
-        .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
-        .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
-        
-        /* Taxi Button Style override */
-        .taxi-active .pedal-btn { background: var(--taxi-yellow) !important; color: black !important; box-shadow: 0 4px 0 #f57f17 !important; }
-        .taxi-active #online-slider-knob { background: var(--taxi-yellow) !important; color:black !important; }
+        .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; color: #888; }
+        .taxi-active .pedal-btn { background: var(--taxi-yellow); color: black; box-shadow: 0 4px 0 #f57f17; }
 
-        .bag-btn { width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #333; cursor: pointer; position: relative; }
+        /* TRACK VISUAL (RESTORED) */
+        .track-container { position: relative; height: 30px; margin: 15px 0; display: flex; align-items: center; }
+        .track-bg { position: absolute; left: 0; right: 0; height: 4px; background: #eee; border-radius: 2px; }
+        .track-fill { position: absolute; left: 0; height: 4px; background: var(--wolt-blue); width: 0%; border-radius: 2px; transition: width 0.2s linear; }
+        .track-icon { position: absolute; left: 0%; top: 50%; transform: translate(-50%, -50%); width: 28px; height: 28px; background: white; border: 2px solid var(--wolt-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--wolt-blue); font-size: 12px; transition: left 0.2s linear; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 2; }
+        .taxi-active .track-fill { background: var(--taxi-yellow); }
+        .taxi-active .track-icon { border-color: var(--taxi-yellow); color: black; }
+
+        .bag-btn { width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #333; cursor: pointer; position: relative; margin-right: 10px; }
         .bag-badge { position: absolute; top: -5px; right: -5px; background: var(--accent-red); color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 
+        /* POPUPS & MENUS */
         .quick-inv { position: absolute; bottom: 90px; left: 20px; width: 220px; background: #252525; color: white; padding: 10px; border-radius: 16px; z-index: 1005; display: none; flex-direction: column; gap: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.6); border: 1px solid #444; }
         .quick-inv.open { display: flex; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .inv-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: background 0.2s; }
         .inv-item:active { background: rgba(255,255,255,0.2); }
-        .inv-item.link-btn { background: var(--wolt-blue); justify-content: center; font-weight: bold; }
-        .inv-count { background: var(--wolt-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
         @keyframes popUp { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
         #side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -89,6 +87,7 @@
         .modal-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; font-weight: bold; }
         .modal-content { flex: 1; overflow-y: auto; padding: 15px; }
 
+        /* SHOP & BANK STYLES (RESTORED) */
         .shop-section { margin-bottom: 25px; }
         .shop-section h3 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
         .shop-card { background: white; padding: 15px; border-radius: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
@@ -121,12 +120,13 @@
         <button class="menu-btn" onclick="toggleMenu()"><i class="fa-solid fa-bars"></i></button>
         <div class="balance-display">
             <div class="balance-amount" id="balance-val">0.00 PLN</div>
-            <div class="balance-label">Баланс <span id="debt-warning" class="debt-warning">(ДОЛГ!)</span></div>
+            <div class="balance-label">Баланс <span id="debt-warning" class="debt-warning">(!ДОЛГ)</span></div>
+            <div class="player-id-label" id="player-id-top">ID: Loading...</div>
         </div>
         <button class="stats-btn" onclick="openModal('stats')"><i class="fa-solid fa-chart-simple"></i></button>
     </div>
 
-    <div class="equip-bar" id="main-ui-bars">
+    <div class="equip-bar">
         <div class="equip-item"><i class="fa-solid fa-bicycle equip-icon" id="icon-vehicle"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-vehicle" style="width: 100%"></div></div><span class="equip-label" id="lbl-vehicle">ВЕЛ</span></div>
         <div class="equip-item"><i class="fa-solid fa-box-open equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-bag" style="width: 100%"></div></div><span class="equip-label">СУМКА</span></div>
         <div class="equip-item"><i class="fa-solid fa-mobile-screen equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-phone" style="width: 100%"></div></div><span class="equip-label">СВЯЗЬ</span></div>
@@ -184,14 +184,13 @@
     </div>
 
     <div class="bottom-sheet">
+        
         <div id="offline-view">
             <h3 style="margin:0">Варшава</h3>
             <p style="color:#888; font-size:13px">Спрос: Высокий • Инфляция: Активна</p>
-            <div class="slider-container" id="offline-slider-box">
-                <div class="slider-fill" id="offline-slider-fill"></div>
-                <div class="slider-text">СВАЙП (ИЛИ КЛИК) ДЛЯ ОНЛАЙНА</div>
-                <div class="slider-knob" id="offline-slider-knob"><i class="fa-solid fa-chevron-right"></i></div>
-            </div>
+            <button class="big-btn btn-start" onclick="goOnline()">
+                <i class="fa-solid fa-power-off"></i> ВЫЙТИ НА ЛИНИЮ
+            </button>
         </div>
 
         <div id="active-order-view" style="display:none; flex-direction:column; gap:10px">
@@ -210,10 +209,10 @@
                 </div>
             </div>
 
-            <div style="position:relative; height:30px; margin:5px 0">
-                <div style="position:absolute; top:50%; left:0; right:0; height:4px; background:#eee; transform:translateY(-50%)"></div>
-                <div style="position:absolute; top:50%; left:0; height:4px; background:var(--wolt-blue); transform:translateY(-50%); width:0%" id="track-fill"></div>
-                <div style="position:absolute; top:50%; left:0; transform:translate(-50%, -50%); width:28px; height:28px; background:white; border:2px solid var(--wolt-blue); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--wolt-blue); font-size:12px; transition:left 0.2s" id="track-icon"><i class="fa-solid fa-bicycle"></i></div>
+            <div class="track-container">
+                <div class="track-bg"></div>
+                <div class="track-fill" id="track-fill"></div>
+                <div class="track-icon" id="track-icon"><i class="fa-solid fa-bicycle"></i></div>
             </div>
 
             <div style="display:flex; justify-content:space-between; font-size:12px; color:#666">
@@ -221,23 +220,23 @@
                 <span id="status-label">Поиск...</span>
             </div>
 
-            <div class="slider-container" id="online-slider-box">
-                <div class="slider-fill" id="online-slider-fill"></div>
-                <div class="slider-text" id="online-slider-text">СВАЙП (КЛИК) ДЛЯ ОФЛАЙНА</div>
-                <div class="slider-knob" id="online-slider-knob"><i class="fa-solid fa-chevron-right"></i></div>
-            </div>
-
             <div class="quick-inv" id="quick-inv"></div>
 
-            <div class="controls-row">
+            <div style="display:flex; gap:10px">
                 <div class="bag-btn" onclick="toggleQuickInv()">
                     <i class="fa-solid fa-bag-shopping"></i>
                     <div class="bag-badge" id="bag-count">0</div>
                 </div>
                 <button class="pedal-btn" id="pedal-btn">ЖМИ ГАЗ (PEDAL)</button>
             </div>
+
+            <button class="big-btn btn-stop" onclick="goOffline()">
+                <i class="fa-solid fa-pause"></i> ЗАКОНЧИТЬ СМЕНУ
+            </button>
+
             <div id="garnishment-info" style="font-size:11px; color:var(--accent-red); text-align:center; display:none">
-                </div>
+                Будет удержано 20% в счет долга
+            </div>
         </div>
     </div>
 
@@ -339,9 +338,10 @@
             }
 
             document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
+            document.getElementById('player-id-top').textContent = `ID: ${state.id}`; // ADDED TOP ID
             document.getElementById('player-name-display').textContent = state.name;
             document.getElementById('pedal-btn').addEventListener('click', pedal);
-            initSliders();
+            
             setInterval(checkDebt, 1000); 
             listenToCloud(); syncToCloud(true);
             updateMenuState();
@@ -443,6 +443,12 @@
                 location.reload(); 
             }
 
+            if (cmd.type === 'UNLOCK_TAXI') {
+                state.taxi.unlocked = true; 
+                updateMenuState();
+                showToast('🚖 Админ открыл доступ к Такси!', 'success');
+            }
+
             saveGame(); 
             updateUI();
         }
@@ -456,8 +462,6 @@
             }
             
             if(!state.career) state.career = { totalOrders: 0 };
-            
-            // Taxi Init
             if(!state.taxi) state.taxi = { unlocked: false, active: false, fuel: 100, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
             if(state.taxi.fuel === undefined) state.taxi.fuel = 100;
 
@@ -601,7 +605,6 @@
             const isTaxi = state.taxi && state.taxi.active;
 
             if (isTaxi) {
-                // --- TAXI LOGIC ---
                 if (state.taxi.fuel <= 0) {
                     showToast('⛽ Бак пуст! Нужна заправка!', 'warn');
                     openQuickInv(true); 
@@ -611,7 +614,6 @@
                 state.taxi.fuel -= 2.0; 
                 state.items.bike -= 0.05; 
                 
-                // POLICE MECHANIC
                 const policeLvl = gameConfig.taxi ? (gameConfig.taxi.policeLevel || 0) : 0;
                 if (policeLvl > 0) {
                     let risk = policeLvl === 1 ? 0.05 : 0.20;
@@ -625,7 +627,6 @@
                 currentOrder.progress += 15; 
             } 
             else {
-                // --- COURIER LOGIC (Old) ---
                 let fatigue = Math.max(0.3, state.needs.energy / 100);
                 if (state.needs.energy <= 5 || state.needs.water <= 5) { showToast('Сил нет! Открой рюкзак!', 'warn'); openQuickInv(true); return; }
                 if (!state.energyBoostActive) state.needs.energy -= gameConfig.energyDrain; 
@@ -732,8 +733,24 @@
             saveGame(); syncToCloud(true); updateUI();
         }
 
+        // --- BUTTONS INSTEAD OF SWIPE ---
+        function goOnline() {
+            state.isOnline = true; 
+            document.getElementById('offline-view').style.display = 'none'; 
+            startSearching(); 
+            sendLog('Вышел на линию (Онлайн)', 'STATUS');
+        }
+
+        function goOffline() {
+            state.isOnline = false; state.isSearching = false; state.scheduledOffline = false;
+            stopOrderLoop(); if (acceptTimeout) clearTimeout(acceptTimeout);
+            document.getElementById('active-order-view').style.display = 'none';
+            document.getElementById('offline-view').style.display = 'block';
+            saveGame(); syncToCloud();
+            sendLog('Ушел с линии (Офлайн)', 'STATUS');
+        }
+
         function startSearching() {
-            if (state.scheduledOffline) { goOffline(); return; }
             if (!state.isOnline) return;
 
             stopOrderLoop(); state.isSearching = true;
@@ -745,15 +762,12 @@
             document.getElementById('order-offer').textContent = '-- PLN'; 
             document.getElementById('accept-timer').style.display = 'none';
             document.getElementById('delivery-timer').textContent = '';
-            resetSlider('online');
-            const box = document.getElementById('online-slider-box');
-            const txt = document.getElementById('online-slider-text');
-            box.classList.remove('scheduled'); txt.textContent = "СВАЙП ДЛЯ ОФЛАЙНА";
+            
             document.getElementById('pedal-btn').disabled = true;
             document.getElementById('pedal-btn').textContent = 'ПОИСК...';
             updateTrack(0);
             setTimeout(() => { 
-                if (state.isOnline && state.isSearching && !state.scheduledOffline) createOrder(); 
+                if (state.isOnline && state.isSearching) createOrder(); 
             }, 2000);
             syncToCloud(); 
         }
@@ -803,93 +817,7 @@
             fill.classList.remove('animate-timer');
             void fill.offsetWidth; fill.classList.add('animate-timer');
             acceptTimeout = setTimeout(missOrder, 15000); 
-            resetSlider('online');
-            const box = document.getElementById('online-slider-box');
-            const txt = document.getElementById('online-slider-text');
-            box.classList.add('scheduled'); txt.textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН";
         }
-
-        function goOffline() {
-            state.isOnline = false; state.isSearching = false; state.scheduledOffline = false;
-            stopOrderLoop(); if (acceptTimeout) clearTimeout(acceptTimeout);
-            document.getElementById('active-order-view').style.display = 'none';
-            document.getElementById('offline-view').style.display = 'block';
-            resetSlider('offline'); saveGame(); syncToCloud();
-            sendLog('Ушел с линии (Офлайн)', 'STATUS');
-        }
-
-        function initSliders() {
-            setupSlider('offline', () => { state.isOnline = true; document.getElementById('offline-view').style.display = 'none'; startSearching(); sendLog('Вышел на линию (Онлайн)', 'STATUS'); });
-            setupSlider('online', () => {
-                if (state.isSearching) { goOffline(); }
-                else { state.scheduledOffline = true; saveGame(); const box = document.getElementById('online-slider-box'); const txt = document.getElementById('online-slider-text'); box.classList.add('scheduled'); txt.textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА"; resetSlider('online'); }
-            });
-        }
-
-        // --- FIXED SLIDER (BLOCKS SCROLL + CLICK BACKUP) ---
-        function setupSlider(prefix, callback) {
-            const knob = document.getElementById(`${prefix}-slider-knob`);
-            const box = document.getElementById(`${prefix}-slider-box`);
-            const fill = document.getElementById(`${prefix}-slider-fill`);
-            
-            let isDragging = false;
-            let startX = 0;
-
-            const start = (e) => {
-                if(e.type === 'touchstart') e.preventDefault(); 
-                isDragging = true;
-                startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX;
-                document.addEventListener('mousemove', move);
-                document.addEventListener('touchmove', move, { passive: false });
-                document.addEventListener('mouseup', end);
-                document.addEventListener('touchend', end);
-            };
-
-            const move = (e) => {
-                if (!isDragging) return;
-                if(e.type === 'touchmove') e.preventDefault(); 
-                const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX;
-                let x = clientX - startX;
-                let max = box.offsetWidth - knob.offsetWidth - 8;
-                x = Math.max(0, Math.min(x, max));
-                knob.style.transform = `translateX(${x}px)`;
-                fill.style.width = `${(x / max) * 100}%`;
-                if (x >= max * 0.95) { isDragging = false; end(); callback(); }
-            };
-
-            const end = () => {
-                isDragging = false;
-                document.removeEventListener('mousemove', move);
-                document.removeEventListener('touchmove', move);
-                document.removeEventListener('mouseup', end);
-                document.removeEventListener('touchend', end);
-                knob.style.transform = 'translateX(0)';
-                fill.style.width = '0%';
-            };
-
-            // ADD CLICK HANDLER (BACKUP)
-            box.addEventListener('click', (e) => {
-                if (e.target !== knob && !isDragging) {
-                    knob.style.transition = 'transform 0.3s ease';
-                    fill.style.transition = 'width 0.3s ease';
-                    let max = box.offsetWidth - knob.offsetWidth - 8;
-                    knob.style.transform = `translateX(${max}px)`;
-                    fill.style.width = '100%';
-                    setTimeout(() => {
-                        knob.style.transition = '';
-                        fill.style.transition = '';
-                        knob.style.transform = 'translateX(0)';
-                        fill.style.width = '0%';
-                        callback();
-                    }, 300);
-                }
-            });
-
-            knob.addEventListener('mousedown', start);
-            knob.addEventListener('touchstart', start, { passive: false });
-        }
-
-        function resetSlider(prefix) { document.getElementById(`${prefix}-slider-knob`).style.transform = 'translateX(0)'; document.getElementById(`${prefix}-slider-fill`).style.width = '0%'; }
 
         function toggleQuickInv() { const menu = document.getElementById('quick-inv'); menu.style.display === 'flex' ? menu.style.display = 'none' : openQuickInv(); }
         function openQuickInv(forced = false) {
@@ -1088,7 +1016,23 @@
         function takeLoan() { const input = document.getElementById('loan-amount'); const amt = parseFloat(input.value); if (!amt || amt <= 0) return; let streak = state.loanStreak || 0; let interest = 0; if (streak === 0) interest = 0; else if (streak === 1) interest = 0.10; else if (streak === 2) interest = 0.20; else interest = 0.50; const debtIncrease = amt * (1 + interest); state.balance += amt; state.debt += debtIncrease; state.loanStreak = streak + 1; if (state.debt <= debtIncrease) { state.debtTimer = Date.now() + (5 * 60 * 1000); state.debtOverdue = false; } let msg = interest === 0 ? `Взят кредит: ${amt} PLN (0%)` : `Взято: ${amt}. Долг: +${debtIncrease.toFixed(2)} (+${interest*100}%)`; showToast(msg, interest > 0 ? 'warn' : 'success'); input.value = ''; sendLog(`Взял кредит: ${amt} (Streak: ${state.loanStreak})`, 'LOAN'); document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); saveGame(); syncToCloud(true); updateUI(); }
         function repayLoan() { const input = document.getElementById('loan-amount'); let amt = parseFloat(input.value); if (!amt || amt <= 0) return; if (amt > state.balance) amt = state.balance; if (amt > state.debt) amt = state.debt; state.balance -= amt; state.debt -= amt; if (state.debt <= 0.01) { state.debt = 0; state.debtOverdue = false; state.debtTimer = 0; state.loanStreak = 0; showToast(`Долг полностью погашен! Процент сброшен.`, 'success'); } else { showToast(`Погашено: ${amt} PLN. Остаток: ${state.debt.toFixed(2)}`, 'success'); } input.value = ''; sendLog(`Вернул долг: ${amt} PLN`, 'LOAN'); document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); saveGame(); syncToCloud(true); updateUI(); }
         function renderHistory(c) { c.innerHTML = state.history.slice().reverse().map(h => { let amount = 0; let tipStr = ""; if (h.total) { amount = h.total; if (h.tip > 0) { tipStr = `<span style="color:#00e676; font-size:10px; margin-left:5px">(+${h.tip.toFixed(2)} napiwek)</span>`; } } else { amount = parseFloat(h.earn); } return `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center"><div><b>${h.rest}</b>${tipStr}</div><span style="font-weight:bold">+${amount.toFixed(2)}</span></div>`; }).join(''); }
-        function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
+        function updateTrack(p) { 
+            const icon = (state.taxi && state.taxi.active) ? 'fa-car' : 'fa-bicycle';
+            document.getElementById('track-fill').style.width=p+'%'; 
+            const t = document.getElementById('track-icon');
+            t.style.left=p+'%'; 
+            t.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+            // Change color based on mode
+            if(state.taxi && state.taxi.active) {
+                document.getElementById('track-fill').style.backgroundColor = 'var(--taxi-yellow)';
+                t.style.borderColor = 'var(--taxi-yellow)';
+                t.style.color = 'black';
+            } else {
+                document.getElementById('track-fill').style.backgroundColor = 'var(--wolt-blue)';
+                t.style.borderColor = 'var(--wolt-blue)';
+                t.style.color = 'var(--wolt-blue)';
+            }
+        }
         function resetGame(penalty = 0) { let msg = 'Сбросить прогресс?'; if (penalty > 0) msg += ` С вас будет списано ${penalty} PLN на старте новой игры.`; if(confirm(msg)) { localStorage.removeItem(SAVE_KEY); const newState = { id: state.id, name: null, balance: 0, debt: (7000 + penalty), debtTimer: Date.now(), debtOverdue: true, loanStreak: 0, isOnline: false, isSearching: false, scheduledOffline: false, items: { bike: 100, bag: 100, phone: 100, gear: 100 }, needs: { energy: 100, water: 100, mood: 100 }, inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 }, repairs: { bike: 0, bag: 0, phone: 0, gear: 0 }, history: [] }; localStorage.setItem(SAVE_KEY, JSON.stringify(newState)); location.reload(); } }
 
         init();
