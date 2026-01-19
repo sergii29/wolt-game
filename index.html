@@ -55,7 +55,7 @@
         .debt-warning { color: var(--accent-red); font-size: 10px; font-weight: bold; display: none; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        /* --- BARS & LABELS --- */
+        /* --- BARS --- */
         .equip-bar {
             position: absolute; top: 70px; left: 15px; right: 15px;
             display: flex; gap: 4px; z-index: 999; pointer-events: none;
@@ -88,7 +88,7 @@
             padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333;
         }
 
-        /* SLIDER GENERIC */
+        /* SLIDERS */
         .slider-container {
             position: relative; width: 100%; height: 60px; background: #f0f0f0;
             border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px;
@@ -101,15 +101,12 @@
             color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s;
         }
         .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 157, 224, 0.2); z-index: 0; }
-        
-        /* Scheduled State for Slider */
         .slider-container.scheduled { background: #ffebee; border: 1px solid #ffcdd2; }
         .slider-container.scheduled .slider-knob { background: var(--accent-red); }
         .slider-container.scheduled .slider-text { color: var(--accent-red); }
 
         /* CONTROLS */
         .controls-row { display: flex; gap: 10px; margin-top: 15px; }
-
         .pedal-btn {
             flex: 1; background: var(--wolt-blue); color: white; border: none; padding: 18px;
             border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase;
@@ -145,7 +142,6 @@
         .inv-item:active { background: rgba(255,255,255,0.2); }
         .inv-item.link-btn { background: var(--wolt-blue); justify-content: center; font-weight: bold; }
         .inv-count { background: var(--wolt-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
-
         @keyframes popUp { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
         /* MODALS */
@@ -171,7 +167,7 @@
         .modal-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; font-weight: bold; }
         .modal-content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* SHOP & DEFLATION CARDS */
+        /* SHOP & DEFLATION */
         .shop-section { margin-bottom: 25px; }
         .shop-section h3 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
         .shop-card {
@@ -194,18 +190,13 @@
         .btn-loan { background: var(--accent-green); color: #004d40; }
         .btn-repay { background: var(--accent-orange); color: #3e2723; }
         .debt-alert-box { background: #ffebee; color: #c62828; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #ef9a9a; display: none; }
-
-        /* GOVT BTN */
         .govt-btn { background: #37474f; color: white; border-color: #37474f; }
         
         /* TIMERS UI */
         .accept-timer-bg { width: 100%; height: 6px; background: #eee; margin-top: 8px; border-radius: 3px; overflow: hidden; display: none; }
         .accept-timer-fill { height: 100%; background: var(--accent-red); width: 100%; }
-        
-        /* ANIMATION for Timer */
         @keyframes shrinkTimer { from { width: 100%; } to { width: 0%; } }
         .animate-timer { animation: shrinkTimer 15s linear forwards; }
-
         .delivery-timer { font-size: 11px; color: #666; margin-top: 2px; font-weight: bold; }
 
     </style>
@@ -237,7 +228,7 @@
 
     <div id="side-menu-overlay" onclick="toggleMenu()">
         <div id="side-menu" onclick="event.stopPropagation()">
-            <h2 style="margin-bottom: 20px">Профиль <span id="player-id-display" style="font-size:10px; color:#666; display:block">Loading ID...</span></h2>
+            <h2 style="margin-bottom: 20px">Профиль <span id="player-id-display" style="font-size:10px; color:#666; display:block">Loading...</span></h2>
             <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--wolt-blue)"></i> Магазин / Инвентарь</div>
             <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
             <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
@@ -312,9 +303,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // ==========================================
-        // НАСТРОЙКИ FIREBASE (Вставлены твои ключи)
-        // ==========================================
+        // CONFIG
         const firebaseConfig = {
           apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
           authDomain: "warszawa-courier.firebaseapp.com",
@@ -325,11 +314,9 @@
           appId: "1:295860613508:web:86fe8364377d6875612dd1",
           measurementId: "G-TGSCHBVLX2"
         };
-        // ==========================================
 
         let db = null;
         try {
-            // Инициализация Firebase
             firebase.initializeApp(firebaseConfig);
             db = firebase.database();
             console.log("Firebase Connected");
@@ -337,17 +324,11 @@
 
         const SAVE_KEY = 'WARSZAWA_FOREVER';
         
-        // Переменные игры (синхронизируются с Админкой)
         let gameConfig = {
-            basePay: 12,
-            payVariance: 6,
-            trafficChance: 0.1,
-            trafficDuration: 3000,
-            inflationRate: 0.1, // 10%
-            energyDrain: 0.15,
-            waterDrain: 0.10,
-            moodDrain: 0.05,
-            itemPrices: {} // Цены из админки
+            basePay: 12, payVariance: 6, trafficChance: 0.1, trafficDuration: 3000,
+            inflationRate: 0.1, energyDrain: 0.15, waterDrain: 0.10, moodDrain: 0.05, 
+            deliveryTime: 60, // Default delivery time
+            itemPrices: {}
         };
 
         const ITEMS_DB = {
@@ -363,15 +344,14 @@
 
         let state = {
             id: 'u_' + Math.random().toString(36).substr(2, 9),
-            balance: 0,
-            debt: 0, debtTimer: 0, debtOverdue: false,
+            balance: 0, debt: 0, debtTimer: 0, debtOverdue: false,
             isOnline: false, isSearching: false, scheduledOffline: false,
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
             needs: { energy: 100, water: 100, mood: 100 },
             inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
             repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
             history: [],
-            energyBoostActive: false // Red Bull effect
+            energyBoostActive: false
         };
 
         const restaurants = [
@@ -390,31 +370,21 @@
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([52.2297, 21.0122], 13);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
             L.marker([52.2297, 21.0122]).addTo(map);
-            
             loadGame();
             document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
-
             document.getElementById('pedal-btn').addEventListener('click', pedal);
             initSliders();
             setInterval(checkDebt, 1000); 
-            
-            listenToCloud(); // Подключаем слушатели админки
-            syncToCloud(true); // Первый синк
+            listenToCloud(); syncToCloud(true);
         }
 
-        // --- СИНХРОНИЗАЦИЯ С FIREBASE ---
         function syncToCloud(force = false) {
             if (!db) return;
             const now = Date.now();
-            if (force || now - lastSync > 3000) { // Отправляем данные не чаще раза в 3 сек
+            if (force || now - lastSync > 3000) {
                 db.ref('players/' + state.id).update({
-                    balance: state.balance,
-                    isOnline: state.isOnline,
-                    lastSeen: now,
-                    stats: state.needs,
-                    inventory: state.inventory,
-                    debt: state.debt,
-                    items: state.items
+                    balance: state.balance, isOnline: state.isOnline, lastSeen: now,
+                    stats: state.needs, inventory: state.inventory, debt: state.debt, items: state.items
                 });
                 lastSync = now;
             }
@@ -422,56 +392,35 @@
 
         function listenToCloud() {
             if (!db) return;
-            
-            // 1. Слушаем глобальные настройки (цены, инфляция)
             db.ref('config').on('value', (snap) => {
                 const val = snap.val();
                 if (val) {
                     gameConfig = { ...gameConfig, ...val };
-                    if (val.itemPrices) {
-                        for(let k in val.itemPrices) {
-                            if(ITEMS_DB[k]) ITEMS_DB[k].cost = val.itemPrices[k];
+                    if (val.itemPrices) { 
+                        for(let k in val.itemPrices) { 
+                            if(ITEMS_DB[k]) ITEMS_DB[k].cost = val.itemPrices[k]; 
+                        } 
+                        // REFRESH SHOP IF OPEN
+                        const modalTitle = document.getElementById('modal-title').textContent;
+                        if(document.getElementById('full-modal').classList.contains('open') && modalTitle === 'Магазин') {
+                            renderShop(document.getElementById('modal-body'));
                         }
                     }
                 }
             });
-
-            // 2. Слушаем личные команды от Админа
             db.ref('players/' + state.id + '/adminInbox').on('child_added', (snap) => {
-                const cmd = snap.val();
-                handleAdminCommand(cmd);
-                snap.ref.remove(); // Удаляем команду после выполнения
+                handleAdminCommand(snap.val());
+                snap.ref.remove();
             });
         }
 
         function handleAdminCommand(cmd) {
-            if (cmd.type === 'SET_BALANCE') {
-                state.balance = parseFloat(cmd.val);
-                showToast(`Админ изменил баланс: ${state.balance.toFixed(2)} PLN`, 'warn');
-            }
-            if (cmd.type === 'ADD_ITEM') {
-                state.inventory[cmd.item] = (state.inventory[cmd.item] || 0) + cmd.qty;
-                showToast(`Админ выдал: ${ITEMS_DB[cmd.item].name} x${cmd.qty}`, 'success');
-            }
-            if (cmd.type === 'REPAIR_ALL') {
-                state.items = { bike: 100, bag: 100, phone: 100, gear: 100 };
-                showToast(`Админ починил снаряжение!`, 'success');
-            }
-            if (cmd.type === 'WIPE_DEBT') {
-                state.debt = 0; state.debtOverdue = false;
-                showToast(`Админ простил долг!`, 'success');
-            }
-            if (cmd.type === 'FULL_RESET') {
-                localStorage.removeItem(SAVE_KEY);
-                let charge = cmd.charge || 0;
-                resetGame(charge); // Сброс с опциональным штрафом
-            }
-            if (cmd.type === 'SET_STATS') {
-                if(cmd.energy) state.needs.energy = cmd.energy;
-                if(cmd.water) state.needs.water = cmd.water;
-                if(cmd.mood) state.needs.mood = cmd.mood;
-                showToast(`Характеристики восстановлены админом`, 'info');
-            }
+            if (cmd.type === 'SET_BALANCE') { state.balance = parseFloat(cmd.val); showToast(`Админ изменил баланс: ${state.balance.toFixed(2)} PLN`, 'warn'); }
+            if (cmd.type === 'ADD_ITEM') { state.inventory[cmd.item] = (state.inventory[cmd.item] || 0) + cmd.qty; showToast(`Админ выдал: ${ITEMS_DB[cmd.item].name} x${cmd.qty}`, 'success'); }
+            if (cmd.type === 'REPAIR_ALL') { state.items = { bike: 100, bag: 100, phone: 100, gear: 100 }; showToast(`Админ починил снаряжение!`, 'success'); }
+            if (cmd.type === 'WIPE_DEBT') { state.debt = 0; state.debtOverdue = false; showToast(`Админ простил долг!`, 'success'); }
+            if (cmd.type === 'FULL_RESET') { localStorage.removeItem(SAVE_KEY); let charge = cmd.charge || 0; resetGame(charge); }
+            if (cmd.type === 'SET_STATS') { if(cmd.energy) state.needs.energy = cmd.energy; if(cmd.water) state.needs.water = cmd.water; if(cmd.mood) state.needs.mood = cmd.mood; showToast(`Характеристики восстановлены`, 'info'); }
             saveGame(); updateUI();
         }
 
@@ -480,7 +429,6 @@
             if (saved) {
                 const parsed = JSON.parse(saved);
                 state = { ...state, ...parsed };
-                // Если ID не было, создаем
                 if (!state.id) state.id = 'u_' + Math.random().toString(36).substr(2, 9);
             }
             if(!state.needs.mood) state.needs.mood = 100;
@@ -489,23 +437,17 @@
             updateUI();
         }
 
-        function saveGame() { 
-            localStorage.setItem(SAVE_KEY, JSON.stringify(state)); 
-            syncToCloud(); 
-        }
+        function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); syncToCloud(); }
 
         function checkDebt() {
+            // FIX: Don't re-render entire bank UI, just update text to keep keyboard open
             if (state.debt > 0 && !state.debtOverdue) {
                 if (Date.now() > state.debtTimer) {
-                    state.debtOverdue = true; 
-                    showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn'); 
-                    updateUI();
-                    if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) {
-                        renderBank(document.getElementById('modal-body'));
-                    }
+                    state.debtOverdue = true; showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn'); updateUI();
+                    if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) renderBank(document.getElementById('modal-body'));
                 } else {
                     if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) {
-                       renderBank(document.getElementById('modal-body'));
+                       updateBankTimer(); // ONLY UPDATE TIMER TEXT
                     }
                 }
             }
@@ -515,214 +457,116 @@
             document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN';
             ['bike','bag','phone','gear'].forEach(k => updateBar(`bar-${k}`, state.items[k]));
             ['energy','water','mood'].forEach(k => updateBar(`bar-${k}`, state.needs[k]));
-            
             const totalInv = Object.values(state.inventory).reduce((a,b)=>a+b, 0);
             document.getElementById('bag-count').textContent = totalInv;
             document.getElementById('bag-count').style.display = totalInv ? 'flex' : 'none';
-
             const warn = document.getElementById('debt-warning');
             const garnInfo = document.getElementById('garnishment-info');
-            if (state.debtOverdue && state.debt > 0) { warn.style.display = 'inline'; garnInfo.style.display = 'block'; }
-            else { warn.style.display = 'none'; garnInfo.style.display = 'none'; }
+            if (state.debtOverdue && state.debt > 0) { warn.style.display = 'inline'; garnInfo.style.display = 'block'; } else { warn.style.display = 'none'; garnInfo.style.display = 'none'; }
         }
 
         function updateBar(id, val) { document.getElementById(id).style.width = Math.max(0, Math.min(100, val)) + '%'; }
-
         function showToast(msg, type='info') {
-            const t = document.getElementById('toast');
-            t.innerHTML = msg;
+            const t = document.getElementById('toast'); t.innerHTML = msg;
             t.className = 'game-toast show ' + (type === 'warn' ? 'toast-warn' : (type==='success' ? 'toast-success' : ''));
             setTimeout(() => t.className = 'game-toast', 3000);
         }
 
-        // --- ORDER LOOP (PHYSICS & TIME) ---
         function startOrderLoop() {
             if (orderInterval) clearInterval(orderInterval);
             orderInterval = setInterval(() => {
                 if (!currentOrder || !currentOrder.accepted) return;
-
                 currentOrder.timeLeft--;
                 document.getElementById('delivery-timer').textContent = `⏱ ${currentOrder.timeLeft}с`;
-                
-                if (currentOrder.timeLeft <= 0) {
-                    failOrder("time");
-                    return;
-                }
-
+                if (currentOrder.timeLeft <= 0) { failOrder("time"); return; }
                 let decay = 0.5 * (1 + ((100 - state.items.bag) / 100));
                 currentOrder.foodTemp -= decay;
-                
-                if (currentOrder.foodTemp < 50 && !currentOrder.tempWarned) {
-                    showToast('❄️ Еда остывает! Поторопись!', 'warn');
-                    currentOrder.tempWarned = true;
-                }
-                
+                if (currentOrder.foodTemp < 50 && !currentOrder.tempWarned) { showToast('❄️ Еда остывает! Поторопись!', 'warn'); currentOrder.tempWarned = true; }
                 document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%';
-
-                if (currentOrder.foodTemp <= 0) {
-                    failOrder("cold");
-                    return;
-                }
-
+                if (currentOrder.foodTemp <= 0) { failOrder("cold"); return; }
             }, 1000);
         }
 
-        function stopOrderLoop() {
-            if (orderInterval) clearInterval(orderInterval);
-            orderInterval = null;
-            document.getElementById('delivery-timer').textContent = '';
-        }
+        function stopOrderLoop() { if (orderInterval) clearInterval(orderInterval); orderInterval = null; document.getElementById('delivery-timer').textContent = ''; }
 
         function failOrder(reason) {
             stopOrderLoop();
             let msg = reason === "time" ? "⏰ Время вышло!" : "❄️ Еда испорчена!";
             showToast(`${msg} Штраф -5.00 PLN`, 'warn');
-            state.balance -= 5.00;
-            currentOrder = null;
-            saveGame(); updateUI();
-            startSearching();
+            state.balance -= 5.00; currentOrder = null; saveGame(); updateUI(); startSearching();
         }
 
-        // --- GAMEPLAY ---
         function pedal() {
             if (!currentOrder) return;
             if (!currentOrder.accepted) { acceptOrder(); return; }
-
             let fatigue = Math.max(0.3, state.needs.energy / 100);
-            
-            if (state.needs.energy <= 5 || state.needs.water <= 5) {
-                showToast('Сил нет! Открой рюкзак!', 'warn');
-                openQuickInv(true);
-                return;
-            }
-
-            // РАСХОД (Управляется переменными из Админки)
-            if (!state.energyBoostActive) {
-                state.needs.energy -= gameConfig.energyDrain; 
-            }
-            state.needs.water -= gameConfig.waterDrain;
-            state.needs.mood -= gameConfig.moodDrain;
-            
-            state.items.bike -= 0.1; 
-            state.items.phone -= 0.05; 
-            
+            if (state.needs.energy <= 5 || state.needs.water <= 5) { showToast('Сил нет! Открой рюкзак!', 'warn'); openQuickInv(true); return; }
+            if (!state.energyBoostActive) state.needs.energy -= gameConfig.energyDrain; 
+            state.needs.water -= gameConfig.waterDrain; state.needs.mood -= gameConfig.moodDrain;
+            state.items.bike -= 0.1; state.items.phone -= 0.05; 
             currentOrder.progress += (5 * fatigue);
             updateTrack(currentOrder.progress);
-            
-            // Random Events (Шанс из Админки)
             if (Math.random() < gameConfig.trafficChance && currentOrder.stage === 2) triggerRandomEvent();
-
             if (currentOrder.progress >= 100) nextStage();
             saveGame(); updateUI();
         }
 
         function triggerRandomEvent() {
             const btn = document.getElementById('pedal-btn');
-            const events = [
-                { text: "🚧 ПРОБКА!", time: gameConfig.trafficDuration },
-                { text: "🚦 СВЕТОФОР", time: 2000 },
-                { text: "🚕 ОБЪЕЗД", time: 4000 }
-            ];
+            const events = [{ text: "🚧 ПРОБКА!", time: gameConfig.trafficDuration }, { text: "🚦 СВЕТОФОР", time: 2000 }, { text: "🚕 ОБЪЕЗД", time: 4000 }];
             const ev = events[Math.floor(Math.random()*events.length)];
-            
-            btn.disabled = true;
-            btn.classList.add('blocked');
-            btn.textContent = ev.text;
-            showToast('Задержка! Еда остывает!', 'warn');
-            
-            setTimeout(() => {
-                if (currentOrder) { 
-                    btn.disabled = false;
-                    btn.classList.remove('blocked');
-                    btn.textContent = 'ЖМИ ГАЗ (PEDAL)';
-                }
-            }, ev.time);
+            btn.disabled = true; btn.classList.add('blocked'); btn.textContent = ev.text; showToast('Задержка! Еда остывает!', 'warn');
+            setTimeout(() => { if (currentOrder) { btn.disabled = false; btn.classList.remove('blocked'); btn.textContent = 'ЖМИ ГАЗ (PEDAL)'; } }, ev.time);
         }
 
         function acceptOrder() {
-            currentOrder.accepted = true;
-            clearTimeout(acceptTimeout);
+            currentOrder.accepted = true; clearTimeout(acceptTimeout);
             document.getElementById('accept-timer').style.display = 'none';
             document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
             startOrderLoop(); 
         }
 
         function missOrder() {
-            state.isSearching = true; 
-            currentOrder = null;
-            state.balance -= 0.10; 
-            showToast('Заказ упущен! Штраф -0.10 PLN', 'warn');
-            saveGame(); updateUI();
-            startSearching();
+            state.isSearching = true; currentOrder = null; state.balance -= 0.10; 
+            showToast('Заказ упущен! Штраф -0.10 PLN', 'warn'); saveGame(); updateUI(); startSearching();
         }
 
         function nextStage() {
-            currentOrder.stage++;
-            currentOrder.progress = 0;
-            updateTrack(0);
-
-            if (currentOrder.stage === 1) { // Waiting
-                const btn = document.getElementById('pedal-btn');
-                btn.disabled = true; btn.textContent = 'ЖДЕМ ЗАКАЗ...';
+            currentOrder.stage++; currentOrder.progress = 0; updateTrack(0);
+            if (currentOrder.stage === 1) { 
+                const btn = document.getElementById('pedal-btn'); btn.disabled = true; btn.textContent = 'ЖДЕМ ЗАКАЗ...';
                 document.getElementById('status-label').textContent = 'Ресторан готовит...';
                 setTimeout(() => {
                     btn.disabled = false; btn.textContent = 'ЖМИ ГАЗ (PEDAL)';
                     document.getElementById('status-label').textContent = 'Везем клиенту';
                     currentOrder.stage = 2;
                 }, 2000);
-            } else if (currentOrder.stage === 3) {
-                completeOrder();
-            }
+            } else if (currentOrder.stage === 3) { completeOrder(); }
         }
 
         function completeOrder() {
             stopOrderLoop();
             const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
-            const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate); // Инфляция из конфига
-            
+            const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
             let pay = (gameConfig.basePay + (Math.random() * gameConfig.payVariance)) * inflationMult;
             let tip = 0;
-
-            if (currentOrder.foodTemp > 60) {
-                if (Math.random() > 0.5) tip += (2 + Math.random() * 3) * inflationMult;
-            }
-            if (state.needs.mood > 80 && currentOrder.foodTemp > 40) {
-                if (Math.random() > 0.3) tip += 3 * inflationMult;
-            }
-
-            if (tip > 0) {
-                pay += tip;
-                let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) 
-                    ? `🔥 Быстро и весело! +${tip.toFixed(2)} чай!` 
-                    : `👍 Клиент доволен! +${tip.toFixed(2)} чай`;
-                showToast(msg, 'success');
-            } else if (currentOrder.foodTemp < 50) {
-                showToast('Еда остыла... Без чаевых.', 'warn');
-            }
-
-            state.items.bag -= 1.5; 
-            state.items.gear -= 0.8;
-
+            if (currentOrder.foodTemp > 60) { if (Math.random() > 0.5) tip += (2 + Math.random() * 3) * inflationMult; }
+            if (state.needs.mood > 80 && currentOrder.foodTemp > 40) { if (Math.random() > 0.3) tip += 3 * inflationMult; }
+            if (tip > 0) { pay += tip; let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) ? `🔥 Быстро и весело! +${tip.toFixed(2)} чай!` : `👍 Клиент доволен! +${tip.toFixed(2)} чай`; showToast(msg, 'success'); } 
+            else if (currentOrder.foodTemp < 50) { showToast('Еда остыла... Без чаевых.', 'warn'); }
+            state.items.bag -= 1.5; state.items.gear -= 0.8;
             if (state.debtOverdue && state.debt > 0) {
-                let penalty = pay * 0.20;
-                if (penalty > state.debt) penalty = state.debt;
-                state.debt -= penalty;
-                pay -= penalty;
-                showToast(`Долг: -${penalty.toFixed(2)} PLN`, 'warn');
+                let penalty = pay * 0.20; if (penalty > state.debt) penalty = state.debt;
+                state.debt -= penalty; pay -= penalty; showToast(`Долг: -${penalty.toFixed(2)} PLN`, 'warn');
             }
-            
-            state.balance += pay;
-            state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
-            
+            state.balance += pay; state.history.push({ rest: currentOrder.rest.name, earn: pay.toFixed(2) });
             setTimeout(() => { showToast(`Заказ: +${pay.toFixed(2)} PLN`, 'success'); }, 500);
-            
             if (state.scheduledOffline) { goOffline(); } else { startSearching(); }
             saveGame(); updateUI();
         }
 
         function startSearching() {
-            stopOrderLoop();
-            state.isSearching = true;
+            stopOrderLoop(); state.isSearching = true;
             document.getElementById('active-order-view').style.display = 'flex';
             document.getElementById('rest-name').textContent = 'Поиск...';
             document.getElementById('rest-icon').textContent = '🔍';
@@ -730,16 +574,12 @@
             document.getElementById('order-dest').textContent = 'Ожидание...';
             document.getElementById('accept-timer').style.display = 'none';
             document.getElementById('delivery-timer').textContent = '';
-            
             resetSlider('online');
             const box = document.getElementById('online-slider-box');
             const txt = document.getElementById('online-slider-text');
-            box.classList.remove('scheduled');
-            txt.textContent = "СВАЙП ДЛЯ ОФЛАЙНА";
-            
+            box.classList.remove('scheduled'); txt.textContent = "СВАЙП ДЛЯ ОФЛАЙНА";
             document.getElementById('pedal-btn').disabled = true;
             document.getElementById('pedal-btn').textContent = 'ПОИСК...';
-            
             updateTrack(0);
             setTimeout(() => { if (state.isOnline && state.isSearching) createOrder(); }, 2000);
             syncToCloud(); 
@@ -748,45 +588,35 @@
         function createOrder() {
             state.isSearching = false;
             const r = restaurants[Math.floor(Math.random() * restaurants.length)];
-            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: 60, tempWarned: false };
-            
+            // USE DYNAMIC DELIVERY TIME FROM CONFIG
+            let time = gameConfig.deliveryTime || 60;
+            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: time, tempWarned: false };
             document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
             document.getElementById('rest-icon').textContent = r.icon;
             document.getElementById('status-label').textContent = '🔥 ПРИМИ ЗАКАЗ! 🔥';
             document.getElementById('order-dest').textContent = 'Забрать: 2.5 km';
             document.getElementById('pedal-btn').textContent = 'ПРИНЯТЬ ЗАКАЗ';
             document.getElementById('pedal-btn').disabled = false;
-
             const bar = document.getElementById('accept-timer');
             const fill = document.getElementById('accept-timer-fill');
             bar.style.display = 'block';
             fill.classList.remove('animate-timer');
-            void fill.offsetWidth; 
-            fill.classList.add('animate-timer');
-
+            void fill.offsetWidth; fill.classList.add('animate-timer');
             acceptTimeout = setTimeout(missOrder, 15000); 
-
             resetSlider('online');
             const box = document.getElementById('online-slider-box');
             const txt = document.getElementById('online-slider-text');
-            box.classList.remove('scheduled');
-            txt.textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН";
+            box.classList.remove('scheduled'); txt.textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН";
         }
 
         function goOffline() {
-            state.isOnline = false;
-            state.isSearching = false;
-            state.scheduledOffline = false;
-            stopOrderLoop();
-            if (acceptTimeout) clearTimeout(acceptTimeout);
+            state.isOnline = false; state.isSearching = false; state.scheduledOffline = false;
+            stopOrderLoop(); if (acceptTimeout) clearTimeout(acceptTimeout);
             document.getElementById('active-order-view').style.display = 'none';
             document.getElementById('offline-view').style.display = 'block';
-            resetSlider('offline');
-            saveGame();
-            syncToCloud(); // Синхронизируем, что мы офлайн
+            resetSlider('offline'); saveGame(); syncToCloud();
         }
 
-        // --- SLIDERS ---
         function initSliders() {
             setupSlider('offline', () => { state.isOnline = true; document.getElementById('offline-view').style.display = 'none'; startSearching(); });
             setupSlider('online', () => {
@@ -795,8 +625,7 @@
                     state.scheduledOffline = true;
                     const box = document.getElementById('online-slider-box');
                     const txt = document.getElementById('online-slider-text');
-                    box.classList.add('scheduled');
-                    txt.textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА";
+                    box.classList.add('scheduled'); txt.textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА";
                     resetSlider('online');
                 }
             });
@@ -815,7 +644,6 @@
 
         function resetSlider(prefix) { document.getElementById(`${prefix}-slider-knob`).style.transform = 'translateX(0)'; document.getElementById(`${prefix}-slider-fill`).style.width = '0%'; }
 
-        // --- SMART INVENTORY ---
         function toggleQuickInv() { const menu = document.getElementById('quick-inv'); menu.style.display === 'flex' ? menu.style.display = 'none' : openQuickInv(); }
         function openQuickInv(forced = false) {
             const menu = document.getElementById('quick-inv'); menu.innerHTML = '';
@@ -841,26 +669,17 @@
             const item = ITEMS_DB[key]; 
             if(state.inventory[key] <= 0) return;
             state.inventory[key]--;
-            
             if (item.effect.energy) state.needs.energy += item.effect.energy;
             if (item.effect.water) state.needs.water += item.effect.water;
             if (item.effect.mood) state.needs.mood += item.effect.mood;
-            
-            // Энергетик Logic
             if (item.special === 'no_drain') {
-                state.energyBoostActive = true;
-                showToast('🚀 ЭНЕРГЕТИК: Усталость остановлена!', 'success');
-                setTimeout(() => { 
-                    state.energyBoostActive = false; 
-                    showToast('Действие энергетика закончилось', 'info');
-                }, 30000); // 30 секунд
+                state.energyBoostActive = true; showToast('🚀 ЭНЕРГЕТИК: Усталость остановлена!', 'success');
+                setTimeout(() => { state.energyBoostActive = false; showToast('Действие энергетика закончилось', 'info'); }, 30000);
             }
-
             ['energy','water','mood'].forEach(k => { if(state.needs[k]>100) state.needs[k]=100; });
             showToast(`${item.name} использован!`, 'success'); toggleQuickInv(); saveGame(); updateUI();
         }
 
-        // --- SHOP & BANK & GOVT ---
         function toggleMenu() { document.getElementById('side-menu-overlay').classList.toggle('open'); document.getElementById('side-menu').classList.toggle('open'); }
         function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
         function openModal(type) {
@@ -876,23 +695,14 @@
             let html = '';
             const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflation = 1 + (levelSum * gameConfig.inflationRate); 
-
             html += '<div class="shop-section"><h3>🎒 Еда (Цены растут!)</h3>';
             ['water', 'bar', 'energy_drink', 'coffee'].forEach(k => {
                 const i = ITEMS_DB[k];
                 const price = i.cost * inflation;
                 const owned = state.inventory[k] || 0;
-                html += `
-                <div class="shop-card">
-                    <div>
-                        <div style="font-weight:bold">${i.name} <span style="font-size:11px; color:#009de0; font-weight:normal">(В наличии: ${owned})</span></div>
-                        <div class="shop-desc">${i.desc}</div>
-                    </div>
-                    <button class="shop-btn buy" onclick="buyItem('${k}', ${price}, this)">${price.toFixed(1)}</button>
-                </div>`;
+                html += `<div class="shop-card"><div><div style="font-weight:bold">${i.name} <span style="font-size:11px; color:#009de0; font-weight:normal">(В наличии: ${owned})</span></div><div class="shop-desc">${i.desc}</div></div><button class="shop-btn buy" onclick="buyItem('${k}', ${price}, this)">${price.toFixed(1)}</button></div>`;
             });
             html += '</div>';
-            
             html += '<div class="shop-section"><h3>🛠 Сервис (Только 0%)</h3>';
             ['bike', 'bag', 'phone', 'gear'].forEach(k => {
                 const i = ITEMS_DB[k];
@@ -901,135 +711,109 @@
                 const currentHealth = Math.floor(state.items[k]);
                 const isBroken = currentHealth <= 0;
                 const btnText = isBroken ? `Починить -${price.toFixed(1)}` : `Целое (${currentHealth}%)`;
-                
-                html += `
-                <div class="shop-card">
-                    <div>
-                        <div style="font-weight:bold">${i.name} (Lvl ${state.repairs[k]||0})</div>
-                        <div class="shop-desc">Состояние: ${currentHealth}%</div>
-                    </div>
-                    <button class="shop-btn" 
-                        ${isBroken ? '' : 'disabled'} 
-                        onclick="buyRepair('${k}', ${price}, this)">
-                        ${btnText}
-                    </button>
-                </div>`;
+                html += `<div class="shop-card"><div><div style="font-weight:bold">${i.name} (Lvl ${state.repairs[k]||0})</div><div class="shop-desc">Состояние: ${currentHealth}%</div></div><button class="shop-btn" ${isBroken ? '' : 'disabled'} onclick="buyRepair('${k}', ${price}, this)">${btnText}</button></div>`;
             });
-            html += '</div>';
-            c.innerHTML = html;
+            html += '</div>'; c.innerHTML = html;
         }
 
         function renderDeflation(c) {
             const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflation = 1 + (levelSum * gameConfig.inflationRate);
-            const cost1 = 2700 * inflation;
-            const cost2 = 5000 * inflation;
-
-            c.innerHTML = `
-                <div style="text-align:center; padding:20px 0;">
-                    <i class="fa-solid fa-scale-unbalanced-flip" style="font-size:40px; color:#90a4ae"></i>
-                    <h2>Инфляция: ${((inflation-1)*100).toFixed(0)}%</h2>
-                    <p style="color:#666; font-size:14px">Снижение инфляции уменьшает цены в магазинах, но стоит больших денег.</p>
-                </div>
-                <div class="shop-card">
-                    <div>
-                        <div style="font-weight:bold">Откат (-1 уровень)</div>
-                        <div class="shop-desc">Снижает цены на шаг назад</div>
-                    </div>
-                    <button class="shop-btn govt-btn" onclick="buyDeflation(1, ${cost1})">-${cost1.toFixed(0)}</button>
-                </div>
-                <div class="shop-card">
-                    <div>
-                        <div style="font-weight:bold">Сильный откат (-2 ур.)</div>
-                        <div class="shop-desc">Серьезное снижение цен</div>
-                    </div>
-                    <button class="shop-btn govt-btn" onclick="buyDeflation(2, ${cost2})">-${cost2.toFixed(0)}</button>
-                </div>
-            `;
+            const cost1 = 2700 * inflation; const cost2 = 5000 * inflation;
+            c.innerHTML = `<div style="text-align:center; padding:20px 0;"><i class="fa-solid fa-scale-unbalanced-flip" style="font-size:40px; color:#90a4ae"></i><h2>Инфляция: ${((inflation-1)*100).toFixed(0)}%</h2><p style="color:#666; font-size:14px">Снижение инфляции уменьшает цены в магазинах, но стоит больших денег.</p></div><div class="shop-card"><div><div style="font-weight:bold">Откат (-1 уровень)</div><div class="shop-desc">Снижает цены на шаг назад</div></div><button class="shop-btn govt-btn" onclick="buyDeflation(1, ${cost1})">-${cost1.toFixed(0)}</button></div><div class="shop-card"><div><div style="font-weight:bold">Сильный откат (-2 ур.)</div><div class="shop-desc">Серьезное снижение цен</div></div><button class="shop-btn govt-btn" onclick="buyDeflation(2, ${cost2})">-${cost2.toFixed(0)}</button></div>`;
         }
 
         function buyItem(k, cost, btn) {
-            if(state.balance >= cost) { 
-                state.balance-=cost; state.inventory[k]=(state.inventory[k]||0)+1; 
-                const originalText = btn.textContent; btn.textContent = 'КУПЛЕНО!'; btn.className = 'shop-btn bought';
-                setTimeout(() => { btn.textContent = originalText; btn.className = 'shop-btn buy'; renderShop(document.getElementById('modal-body')); }, 600);
-                saveGame(); updateUI(); 
-            } else showToast('Нет денег','warn');
+            if(state.balance >= cost) { state.balance-=cost; state.inventory[k]=(state.inventory[k]||0)+1; const originalText = btn.textContent; btn.textContent = 'КУПЛЕНО!'; btn.className = 'shop-btn bought'; setTimeout(() => { btn.textContent = originalText; btn.className = 'shop-btn buy'; renderShop(document.getElementById('modal-body')); }, 600); saveGame(); updateUI(); } else showToast('Нет денег','warn');
         }
 
         function buyRepair(k, cost, btn) {
             if (state.items[k] > 0) return;
-            if(state.balance >= cost) { 
-                state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; 
-                btn.textContent = 'ГОТОВО!'; btn.className = 'shop-btn bought';
-                setTimeout(() => { renderShop(document.getElementById('modal-body')); }, 600);
-                saveGame(); updateUI(); 
-            } else showToast('Нет денег','warn');
+            if(state.balance >= cost) { state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; btn.textContent = 'ГОТОВО!'; btn.className = 'shop-btn bought'; setTimeout(() => { renderShop(document.getElementById('modal-body')); }, 600); saveGame(); updateUI(); } else showToast('Нет денег','warn');
         }
 
         function buyDeflation(levels, cost) {
             if (state.balance < cost) { showToast('Недостаточно средств', 'warn'); return; }
             let reduced = 0;
-            for (let i = 0; i < levels; i++) {
-                const key = Object.keys(state.repairs).find(k => state.repairs[k] > 0);
-                if (key) { state.repairs[key]--; reduced++; }
-            }
-            if (reduced > 0) {
-                state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success');
-                saveGame(); updateUI(); renderDeflation(document.getElementById('modal-body'));
-            } else { showToast('Инфляция уже на минимуме!', 'warn'); }
+            for (let i = 0; i < levels; i++) { const key = Object.keys(state.repairs).find(k => state.repairs[k] > 0); if (key) { state.repairs[key]--; reduced++; } }
+            if (reduced > 0) { state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success'); saveGame(); updateUI(); renderDeflation(document.getElementById('modal-body')); } else { showToast('Инфляция уже на минимуме!', 'warn'); }
         }
 
+        // FIXED BANK RENDERING (KEYBOARD ISSUE)
         function renderBank(c) {
             let timeLeftStr = "00:00";
             if(state.debt > 0 && !state.debtOverdue) {
                 let diff = Math.max(0, state.debtTimer - Date.now());
-                let m = Math.floor(diff / 60000);
-                let s = Math.floor((diff % 60000) / 1000);
+                let m = Math.floor(diff / 60000); let s = Math.floor((diff % 60000) / 1000);
                 timeLeftStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
             }
 
+            // Check if Bank UI is already rendered to prevent input overwrite
+            if(document.getElementById('bank-ui-root')) {
+                updateBankTimer(timeLeftStr); // Just update text
+                return;
+            }
+
             c.innerHTML = `
-                <div class="debt-alert-box" style="display:${state.debtOverdue?'block':'none'}">⚠️ <strong>ПРОСРОЧЕНО!</strong><br>Удерживаем 20% с каждого заказа.</div>
-                <div style="text-align:center; margin-bottom:20px">
-                    <div style="font-size:14px; color:#666">Текущий долг</div>
-                    <div style="font-size:32px; font-weight:800; color:${state.debt>0?'var(--accent-red)':'#333'}">${state.debt.toFixed(2)} PLN</div>
-                    <div style="font-size:12px; color:${state.debtOverdue?'red':'#00c853'}; font-weight:bold; margin-top:5px">
-                        ${state.debt > 0 ? (state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + timeLeftStr) : 'Нет долгов'}
+                <div id="bank-ui-root">
+                    <div class="debt-alert-box" id="bank-alert" style="display:${state.debtOverdue?'block':'none'}">⚠️ <strong>ПРОСРОЧЕНО!</strong><br>Удерживаем 20% с каждого заказа.</div>
+                    <div style="text-align:center; margin-bottom:20px">
+                        <div style="font-size:14px; color:#666">Текущий долг</div>
+                        <div style="font-size:32px; font-weight:800; color:${state.debt>0?'var(--accent-red)':'#333'}" id="bank-debt-display">${state.debt.toFixed(2)} PLN</div>
+                        <div style="font-size:12px; color:${state.debtOverdue?'red':'#00c853'}; font-weight:bold; margin-top:5px" id="bank-timer-display">
+                            ${state.debt > 0 ? (state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + timeLeftStr) : 'Нет долгов'}
+                        </div>
                     </div>
-                </div>
-                <input type="number" id="loan-amount" class="bank-input" placeholder="Сумма...">
-                <div class="bank-actions">
-                    <button class="bank-btn btn-loan" onclick="takeLoan()">ВЗЯТЬ</button>
-                    ${state.debt > 0 ? '<button class="bank-btn btn-repay" onclick="repayLoan()">ВЕРНУТЬ</button>' : ''}
+                    <input type="number" id="loan-amount" class="bank-input" placeholder="Сумма...">
+                    <div class="bank-actions">
+                        <button class="bank-btn btn-loan" onclick="takeLoan()">ВЗЯТЬ</button>
+                        ${state.debt > 0 ? '<button class="bank-btn btn-repay" onclick="repayLoan()">ВЕРНУТЬ</button>' : ''}
+                    </div>
                 </div>
             `;
         }
+
+        function updateBankTimer(timeStr) {
+            const timerDisplay = document.getElementById('bank-timer-display');
+            const debtDisplay = document.getElementById('bank-debt-display');
+            if(timerDisplay) {
+                if(state.debt > 0) {
+                    timerDisplay.textContent = state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + (timeStr || "00:00");
+                    timerDisplay.style.color = state.debtOverdue ? 'red' : '#00c853';
+                } else {
+                    timerDisplay.textContent = 'Нет долгов';
+                }
+            }
+            if(debtDisplay) debtDisplay.textContent = state.debt.toFixed(2) + ' PLN';
+        }
+
         function takeLoan() {
             const input = document.getElementById('loan-amount'); const amt = parseFloat(input.value);
             if (!amt || amt <= 0) return;
             state.balance += amt; state.debt += amt; state.debtTimer = Date.now() + (5 * 60 * 1000); state.debtOverdue = false;
-            showToast(`Взят кредит: ${amt} PLN`, 'success'); input.value = ''; renderBank(document.getElementById('modal-body')); saveGame(); updateUI();
+            showToast(`Взят кредит: ${amt} PLN`, 'success'); input.value = ''; 
+            document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); // Full Re-render on action
+            saveGame(); updateUI();
         }
         function repayLoan() {
             const input = document.getElementById('loan-amount'); let amt = parseFloat(input.value);
             if (!amt || amt <= 0) return;
             if (amt > state.balance) amt = state.balance; if (amt > state.debt) amt = state.debt;
             state.balance -= amt; state.debt -= amt; if (state.debt <= 0.01) { state.debt = 0; state.debtOverdue = false; }
-            showToast(`Погашено: ${amt} PLN`, 'success'); input.value = ''; renderBank(document.getElementById('modal-body')); saveGame(); updateUI();
+            showToast(`Погашено: ${amt} PLN`, 'success'); input.value = ''; 
+            document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); // Full Re-render on action
+            saveGame(); updateUI();
         }
         function renderHistory(c) { c.innerHTML = state.history.slice().reverse().map(h=>`<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between"><b>${h.rest}</b><span>+${h.earn}</span></div>`).join(''); }
-        
         function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
         
         function resetGame(penalty = 0) {
             let msg = 'Сбросить прогресс?';
             if (penalty > 0) msg += ` С вас будет списано ${penalty} PLN на старте новой игры.`;
-            
             if(confirm(msg)) {
                 localStorage.removeItem(SAVE_KEY);
                 const newState = {
-                    id: state.id, // ID оставляем тот же!
+                    id: state.id, 
                     balance: 0, debt: (7000 + penalty), debtTimer: Date.now(), debtOverdue: true,
                     isOnline: false, isSearching: false, scheduledOffline: false,
                     items: { bike: 100, bag: 100, phone: 100, gear: 100 },
@@ -1047,3 +831,4 @@
     </script>
 </body>
 </html>
+
