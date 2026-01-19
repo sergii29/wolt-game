@@ -62,7 +62,7 @@
 <body>
 
     <div style="display:flex; justify-content:space-between; align-items:center">
-        <h1>ADMIN <span style="font-size:12px; color:#666">v1.6 (Fix)</span></h1>
+        <h1>ADMIN <span style="font-size:12px; color:#666">v1.7 (PayModel)</span></h1>
         <div style="font-size:12px; color:#aaa" id="connection-status">Disconnected</div>
     </div>
 
@@ -97,9 +97,10 @@
     <div id="settings" class="panel">
         
         <div class="setting-group">
-            <h3>💸 Деньги и Зарплата</h3>
-            <div class="setting-row"><span class="setting-label">Зарплата за заказ (PLN)</span> <input type="number" id="basePay" placeholder="12"></div>
-            <div class="setting-row"><span class="setting-label">Случайный бонус (+/-)</span> <input type="number" id="payVariance" placeholder="6"></div>
+            <h3>💸 Экономика (Новая Модель)</h3>
+            <div class="setting-row"><span class="setting-label">Базовая подача (PLN)</span> <input type="number" id="basePickupPay" placeholder="4.0"></div>
+            <div class="setting-row"><span class="setting-label">Тариф за КМ (PLN)</span> <input type="number" id="perKmPay" placeholder="1.5"></div>
+            <div class="setting-row"><span class="setting-label">Случайный бонус (+/-)</span> <input type="number" id="payVariance" placeholder="2.0"></div>
             <div class="setting-row"><span class="setting-label">Инфляция за уровень (%)</span> <input type="number" id="inflationRate" placeholder="10"></div>
         </div>
 
@@ -201,7 +202,8 @@
         
         // DEFAULTS
         const DEFAULTS = {
-            basePay: 12, payVariance: 6, inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 3000,
+            basePickupPay: 4.0, perKmPay: 1.5, payVariance: 2.0,
+            inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 3000,
             energyDrain: 0.15, waterDrain: 0.10, deliveryTime: 60, coolingRate: 0.5, 
             tipChance: 0.5, tipMinTemp: 60, tipMinMood: 80,
             itemPrices: { water: 2.0, bar: 4.5, energy_drink: 7.0, coffee: 9.0 }
@@ -293,7 +295,9 @@
                 const cfg = snap.val() || DEFAULTS;
                 const setVal = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
 
-                setVal('basePay', cfg.basePay ?? DEFAULTS.basePay);
+                setVal('basePickupPay', cfg.basePickupPay ?? DEFAULTS.basePickupPay);
+                setVal('perKmPay', cfg.perKmPay ?? DEFAULTS.perKmPay);
+
                 setVal('payVariance', cfg.payVariance ?? DEFAULTS.payVariance);
                 setVal('inflationRate', ((cfg.inflationRate ?? DEFAULTS.inflationRate) * 100).toFixed(0)); 
                 setVal('trafficChance', ((cfg.trafficChance ?? DEFAULTS.trafficChance) * 100).toFixed(0)); 
@@ -325,8 +329,10 @@
 
         function saveGlobalSettings() {
             const data = {
-                basePay: getNum('basePay', 12),
-                payVariance: getNum('payVariance', 6),
+                basePickupPay: getNum('basePickupPay', 4.0),
+                perKmPay: getNum('perKmPay', 1.5),
+
+                payVariance: getNum('payVariance', 2.0),
                 inflationRate: getNum('inflationRate', 10) / 100,
                 trafficChance: getNum('trafficChance', 10) / 100,
                 trafficDuration: getNum('trafficDuration', 3000),
@@ -399,4 +405,3 @@
     </script>
 </body>
 </html>
-
