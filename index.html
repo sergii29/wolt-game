@@ -237,8 +237,7 @@
                 <button class="pedal-btn" id="pedal-btn">ЖМИ ГАЗ (PEDAL)</button>
             </div>
             <div id="garnishment-info" style="font-size:11px; color:var(--accent-red); text-align:center; display:none">
-                Будет удержано 20% в счет долга
-            </div>
+                </div>
         </div>
     </div>
 
@@ -447,7 +446,7 @@
         function checkDebt() {
             if (state.debt > 0 && !state.debtOverdue) {
                 if (Date.now() > state.debtTimer) {
-                    state.debtOverdue = true; showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn'); updateUI();
+                    state.debtOverdue = true; showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ ' + (getGarnishmentRate()*100).toFixed(0) + '%', 'warn'); updateUI();
                     if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) renderBank(document.getElementById('modal-body'));
                 } else {
                     if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) {
@@ -455,6 +454,15 @@
                     }
                 }
             }
+        }
+
+        // --- DYNAMIC GARNISHMENT RATE ---
+        function getGarnishmentRate() {
+            let s = state.loanStreak || 0;
+            if (s === 0) return 0.10; // 1st time: 10%
+            if (s === 1) return 0.20; // 2nd time: 20%
+            if (s === 2) return 0.30; // 3rd time: 30%
+            return 0.50;              // 4th+: 50%
         }
 
         function updateUI() {
@@ -466,7 +474,15 @@
             document.getElementById('bag-count').style.display = totalInv ? 'flex' : 'none';
             const warn = document.getElementById('debt-warning');
             const garnInfo = document.getElementById('garnishment-info');
-            if (state.debtOverdue && state.debt > 0) { warn.style.display = 'inline'; garnInfo.style.display = 'block'; } else { warn.style.display = 'none'; garnInfo.style.display = 'none'; }
+            
+            if (state.debtOverdue && state.debt > 0) { 
+                warn.style.display = 'inline'; 
+                garnInfo.style.display = 'block';
+                garnInfo.textContent = '⚠️ ПРОСРОЧКА! Удерживаем ' + (getGarnishmentRate()*100).toFixed(0) + '% с заказа';
+            } else { 
+                warn.style.display = 'none'; 
+                garnInfo.style.display = 'none'; 
+            }
         }
 
         function updateBar(id, val) { document.getElementById(id).style.width = Math.max(0, Math.min(100, val)) + '%'; }
@@ -584,8 +600,13 @@
             state.items.bag -= 1.5; state.items.gear -= 0.8;
             
             if (state.debtOverdue && state.debt > 0) {
-                let penalty = totalEarn * 0.20; if (penalty > state.debt) penalty = state.debt;
-                state.debt -= penalty; totalEarn -= penalty; showToast(`Долг: -${penalty.toFixed(2)} PLN`, 'warn');
+                // NEW: Dynamic Garnishment Rate
+                const rate = getGarnishmentRate();
+                let penalty = totalEarn * rate; 
+                
+                if (penalty > state.debt) penalty = state.debt;
+                state.debt -= penalty; totalEarn -= penalty; 
+                showToast(`Долг (-${(rate*100).toFixed(0)}%): -${penalty.toFixed(2)} PLN`, 'warn');
             }
             
             state.balance += totalEarn; 
