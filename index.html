@@ -240,7 +240,7 @@
     <div id="full-modal" class="full-modal">
         <div class="modal-header">
             <i class="fa-solid fa-arrow-left" onclick="closeModal()" style="font-size:20px; padding:10px; cursor:pointer"></i>
-            <span id="modal-title">Title</span>
+            <span id="modal-title" id="modal-title">Title</span>
         </div>
         <div class="modal-content" id="modal-body"></div>
     </div>
@@ -324,10 +324,12 @@
 
         const SAVE_KEY = 'WARSZAWA_FOREVER';
         
+        // GAME CONFIG (with defaults)
         let gameConfig = {
             basePay: 12, payVariance: 6, trafficChance: 0.1, trafficDuration: 3000,
             inflationRate: 0.1, energyDrain: 0.15, waterDrain: 0.10, moodDrain: 0.05, 
-            deliveryTime: 60, coolingRate: 0.5, tipChance: 0.5, // NEW PARAMS
+            deliveryTime: 60, coolingRate: 0.5, 
+            tipChance: 0.5, tipBonusChance: 0.3, tipMinTemp: 60, tipMinMood: 80, // Tip Settings
             itemPrices: {}
         };
 
@@ -557,11 +559,18 @@
             let pay = (gameConfig.basePay + (Math.random() * gameConfig.payVariance)) * inflationMult;
             let tip = 0;
             
-            // USE CONFIG FOR TIP CHANCE
+            // TIP LOGIC FROM CONFIG
+            let minTemp = gameConfig.tipMinTemp || 60;
+            let minMood = gameConfig.tipMinMood || 80;
             let chance = gameConfig.tipChance || 0.5;
+            let bonusChance = gameConfig.tipBonusChance || 0.3;
             
-            if (currentOrder.foodTemp > 60) { if (Math.random() > (1 - chance)) tip += (2 + Math.random() * 3) * inflationMult; }
-            if (state.needs.mood > 80 && currentOrder.foodTemp > 40) { if (Math.random() > (1 - chance)) tip += 3 * inflationMult; }
+            if (currentOrder.foodTemp > minTemp) { 
+                if (Math.random() > (1.0 - chance)) tip += (2 + Math.random() * 3) * inflationMult; 
+            }
+            if (state.needs.mood > minMood && currentOrder.foodTemp > 40) { 
+                if (Math.random() > (1.0 - bonusChance)) tip += 3 * inflationMult; 
+            }
             
             if (tip > 0) { pay += tip; let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) ? `🔥 Быстро и весело! +${tip.toFixed(2)} чай!` : `👍 Клиент доволен! +${tip.toFixed(2)} чай`; showToast(msg, 'success'); } 
             else if (currentOrder.foodTemp < 50) { showToast('Еда остыла... Без чаевых.', 'warn'); }
@@ -760,7 +769,7 @@
 
             // Check if Bank UI is already rendered to prevent input overwrite
             if(document.getElementById('bank-ui-root')) {
-                updateBankTimer(timeLeftStr); // Just update text
+                updateBankTimer(); // Just update text, calc inside
                 return;
             }
 
@@ -783,15 +792,26 @@
             `;
         }
 
-        function updateBankTimer(timeStr) {
+        function updateBankTimer() {
             const timerDisplay = document.getElementById('bank-timer-display');
             const debtDisplay = document.getElementById('bank-debt-display');
+            
+            // Calculate time inside update function to avoid 00:00 bug
+            let timeStr = "00:00";
+            if(state.debt > 0 && !state.debtOverdue) {
+                let diff = Math.max(0, state.debtTimer - Date.now());
+                let m = Math.floor(diff / 60000); let s = Math.floor((diff % 60000) / 1000);
+                timeStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            }
+
             if(timerDisplay) {
                 if(state.debt > 0) {
-                    timerDisplay.textContent = state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + (timeStr || "00:00");
+                    timerDisplay.textContent = state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + timeStr;
                     timerDisplay.style.color = state.debtOverdue ? 'red' : '#00c853';
+                    document.getElementById('bank-alert').style.display = state.debtOverdue ? 'block' : 'none';
                 } else {
                     timerDisplay.textContent = 'Нет долгов';
+                    document.getElementById('bank-alert').style.display = 'none';
                 }
             }
             if(debtDisplay) debtDisplay.textContent = state.debt.toFixed(2) + ' PLN';
