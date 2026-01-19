@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Warsaw Courier Sim</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -23,181 +21,85 @@
             --accent-red: #ff3d00;
             --accent-purple: #d500f9;
             --wolt-blue: #009de0;
-            --taxi-yellow: #ffcc00; /* NEW: Taxi Color */
+            --taxi-yellow: #ffcc00;
             --taxi-black: #111;
         }
 
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-dark); color: var(--text-primary);
-            overflow: hidden; user-select: none;
-        }
-
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-dark); color: var(--text-primary); overflow: hidden; user-select: none; }
         #map { height: 100%; width: 100%; z-index: 1; filter: brightness(0.8) contrast(1.2); }
 
-        /* --- TOP UI --- */
-        .top-bar {
-            position: absolute; top: 0; left: 0; right: 0; padding: 15px;
-            display: flex; justify-content: space-between; align-items: flex-start;
-            z-index: 1000; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
-            pointer-events: none;
-        }
-
-        .menu-btn, .stats-btn {
-            background: white; color: black; width: 45px; height: 45px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-size: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: auto; cursor: pointer; border: none;
-        }
-
-        .balance-display {
-            background: rgba(0, 0, 0, 0.8); padding: 8px 16px; border-radius: 20px;
-            text-align: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1);
-        }
+        .top-bar { position: absolute; top: 0; left: 0; right: 0; padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 1000; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); pointer-events: none; }
+        .menu-btn, .stats-btn { background: white; color: black; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: auto; cursor: pointer; border: none; }
+        .balance-display { background: rgba(0, 0, 0, 0.8); padding: 8px 16px; border-radius: 20px; text-align: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
         .balance-amount { font-size: 18px; font-weight: 800; color: white; }
         .balance-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; }
         .debt-warning { color: var(--accent-red); font-size: 10px; font-weight: bold; display: none; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-        /* --- BARS --- */
-        .equip-bar {
-            position: absolute; top: 70px; left: 15px; right: 15px;
-            display: flex; gap: 4px; z-index: 999; pointer-events: none;
-        }
-
-        .equip-item {
-            flex: 1; background: rgba(0,0,0,0.8); border-radius: 6px; padding: 4px 2px;
-            display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(4px);
-        }
+        .equip-bar { position: absolute; top: 70px; left: 15px; right: 15px; display: flex; gap: 4px; z-index: 999; pointer-events: none; }
+        .equip-item { flex: 1; background: rgba(0,0,0,0.8); border-radius: 6px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(4px); }
         .equip-icon { font-size: 10px; margin-bottom: 2px; color: #ccc; }
         .progress-mini { width: 80%; height: 3px; background: #444; border-radius: 2px; overflow: hidden; margin-bottom: 2px; }
         .progress-mini-fill { height: 100%; background: var(--accent-green); transition: width 0.3s; }
         .equip-label { font-size: 7px; text-transform: uppercase; color: #888; font-weight: 700; letter-spacing: 0.5px; }
 
-        /* --- TOAST --- */
-        .game-toast {
-            position: absolute; top: 140px; left: 50%; transform: translateX(-50%) translateY(-20px);
-            background: rgba(0, 0, 0, 0.9); color: white; padding: 10px 20px; border-radius: 25px;
-            font-weight: bold; font-size: 14px; z-index: 1001; opacity: 0; transition: all 0.3s;
-            pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 1px solid #333;
-        }
+        .game-toast { position: absolute; top: 140px; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(0, 0, 0, 0.9); color: white; padding: 10px 20px; border-radius: 25px; font-weight: bold; font-size: 14px; z-index: 1001; opacity: 0; transition: all 0.3s; pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 1px solid #333; }
         .game-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         .toast-warn { border-color: var(--accent-orange); color: var(--accent-orange); }
         .toast-success { border-color: var(--accent-green); color: var(--accent-green); }
 
-        /* --- BOTTOM SHEET --- */
-        .bottom-sheet {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            background: white; border-top-left-radius: 24px; border-top-right-radius: 24px;
-            padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333;
-        }
+        .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333; }
 
-        /* SLIDERS */
-        .slider-container {
-            position: relative; width: 100%; height: 60px; background: #f0f0f0;
-            border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px;
-        }
+        .slider-container { position: relative; width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
         .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; }
-        .slider-knob {
-            position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px;
-            background: var(--wolt-blue); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s;
-        }
+        .slider-knob { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px; background: var(--wolt-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; }
         .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 157, 224, 0.2); z-index: 0; }
         
-        /* NEW: TAXI SLIDER STYLES */
         .slider-container.taxi-mode { background: #fff9c4; border: 1px solid #fbc02d; }
         .slider-container.taxi-mode .slider-knob { background: var(--taxi-yellow); color: black; }
         .slider-container.taxi-mode .slider-fill { background: rgba(255, 204, 0, 0.3); }
         .slider-container.taxi-mode .slider-text { color: #f57f17; }
-
         .slider-container.scheduled { background: #ffebee; border: 1px solid #ffcdd2; }
         .slider-container.scheduled .slider-knob { background: var(--accent-red); }
         .slider-container.scheduled .slider-text { color: var(--accent-red); }
 
-        /* CONTROLS */
         .controls-row { display: flex; gap: 10px; margin-top: 15px; }
-        .pedal-btn {
-            flex: 1; background: var(--wolt-blue); color: white; border: none; padding: 18px;
-            border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase;
-            letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 0 #007bb5; transition: all 0.1s;
-        }
+        .pedal-btn { flex: 1; background: var(--wolt-blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 0 #007bb5; transition: all 0.1s; }
         .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
         .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
         .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
 
-        .bag-btn {
-            width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px;
-            display: flex; align-items: center; justify-content: center; font-size: 24px;
-            color: #333; cursor: pointer; position: relative;
-        }
-        .bag-badge {
-            position: absolute; top: -5px; right: -5px; background: var(--accent-red);
-            color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-weight: bold;
-        }
+        .bag-btn { width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #333; cursor: pointer; position: relative; }
+        .bag-badge { position: absolute; top: -5px; right: -5px; background: var(--accent-red); color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
 
-        /* INVENTORY POPUP */
-        .quick-inv {
-            position: absolute; bottom: 90px; left: 20px; width: 220px; background: #252525;
-            color: white; padding: 10px; border-radius: 16px; z-index: 1005; display: none;
-            flex-direction: column; gap: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.6); border: 1px solid #444;
-        }
+        .quick-inv { position: absolute; bottom: 90px; left: 20px; width: 220px; background: #252525; color: white; padding: 10px; border-radius: 16px; z-index: 1005; display: none; flex-direction: column; gap: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.6); border: 1px solid #444; }
         .quick-inv.open { display: flex; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .inv-item {
-            display: flex; justify-content: space-between; align-items: center; padding: 10px;
-            background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer;
-            border: 1px solid transparent; transition: background 0.2s;
-        }
+        .inv-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: background 0.2s; }
         .inv-item:active { background: rgba(255,255,255,0.2); }
         .inv-item.link-btn { background: var(--wolt-blue); justify-content: center; font-weight: bold; }
         .inv-count { background: var(--wolt-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
         @keyframes popUp { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-        /* MODALS */
-        #side-menu-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
-        }
+        #side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         #side-menu-overlay.open { opacity: 1; pointer-events: auto; }
-        #side-menu {
-            position: absolute; top: 0; left: -85%; width: 85%; max-width: 320px; height: 100%;
-            background: #1e1e1e; transition: left 0.3s; padding: 20px; box-sizing: border-box;
-            display: flex; flex-direction: column; overflow-y: auto;
-        }
+        #side-menu { position: absolute; top: 0; left: -85%; width: 85%; max-width: 320px; height: 100%; background: #1e1e1e; transition: left 0.3s; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; }
         #side-menu.open { left: 0; }
         .menu-item { padding: 15px 0; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 15px; font-size: 16px; align-items: center; }
-        
-        /* NEW MENU STYLES */
         .menu-divider { height: 20px; border-bottom: 1px solid #333; margin-bottom: 20px; }
         .menu-section-title { font-size: 12px; color: var(--taxi-yellow); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; margin-top: 10px; }
         .menu-item.locked { opacity: 0.5; cursor: not-allowed; color: #777; }
         .menu-item.taxi-item { border-bottom: 1px solid #444; }
         .menu-item.taxi-item i { width: 25px; text-align: center; }
 
-        .full-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f5f5f5;
-            color: black; z-index: 3000; transform: translateY(100%); transition: transform 0.3s;
-            display: flex; flex-direction: column;
-        }
+        .full-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f5f5f5; color: black; z-index: 3000; transform: translateY(100%); transition: transform 0.3s; display: flex; flex-direction: column; }
         .full-modal.open { transform: translateY(0); }
         .modal-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; font-weight: bold; }
         .modal-content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* SHOP & DEFLATION */
         .shop-section { margin-bottom: 25px; }
         .shop-section h3 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
-        .shop-card {
-            background: white; padding: 15px; border-radius: 14px; margin-bottom: 12px;
-            display: flex; justify-content: space-between; align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-        }
-        .shop-btn {
-            padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer;
-            border: 1px solid var(--wolt-blue); color: var(--wolt-blue); background: white; min-width: 80px;
-            transition: all 0.2s;
-        }
+        .shop-card { background: white; padding: 15px; border-radius: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .shop-btn { padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; border: 1px solid var(--wolt-blue); color: var(--wolt-blue); background: white; min-width: 80px; transition: all 0.2s; }
         .shop-btn.buy { background: var(--wolt-blue); color: white; }
         .shop-btn.bought { background: var(--accent-green); border-color: var(--accent-green); color: white; transform: scale(1.05); }
         .shop-btn:disabled { background: #eee; color: #aaa; border-color: #eee; cursor: not-allowed; }
@@ -210,7 +112,6 @@
         .debt-alert-box { background: #ffebee; color: #c62828; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #ef9a9a; display: none; }
         .govt-btn { background: #37474f; color: white; border-color: #37474f; }
         
-        /* TIMERS UI */
         .accept-timer-bg { width: 100%; height: 6px; background: #eee; margin-top: 8px; border-radius: 3px; overflow: hidden; display: none; }
         .accept-timer-fill { height: 100%; background: var(--accent-red); width: 100%; }
         @keyframes shrinkTimer { from { width: 100%; } to { width: 0%; } }
@@ -257,10 +158,10 @@
             
             <div class="menu-divider"></div>
             <div class="menu-section-title">🚖 Такси Департамент</div>
-            <div class="menu-item taxi-item locked" id="taxi-showroom-btn" onclick="showLockedMsg()">
+            <div class="menu-item taxi-item locked" id="taxi-showroom-btn" onclick="openModal('taxi-shop')">
                 <i class="fa-solid fa-car" style="color:var(--taxi-yellow)"></i> Автосалон
             </div>
-            <div class="menu-item taxi-item locked" id="taxi-licenses-btn" onclick="showLockedMsg()">
+            <div class="menu-item taxi-item locked" id="taxi-licenses-btn" onclick="openModal('taxi-licenses')">
                 <i class="fa-solid fa-id-card" style="color:#aaa"></i> Лицензии / Права
             </div>
             <div id="taxi-lock-msg" style="font-size:10px; color:#666; margin-left:15px; margin-top:5px; font-style:italic">
@@ -302,11 +203,9 @@
                         <span style="font-size:12px; color:#666" id="order-dest">Ожидание</span>
                         <span id="order-offer" style="font-weight:bold; color:var(--accent-green); font-size:15px">-- PLN</span>
                     </div>
-                    
                     <div style="display:flex; justify-content:flex-end; align-items:center">
                         <span id="delivery-timer" class="delivery-timer"></span>
                     </div>
-                    
                     <div class="accept-timer-bg" id="accept-timer"><div class="accept-timer-fill" id="accept-timer-fill"></div></div>
                 </div>
             </div>
@@ -365,7 +264,7 @@
         } catch(e) { console.error("Firebase Error:", e); }
 
         const SAVE_KEY = 'WARSZAWA_FOREVER';
-        const TAXI_UNLOCK_REQ = 50; // Required orders to unlock taxi menu
+        const TAXI_UNLOCK_REQ = 50;
         
         let gameConfig = {
             basePickupPay: 4.0, perKmPay: 1.5, payVariance: 2.0, 
@@ -398,9 +297,7 @@
             repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
             history: [],
             energyBoostActive: false,
-            // NEW: Career Tracking
             career: { totalOrders: 0 },
-            // NEW: Taxi State (dormant for now)
             taxi: { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
         };
 
@@ -421,7 +318,6 @@
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
             L.marker([52.2297, 21.0122]).addTo(map);
             
-            // --- TELEGRAM AUTH ---
             const tg = window.Telegram.WebApp;
             tg.ready();
             
@@ -468,7 +364,8 @@
                     name: state.name, 
                     balance: state.balance, isOnline: state.isOnline, lastSeen: now,
                     stats: state.needs, inventory: state.inventory, debt: state.debt, items: state.items,
-                    career: state.career // Sync career stats
+                    career: state.career,
+                    taxi: state.taxi // Sync Taxi State
                 });
                 lastSync = now;
             }
@@ -510,6 +407,13 @@
                 if(charge > 0) localStorage.setItem('ADMIN_PENALTY', charge);
                 location.reload(); 
             }
+            // --- UPDATED: TAXI UNLOCK COMMAND ---
+            if (cmd.type === 'UNLOCK_TAXI') {
+                state.taxi.unlocked = true; // Clean unlock
+                updateMenuState();
+                showToast('🚖 Админ открыл доступ к Такси!', 'success');
+            }
+            // ------------------------------------
             if (cmd.type === 'SET_STATS') { if(cmd.energy!==undefined) state.needs.energy = cmd.energy; if(cmd.water!==undefined) state.needs.water = cmd.water; if(cmd.mood!==undefined) state.needs.mood = cmd.mood; showToast(`Статус изменен админом`, 'info'); }
             saveGame(); updateUI();
         }
@@ -522,7 +426,6 @@
                 if (!state.id) state.id = 'u_' + Math.random().toString(36).substr(2, 9);
             }
             
-            // INIT NEW FIELDS SAFELY
             if(!state.career) state.career = { totalOrders: 0 };
             if(!state.taxi) state.taxi = { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
 
@@ -880,6 +783,11 @@
             if (type === 'shop') { document.getElementById('modal-title').textContent = 'Магазин'; renderShop(b); }
             else if (type === 'bank') { document.getElementById('modal-title').textContent = 'Банк (Кредит)'; renderBank(b); }
             else if (type === 'deflation') { document.getElementById('modal-title').textContent = 'Борьба с инфляцией'; renderDeflation(b); }
+            
+            // NEW CASES FOR TAXI MODALS
+            else if (type === 'taxi-shop') { document.getElementById('modal-title').textContent = 'Автосалон'; renderTaxiShop(b); }
+            else if (type === 'taxi-licenses') { document.getElementById('modal-title').textContent = 'Лицензии и Документы'; renderTaxiLicenses(b); }
+            
             else { document.getElementById('modal-title').textContent = 'История'; renderHistory(b); }
         }
 
@@ -888,21 +796,77 @@
             const total = state.career.totalOrders;
             document.getElementById('career-count').textContent = total;
             
-            const locked = total < TAXI_UNLOCK_REQ;
+            // Unlock logic: Either has enough orders OR admin unlocked it manually
+            const isUnlocked = state.taxi.unlocked || total >= TAXI_UNLOCK_REQ;
+            
             const btns = document.querySelectorAll('.taxi-item');
             const msg = document.getElementById('taxi-lock-msg');
             
-            if (locked) {
-                btns.forEach(b => { b.classList.add('locked'); b.onclick = showLockedMsg; });
-                msg.style.display = 'block';
-            } else {
-                btns.forEach(b => { b.classList.remove('locked'); b.onclick = () => showToast("Раздел в разработке (Скоро!)", "info"); }); // Will act later
+            if (isUnlocked) {
+                btns.forEach(b => { 
+                    b.classList.remove('locked'); 
+                    // Onclick is handled inline in HTML to openModal
+                });
                 msg.style.display = 'none';
+            } else {
+                btns.forEach(b => { 
+                    b.classList.add('locked'); 
+                    b.onclick = showLockedMsg; 
+                });
+                msg.style.display = 'block';
             }
         }
 
         function showLockedMsg() {
             showToast(`Нужно ${TAXI_UNLOCK_REQ} выполненных заказов!`, 'warn');
+        }
+
+        // --- NEW TAXI RENDERS (SHOWCASE ONLY) ---
+        function renderTaxiShop(c) {
+            c.innerHTML = `
+                <div style="text-align:center; padding:10px; color:#666; font-size:12px">Автомобили для работы в такси.</div>
+                
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold"><i class="fa-solid fa-car-side"></i> Skoda Fabia (LPG)</div>
+                        <div class="shop-desc">Надежная рабочая лошадка. Дешевый ремонт.</div>
+                    </div>
+                    <button class="shop-btn" disabled>15,000 PLN</button>
+                </div>
+
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold"><i class="fa-solid fa-car"></i> Toyota Prius (Hybrid)</div>
+                        <div class="shop-desc">Экономия топлива и хороший чай от клиентов.</div>
+                    </div>
+                    <button class="shop-btn" disabled>45,000 PLN</button>
+                </div>
+
+                <div class="shop-card">
+                    <div>
+                        <div style="font-weight:bold"><i class="fa-solid fa-bolt"></i> Tesla Model 3</div>
+                        <div class="shop-desc">Престиж. Доступ к VIP заказам.</div>
+                    </div>
+                    <button class="shop-btn" disabled>120,000 PLN</button>
+                </div>
+            `;
+        }
+
+        function renderTaxiLicenses(c) {
+            c.innerHTML = `
+                <div class="shop-card">
+                    <div><div style="font-weight:bold">Водительские права (B)</div></div>
+                    <button class="shop-btn" disabled>2,500 PLN</button>
+                </div>
+                <div class="shop-card">
+                    <div><div style="font-weight:bold">Страховка OC/AC</div></div>
+                    <button class="shop-btn" disabled>1,200 PLN</button>
+                </div>
+                <div class="shop-card">
+                    <div><div style="font-weight:bold">Лицензия Такси</div></div>
+                    <button class="shop-btn" disabled>5,000 PLN</button>
+                </div>
+            `;
         }
         // -----------------------
 
@@ -1098,4 +1062,3 @@
     </script>
 </body>
 </html>
-
