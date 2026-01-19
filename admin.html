@@ -34,7 +34,7 @@
         /* Settings Inputs */
         .setting-group { background: #252525; padding: 15px; margin-bottom: 15px; border-radius: 10px; }
         .setting-row { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
-        input[type="number"] { background: #333; border: 1px solid #444; color: white; padding: 5px; width: 80px; text-align: right; border-radius: 4px; }
+        input[type="number"] { background: #333; border: 1px solid #444; color: #00ccff; font-weight:bold; padding: 8px; width: 80px; text-align: right; border-radius: 4px; }
         
         /* Modal */
         #editModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 100; }
@@ -46,7 +46,7 @@
 <body>
 
     <div style="display:flex; justify-content:space-between; align-items:center">
-        <h1>ADMIN <span style="font-size:12px; color:#666">v1.0</span></h1>
+        <h1>ADMIN <span style="font-size:12px; color:#666">v1.1</span></h1>
         <div style="font-size:12px; color:#aaa" id="connection-status">Disconnected</div>
     </div>
 
@@ -62,29 +62,29 @@
     <div id="settings" class="panel">
         <div class="setting-group">
             <h3>💸 Экономика</h3>
-            <div class="setting-row"><span>Базовая оплата (PLN)</span> <input type="number" id="basePay"></div>
-            <div class="setting-row"><span>Разброс оплаты (+/- PLN)</span> <input type="number" id="payVariance"></div>
-            <div class="setting-row"><span>Инфляция за уровень (%)</span> <input type="number" id="inflationRate"></div>
+            <div class="setting-row"><span>Базовая оплата (PLN)</span> <input type="number" id="basePay" placeholder="12"></div>
+            <div class="setting-row"><span>Разброс оплаты (+/- PLN)</span> <input type="number" id="payVariance" placeholder="6"></div>
+            <div class="setting-row"><span>Инфляция за уровень (%)</span> <input type="number" id="inflationRate" placeholder="10"></div>
         </div>
 
         <div class="setting-group">
             <h3>🛣 Город и Трафик</h3>
-            <div class="setting-row"><span>Шанс пробки/светофора (%)</span> <input type="number" id="trafficChance"></div>
-            <div class="setting-row"><span>Длительность пробки (мс)</span> <input type="number" id="trafficDuration"></div>
+            <div class="setting-row"><span>Шанс пробки/светофора (%)</span> <input type="number" id="trafficChance" placeholder="10"></div>
+            <div class="setting-row"><span>Длительность пробки (мс)</span> <input type="number" id="trafficDuration" placeholder="3000"></div>
         </div>
 
         <div class="setting-group">
             <h3>⚡ Потребление (0.1 - 1.0)</h3>
-            <div class="setting-row"><span>Расход Энергии (клик)</span> <input type="number" id="energyDrain"></div>
-            <div class="setting-row"><span>Расход Воды (клик)</span> <input type="number" id="waterDrain"></div>
+            <div class="setting-row"><span>Расход Энергии (клик)</span> <input type="number" id="energyDrain" step="0.01" placeholder="0.15"></div>
+            <div class="setting-row"><span>Расход Воды (клик)</span> <input type="number" id="waterDrain" step="0.01" placeholder="0.10"></div>
         </div>
 
         <div class="setting-group">
             <h3>🍎 Цены на продукты (База)</h3>
-            <div class="setting-row"><span>Вода</span> <input type="number" class="price-input" data-item="water"></div>
-            <div class="setting-row"><span>Сникерс</span> <input type="number" class="price-input" data-item="bar"></div>
-            <div class="setting-row"><span>Энергетик</span> <input type="number" class="price-input" data-item="energy_drink"></div>
-            <div class="setting-row"><span>Кофе</span> <input type="number" class="price-input" data-item="coffee"></div>
+            <div class="setting-row"><span>Вода</span> <input type="number" class="price-input" data-item="water" placeholder="2.0"></div>
+            <div class="setting-row"><span>Сникерс</span> <input type="number" class="price-input" data-item="bar" placeholder="4.5"></div>
+            <div class="setting-row"><span>Энергетик</span> <input type="number" class="price-input" data-item="energy_drink" placeholder="7.0"></div>
+            <div class="setting-row"><span>Кофе</span> <input type="number" class="price-input" data-item="coffee" placeholder="9.0"></div>
         </div>
 
         <button class="btn btn-green" style="width:100%; padding:15px" onclick="saveGlobalSettings()">СОХРАНИТЬ ВСЕ НАСТРОЙКИ</button>
@@ -97,7 +97,7 @@
             
             <label>Баланс:</label>
             <div style="display:flex; gap:5px; margin-bottom:10px">
-                <input type="number" id="m-balance" style="flex:1">
+                <input type="number" id="m-balance" style="flex:1; color:white">
                 <button class="btn btn-blue" onclick="adminSetBalance()">OK</button>
             </div>
 
@@ -109,7 +109,7 @@
                     <option value="energy_drink">Red Bull</option>
                     <option value="coffee">Кофе</option>
                 </select>
-                <input type="number" id="m-item-qty" value="1" style="width:40px">
+                <input type="number" id="m-item-qty" value="1" style="width:40px; color:white">
                 <button class="btn btn-green" onclick="adminGiveItem()">+</button>
             </div>
             
@@ -129,20 +129,37 @@
 
     <script>
         // ==========================================
-        // НАСТРОЙКИ FIREBASE (Адаптировано под CDN)
+        // НАСТРОЙКИ FIREBASE (Вставлены твои ключи)
         // ==========================================
         const firebaseConfig = {
-            apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
-            authDomain: "warszawa-courier.firebaseapp.com",
-            databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "warszawa-courier",
-            storageBucket: "warszawa-courier.firebasestorage.app",
-            messagingSenderId: "295860613508",
-            appId: "1:295860613508:web:86fe8364377d6875612dd1",
-            measurementId: "G-TGSCHBVLX2"
+          apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
+          authDomain: "warszawa-courier.firebaseapp.com",
+          databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "warszawa-courier",
+          storageBucket: "warszawa-courier.firebasestorage.app",
+          messagingSenderId: "295860613508",
+          appId: "1:295860613508:web:86fe8364377d6875612dd1",
+          measurementId: "G-TGSCHBVLX2"
         };
         // ==========================================
         
+        // СТАНДАРТНЫЕ ЗНАЧЕНИЯ (Отображаются, если в базе пусто)
+        const DEFAULTS = {
+            basePay: 12,
+            payVariance: 6,
+            inflationRate: 0.1,
+            trafficChance: 0.1,
+            trafficDuration: 3000,
+            energyDrain: 0.15,
+            waterDrain: 0.10,
+            itemPrices: {
+                water: 2.0,
+                bar: 4.5,
+                energy_drink: 7.0,
+                coffee: 9.0
+            }
+        };
+
         let db;
         try {
             firebase.initializeApp(firebaseConfig);
@@ -164,7 +181,7 @@
         }
 
         function startListening() {
-            // Listen for Players
+            // ИГРОКИ
             db.ref('players').on('value', snap => {
                 const list = document.getElementById('players-list');
                 list.innerHTML = '';
@@ -189,24 +206,24 @@
                 });
             });
 
-            // Load Settings once
-            db.ref('config').once('value', snap => {
-                const cfg = snap.val();
-                if(!cfg) return;
-                document.getElementById('basePay').value = cfg.basePay;
-                document.getElementById('payVariance').value = cfg.payVariance;
-                document.getElementById('inflationRate').value = (cfg.inflationRate * 100).toFixed(0);
-                document.getElementById('trafficChance').value = (cfg.trafficChance * 100).toFixed(0);
-                document.getElementById('trafficDuration').value = cfg.trafficDuration;
-                document.getElementById('energyDrain').value = cfg.energyDrain;
-                document.getElementById('waterDrain').value = cfg.waterDrain;
+            // НАСТРОЙКИ (Загружаем из базы, или берем дефолт)
+            db.ref('config').on('value', snap => {
+                const cfg = snap.val() || DEFAULTS; // Если в базе нет, берем DEFAULTS
+
+                // Безопасное чтение значений (если в базе неполные данные)
+                document.getElementById('basePay').value = cfg.basePay ?? DEFAULTS.basePay;
+                document.getElementById('payVariance').value = cfg.payVariance ?? DEFAULTS.payVariance;
+                document.getElementById('inflationRate').value = ((cfg.inflationRate ?? DEFAULTS.inflationRate) * 100).toFixed(0);
+                document.getElementById('trafficChance').value = ((cfg.trafficChance ?? DEFAULTS.trafficChance) * 100).toFixed(0);
+                document.getElementById('trafficDuration').value = cfg.trafficDuration ?? DEFAULTS.trafficDuration;
+                document.getElementById('energyDrain').value = cfg.energyDrain ?? DEFAULTS.energyDrain;
+                document.getElementById('waterDrain').value = cfg.waterDrain ?? DEFAULTS.waterDrain;
                 
-                if(cfg.itemPrices) {
-                    document.querySelectorAll('.price-input').forEach(inp => {
-                        const item = inp.dataset.item;
-                        if(cfg.itemPrices[item]) inp.value = cfg.itemPrices[item];
-                    });
-                }
+                const prices = cfg.itemPrices || DEFAULTS.itemPrices;
+                document.querySelectorAll('.price-input').forEach(inp => {
+                    const item = inp.dataset.item;
+                    if(prices[item]) inp.value = prices[item];
+                });
             });
         }
 
@@ -226,7 +243,7 @@
                 data.itemPrices[inp.dataset.item] = parseFloat(inp.value);
             });
 
-            db.ref('config').update(data).then(() => alert('Настройки сохранены!'));
+            db.ref('config').update(data).then(() => alert('Настройки сохранены и применены ко всем игрокам!'));
         }
 
         // --- PLAYER ACTIONS ---
