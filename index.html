@@ -290,6 +290,7 @@
             id: 'u_' + Math.random().toString(36).substr(2, 9),
             name: null, 
             balance: 0, debt: 0, debtTimer: 0, debtOverdue: false,
+            loanStreak: 0, // NEW: Loan Counter
             isOnline: false, isSearching: false, scheduledOffline: false,
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
             needs: { energy: 100, water: 100, mood: 100 },
@@ -407,13 +408,11 @@
                 if(charge > 0) localStorage.setItem('ADMIN_PENALTY', charge);
                 location.reload(); 
             }
-            // --- UPDATED: TAXI UNLOCK COMMAND ---
             if (cmd.type === 'UNLOCK_TAXI') {
-                state.taxi.unlocked = true; // Clean unlock
+                state.taxi.unlocked = true; 
                 updateMenuState();
                 showToast('🚖 Админ открыл доступ к Такси!', 'success');
             }
-            // ------------------------------------
             if (cmd.type === 'SET_STATS') { if(cmd.energy!==undefined) state.needs.energy = cmd.energy; if(cmd.water!==undefined) state.needs.water = cmd.water; if(cmd.mood!==undefined) state.needs.mood = cmd.mood; showToast(`Статус изменен админом`, 'info'); }
             saveGame(); updateUI();
         }
@@ -428,6 +427,7 @@
             
             if(!state.career) state.career = { totalOrders: 0 };
             if(!state.taxi) state.taxi = { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
+            if(state.loanStreak === undefined) state.loanStreak = 0; // Init loan streak
 
             const penalty = localStorage.getItem('ADMIN_PENALTY');
             if(penalty) {
@@ -530,7 +530,7 @@
             currentOrder.accepted = true; clearTimeout(acceptTimeout);
             document.getElementById('accept-timer').style.display = 'none';
             document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
-            document.getElementById('order-offer').style.display = 'none'; // Hide Price on Accept
+            document.getElementById('order-offer').style.display = 'none'; 
             startOrderLoop(); 
         }
 
@@ -555,10 +555,7 @@
         function completeOrder() {
             stopOrderLoop();
             
-            // PAY IS NOW EXACTLY WHAT WAS OFFERED
             let pay = currentOrder.offerPrice; 
-
-            // Calculate Tip Separately
             const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
 
@@ -593,11 +590,9 @@
             
             state.balance += totalEarn; 
             
-            // UPDATE CAREER STATS
             state.career.totalOrders++;
             updateMenuState(); 
 
-            // HISTORY with TIP SPLIT
             state.history.push({ 
                 rest: currentOrder.rest.name, 
                 pay: pay, 
@@ -609,7 +604,6 @@
 
             setTimeout(() => { showToast(`Заказ: +${(pay+tip).toFixed(2)} PLN`, 'success'); }, 500);
             if (state.scheduledOffline) { goOffline(); } else { startSearching(); }
-            // FORCE SYNC ON EARNINGS
             saveGame(); syncToCloud(true); updateUI();
         }
 
@@ -623,7 +617,7 @@
             document.getElementById('rest-icon').textContent = '🔍';
             document.getElementById('status-label').textContent = 'Ищем заказ...';
             document.getElementById('order-dest').textContent = 'Ожидание...';
-            document.getElementById('order-offer').textContent = '-- PLN'; // Reset Price
+            document.getElementById('order-offer').textContent = '-- PLN'; 
             document.getElementById('accept-timer').style.display = 'none';
             document.getElementById('delivery-timer').textContent = '';
             resetSlider('online');
@@ -644,19 +638,16 @@
             state.isSearching = false;
             const r = restaurants[Math.floor(Math.random() * restaurants.length)];
             
-            // 1. RANDOM DISTANCE
             const dist = (0.8 + Math.random() * 5.7).toFixed(1);
             
-            // 2. CALCULATE EXACT PAY (including inflation NOW)
             const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
             
             let rawPay = (gameConfig.basePickupPay || 4.0) + (dist * (gameConfig.perKmPay || 1.5));
             let finalOffer = rawPay * inflationMult;
             
-            // Add variance NOW, so the offer is final
             finalOffer += (Math.random() * gameConfig.payVariance) - (gameConfig.payVariance / 2);
-            if(finalOffer < 2) finalOffer = 2; // Min pay safety
+            if(finalOffer < 2) finalOffer = 2; 
 
             let time = gameConfig.deliveryTime || 60;
             currentOrder = { 
@@ -668,7 +659,7 @@
                 timeLeft: time, 
                 tempWarned: false,
                 distance: dist,
-                offerPrice: finalOffer // STORE EXACT PROMISED AMOUNT
+                offerPrice: finalOffer 
             };
 
             document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
@@ -691,7 +682,7 @@
             resetSlider('online');
             const box = document.getElementById('online-slider-box');
             const txt = document.getElementById('online-slider-text');
-            box.classList.remove('scheduled'); txt.textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН";
+            box.classList.add('scheduled'); txt.textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН";
         }
 
         function goOffline() {
@@ -784,29 +775,21 @@
             if (type === 'shop') { document.getElementById('modal-title').textContent = 'Магазин'; renderShop(b); }
             else if (type === 'bank') { document.getElementById('modal-title').textContent = 'Банк (Кредит)'; renderBank(b); }
             else if (type === 'deflation') { document.getElementById('modal-title').textContent = 'Борьба с инфляцией'; renderDeflation(b); }
-            
-            // NEW CASES FOR TAXI MODALS
             else if (type === 'taxi-shop') { document.getElementById('modal-title').textContent = 'Автосалон'; renderTaxiShop(b); }
             else if (type === 'taxi-licenses') { document.getElementById('modal-title').textContent = 'Лицензии и Документы'; renderTaxiLicenses(b); }
-            
             else { document.getElementById('modal-title').textContent = 'История'; renderHistory(b); }
         }
 
-        // --- NEW TAXI LOGIC ---
         function updateMenuState() {
             const total = state.career.totalOrders;
             document.getElementById('career-count').textContent = total;
-            
-            // Unlock logic: Either has enough orders OR admin unlocked it manually
             const isUnlocked = state.taxi.unlocked || total >= TAXI_UNLOCK_REQ;
-            
             const btns = document.querySelectorAll('.taxi-item');
             const msg = document.getElementById('taxi-lock-msg');
             
             if (isUnlocked) {
                 btns.forEach(b => { 
                     b.classList.remove('locked'); 
-                    // Onclick is handled inline in HTML to openModal
                 });
                 msg.style.display = 'none';
             } else {
@@ -822,54 +805,26 @@
             showToast(`Нужно ${TAXI_UNLOCK_REQ} выполненных заказов!`, 'warn');
         }
 
-        // --- NEW TAXI RENDERS (SHOWCASE ONLY) ---
         function renderTaxiShop(c) {
             c.innerHTML = `
                 <div style="text-align:center; padding:10px; color:#666; font-size:12px">Автомобили для работы в такси.</div>
-                
                 <div class="shop-card">
-                    <div>
-                        <div style="font-weight:bold"><i class="fa-solid fa-car-side"></i> Skoda Fabia (LPG)</div>
-                        <div class="shop-desc">Надежная рабочая лошадка. Дешевый ремонт.</div>
-                    </div>
-                    <button class="shop-btn" disabled>15,000 PLN</button>
+                    <div><div style="font-weight:bold"><i class="fa-solid fa-car-side"></i> Skoda Fabia (LPG)</div><div class="shop-desc">Надежная рабочая лошадка. Дешевый ремонт.</div></div><button class="shop-btn" disabled>15,000 PLN</button>
                 </div>
-
                 <div class="shop-card">
-                    <div>
-                        <div style="font-weight:bold"><i class="fa-solid fa-car"></i> Toyota Prius (Hybrid)</div>
-                        <div class="shop-desc">Экономия топлива и хороший чай от клиентов.</div>
-                    </div>
-                    <button class="shop-btn" disabled>45,000 PLN</button>
+                    <div><div style="font-weight:bold"><i class="fa-solid fa-car"></i> Toyota Prius (Hybrid)</div><div class="shop-desc">Экономия топлива и хороший чай от клиентов.</div></div><button class="shop-btn" disabled>45,000 PLN</button>
                 </div>
-
                 <div class="shop-card">
-                    <div>
-                        <div style="font-weight:bold"><i class="fa-solid fa-bolt"></i> Tesla Model 3</div>
-                        <div class="shop-desc">Престиж. Доступ к VIP заказам.</div>
-                    </div>
-                    <button class="shop-btn" disabled>120,000 PLN</button>
-                </div>
-            `;
+                    <div><div style="font-weight:bold"><i class="fa-solid fa-bolt"></i> Tesla Model 3</div><div class="shop-desc">Престиж. Доступ к VIP заказам.</div></div><button class="shop-btn" disabled>120,000 PLN</button>
+                </div>`;
         }
 
         function renderTaxiLicenses(c) {
             c.innerHTML = `
-                <div class="shop-card">
-                    <div><div style="font-weight:bold">Водительские права (B)</div></div>
-                    <button class="shop-btn" disabled>2,500 PLN</button>
-                </div>
-                <div class="shop-card">
-                    <div><div style="font-weight:bold">Страховка OC/AC</div></div>
-                    <button class="shop-btn" disabled>1,200 PLN</button>
-                </div>
-                <div class="shop-card">
-                    <div><div style="font-weight:bold">Лицензия Такси</div></div>
-                    <button class="shop-btn" disabled>5,000 PLN</button>
-                </div>
-            `;
+                <div class="shop-card"><div><div style="font-weight:bold">Водительские права (B)</div></div><button class="shop-btn" disabled>2,500 PLN</button></div>
+                <div class="shop-card"><div><div style="font-weight:bold">Страховка OC/AC</div></div><button class="shop-btn" disabled>1,200 PLN</button></div>
+                <div class="shop-card"><div><div style="font-weight:bold">Лицензия Такси</div></div><button class="shop-btn" disabled>5,000 PLN</button></div>`;
         }
-        // -----------------------
 
         function renderShop(c) {
             let html = '';
@@ -908,9 +863,7 @@
                 state.balance-=cost; 
                 state.inventory[k]=(state.inventory[k]||0)+1; 
                 const originalText = btn.textContent; btn.textContent = 'КУПЛЕНО!'; btn.className = 'shop-btn bought'; 
-                
                 sendLog(`Купил: ${ITEMS_DB[k].name} за ${cost.toFixed(2)}`, 'BUY');
-
                 setTimeout(() => { btn.textContent = originalText; btn.className = 'shop-btn buy'; renderShop(document.getElementById('modal-body')); }, 600); 
                 saveGame(); syncToCloud(true); updateUI(); 
             } else showToast('Нет денег','warn');
@@ -932,6 +885,8 @@
             if (reduced > 0) { state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success'); saveGame(); syncToCloud(true); updateUI(); renderDeflation(document.getElementById('modal-body')); } else { showToast('Инфляция уже на минимуме!', 'warn'); }
         }
 
+        // --- UPDATED BANK LOGIC (SOS + PROGRESSIVE) ---
+
         function renderBank(c) {
             let timeLeftStr = "00:00";
             if(state.debt > 0 && !state.debtOverdue) {
@@ -945,9 +900,30 @@
                 return;
             }
 
+            let interestRate = 0;
+            let streak = state.loanStreak || 0;
+            if (streak === 0) interestRate = 0;      
+            else if (streak === 1) interestRate = 10; 
+            else if (streak === 2) interestRate = 20; 
+            else interestRate = 50;                  
+
+            const hasFood = (state.inventory.bar > 0 || state.inventory.water > 0 || state.inventory.energy_drink > 0);
+            const isCrisis = state.balance < 5 && !hasFood;
+            
+            let sosHtml = '';
+            if (isCrisis) {
+                sosHtml = `
+                <div style="margin-bottom:15px; padding:10px; background:#37474f; border:1px border:#cfd8dc; border-radius:10px; text-align:center">
+                    <div style="color:#ff9100; font-weight:bold; font-size:12px; margin-bottom:5px">🆘 ПАКЕТ ВЫЖИВАНИЯ</div>
+                    <div style="font-size:11px; color:#b0bec5">Вода + Сникерс. Цена x2 в долг.</div>
+                    <button class="bank-btn" style="background:#ff3d00; color:white; margin-top:5px; padding:8px" onclick="takeSOS()">ВЗЯТЬ (ДОЛГ x2)</button>
+                </div>`;
+            }
+
             c.innerHTML = `
                 <div id="bank-ui-root">
                     <div class="debt-alert-box" id="bank-alert" style="display:${state.debtOverdue?'block':'none'}">⚠️ <strong>ПРОСРОЧЕНО!</strong><br>Удерживаем 20% с каждого заказа.</div>
+                    
                     <div style="text-align:center; margin-bottom:20px">
                         <div style="font-size:14px; color:#666">Текущий долг</div>
                         <div style="font-size:32px; font-weight:800; color:${state.debt>0?'var(--accent-red)':'#333'}" id="bank-debt-display">${state.debt.toFixed(2)} PLN</div>
@@ -955,7 +931,18 @@
                             ${state.debt > 0 ? (state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + timeLeftStr) : 'Нет долгов'}
                         </div>
                     </div>
-                    <input type="number" id="loan-amount" class="bank-input" placeholder="Сумма...">
+
+                    ${sosHtml}
+
+                    <div style="background:#f5f5f5; padding:10px; border-radius:10px; margin-bottom:10px">
+                        <div style="font-size:11px; color:#666; margin-bottom:5px">УСЛОВИЯ КРЕДИТА:</div>
+                        <div style="display:flex; justify-content:space-between; font-size:13px">
+                            <span>Попытка №${streak + 1}</span>
+                            <span style="font-weight:bold; color:${interestRate>0?'var(--accent-red)':'var(--accent-green)'}">Комиссия: +${interestRate}%</span>
+                        </div>
+                    </div>
+
+                    <input type="number" id="loan-amount" class="bank-input" placeholder="Сумма кредита...">
                     <div class="bank-actions">
                         <button class="bank-btn btn-loan" onclick="takeLoan()">ВЗЯТЬ</button>
                         ${state.debt > 0 ? '<button class="bank-btn btn-repay" onclick="repayLoan()">ВЕРНУТЬ</button>' : ''}
@@ -988,21 +975,85 @@
             if(debtDisplay) debtDisplay.textContent = state.debt.toFixed(2) + ' PLN';
         }
 
+        function takeSOS() {
+            const costWater = (ITEMS_DB.water.cost || 2.0);
+            const costBar = (ITEMS_DB.bar.cost || 4.5);
+            const totalVal = costWater + costBar;
+            const debtIncrease = totalVal * 2;
+
+            state.inventory.water = (state.inventory.water || 0) + 1;
+            state.inventory.bar = (state.inventory.bar || 0) + 1;
+
+            state.debt += debtIncrease;
+            
+            if (state.debtTimer === 0 || state.debt <= debtIncrease) {
+                state.debtTimer = Date.now() + (5 * 60 * 1000); 
+                state.debtOverdue = false;
+            }
+
+            showToast(`🆘 SOS получен! Долг +${debtIncrease.toFixed(2)} PLN`, 'warn');
+            sendLog(`Взял SOS пакет. Долг +${debtIncrease}`, 'LOAN');
+            
+            document.getElementById('modal-body').innerHTML = ''; 
+            renderBank(document.getElementById('modal-body')); 
+            saveGame(); syncToCloud(true); updateUI();
+        }
+
         function takeLoan() {
-            const input = document.getElementById('loan-amount'); const amt = parseFloat(input.value);
+            const input = document.getElementById('loan-amount'); 
+            const amt = parseFloat(input.value);
             if (!amt || amt <= 0) return;
-            state.balance += amt; state.debt += amt; state.debtTimer = Date.now() + (5 * 60 * 1000); state.debtOverdue = false;
-            showToast(`Взят кредит: ${amt} PLN`, 'success'); input.value = ''; 
-            sendLog(`Взял кредит: ${amt} PLN`, 'LOAN');
+
+            let streak = state.loanStreak || 0;
+            let interest = 0;
+            
+            if (streak === 0) interest = 0;      
+            else if (streak === 1) interest = 0.10; 
+            else if (streak === 2) interest = 0.20; 
+            else interest = 0.50;                 
+
+            const debtIncrease = amt * (1 + interest);
+
+            state.balance += amt; 
+            state.debt += debtIncrease; 
+            state.loanStreak = streak + 1;
+
+            if (state.debt <= debtIncrease) { 
+                state.debtTimer = Date.now() + (5 * 60 * 1000); 
+                state.debtOverdue = false; 
+            }
+            
+            let msg = interest === 0 ? `Взят кредит: ${amt} PLN (0%)` : `Взято: ${amt}. Долг: +${debtIncrease.toFixed(2)} (+${interest*100}%)`;
+            showToast(msg, interest > 0 ? 'warn' : 'success'); 
+            input.value = ''; 
+            
+            sendLog(`Взял кредит: ${amt} (Streak: ${state.loanStreak})`, 'LOAN');
             document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
             saveGame(); syncToCloud(true); updateUI();
         }
+
         function repayLoan() {
-            const input = document.getElementById('loan-amount'); let amt = parseFloat(input.value);
+            const input = document.getElementById('loan-amount'); 
+            let amt = parseFloat(input.value);
             if (!amt || amt <= 0) return;
-            if (amt > state.balance) amt = state.balance; if (amt > state.debt) amt = state.debt;
-            state.balance -= amt; state.debt -= amt; if (state.debt <= 0.01) { state.debt = 0; state.debtOverdue = false; }
-            showToast(`Погашено: ${amt} PLN`, 'success'); input.value = ''; 
+            
+            if (amt > state.balance) amt = state.balance; 
+            if (amt > state.debt) amt = state.debt;
+            
+            state.balance -= amt; 
+            state.debt -= amt; 
+            
+            if (state.debt <= 0.01) { 
+                state.debt = 0; 
+                state.debtOverdue = false;
+                state.debtTimer = 0;
+                state.loanStreak = 0; 
+                showToast(`Долг полностью погашен! Процент сброшен.`, 'success');
+            } else {
+                showToast(`Погашено: ${amt} PLN. Остаток: ${state.debt.toFixed(2)}`, 'success'); 
+            }
+
+            input.value = ''; 
             sendLog(`Вернул долг: ${amt} PLN`, 'LOAN');
             document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
             saveGame(); syncToCloud(true); updateUI();
@@ -1012,18 +1063,14 @@
             c.innerHTML = state.history.slice().reverse().map(h => {
                 let amount = 0;
                 let tipStr = "";
-
-                // Handle both old format (string/simple) and new format (object with tip)
                 if (h.total) {
                     amount = h.total;
                     if (h.tip > 0) {
                         tipStr = `<span style="color:#00e676; font-size:10px; margin-left:5px">(+${h.tip.toFixed(2)} napiwek)</span>`;
                     }
                 } else {
-                    // Fallback for old history data
                     amount = parseFloat(h.earn); 
                 }
-
                 return `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center">
                     <div><b>${h.rest}</b>${tipStr}</div>
                     <span style="font-weight:bold">+${amount.toFixed(2)}</span>
@@ -1042,6 +1089,7 @@
                     id: state.id, 
                     name: null,
                     balance: 0, debt: (7000 + penalty), debtTimer: Date.now(), debtOverdue: true,
+                    loanStreak: 0, 
                     isOnline: false, isSearching: false, scheduledOffline: false,
                     items: { bike: 100, bag: 100, phone: 100, gear: 100 },
                     needs: { energy: 100, water: 100, mood: 100 },
