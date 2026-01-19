@@ -264,10 +264,15 @@
                 <div style="font-size:24px; width:45px; height:45px; background:#f5f5f5; border-radius:10px; display:flex; align-items:center; justify-content:center" id="rest-icon">🍔</div>
                 <div style="flex:1">
                     <h3 style="margin:0" id="rest-name">Поиск...</h3>
-                    <div style="display:flex; justify-content:space-between; align-items:center">
-                        <p style="margin:0; font-size:12px; color:#888" id="order-dest">Ожидание</p>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px">
+                        <span style="font-size:12px; color:#666" id="order-dest">Ожидание</span>
+                        <span id="order-offer" style="font-weight:bold; color:var(--accent-green); font-size:15px">-- PLN</span>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:flex-end; align-items:center">
                         <span id="delivery-timer" class="delivery-timer"></span>
                     </div>
+                    
                     <div class="accept-timer-bg" id="accept-timer"><div class="accept-timer-fill" id="accept-timer-fill"></div></div>
                 </div>
             </div>
@@ -327,12 +332,13 @@
 
         const SAVE_KEY = 'WARSZAWA_FOREVER';
         
-        // GAME CONFIG (with defaults)
+        // GAME CONFIG (New defaults)
         let gameConfig = {
-            basePay: 12, payVariance: 6, trafficChance: 0.1, trafficDuration: 3000,
+            basePickupPay: 4.0, perKmPay: 1.5, payVariance: 2.0, // NEW ECONOMY
+            trafficChance: 0.1, trafficDuration: 3000,
             inflationRate: 0.1, energyDrain: 0.15, waterDrain: 0.10, moodDrain: 0.05, 
             deliveryTime: 60, coolingRate: 0.5, 
-            tipChance: 0.5, tipBonusChance: 0.3, tipMinTemp: 60, tipMinMood: 80, // Tip Settings
+            tipChance: 0.5, tipBonusChance: 0.3, tipMinTemp: 60, tipMinMood: 80,
             itemPrices: {}
         };
 
@@ -349,7 +355,7 @@
 
         let state = {
             id: 'u_' + Math.random().toString(36).substr(2, 9),
-            name: null, // NEW: Player Name
+            name: null, 
             balance: 0, debt: 0, debtTimer: 0, debtOverdue: false,
             isOnline: false, isSearching: false, scheduledOffline: false,
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
@@ -379,7 +385,6 @@
             
             loadGame();
             
-            // Nickname Prompt if missing
             if (!state.name) {
                 let nameInput = prompt("Введите ваше имя курьера:", "Курьер #" + Math.floor(Math.random() * 1000));
                 state.name = nameInput ? nameInput.substring(0, 15) : "Anon";
@@ -394,7 +399,6 @@
             listenToCloud(); syncToCloud(true);
         }
 
-        // --- NEW: LOGGING SYSTEM ---
         function sendLog(msg, type='INFO') {
             if(!db) return;
             const logEntry = {
@@ -412,7 +416,7 @@
             const now = Date.now();
             if (force || now - lastSync > 3000) {
                 db.ref('players/' + state.id).update({
-                    name: state.name, // Sync Name
+                    name: state.name, 
                     balance: state.balance, isOnline: state.isOnline, lastSeen: now,
                     stats: state.needs, inventory: state.inventory, debt: state.debt, items: state.items
                 });
@@ -556,6 +560,7 @@
             currentOrder.accepted = true; clearTimeout(acceptTimeout);
             document.getElementById('accept-timer').style.display = 'none';
             document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
+            document.getElementById('order-offer').style.display = 'none'; // Hide Price on Accept
             startOrderLoop(); 
         }
 
@@ -579,11 +584,20 @@
 
         function completeOrder() {
             stopOrderLoop();
+            
+            // USE CALCULATED OFFER PRICE
+            let pay = currentOrder.offerPrice || 10;
+
             const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
-            let pay = (gameConfig.basePay + (Math.random() * gameConfig.payVariance)) * inflationMult;
-            let tip = 0;
             
+            // Apply Inflation to the Base Offer
+            pay = pay * inflationMult;
+
+            // Small variance around that offer
+            pay += (Math.random() * gameConfig.payVariance) - (gameConfig.payVariance / 2);
+
+            let tip = 0;
             let minTemp = gameConfig.tipMinTemp || 60;
             let minMood = gameConfig.tipMinMood || 80;
             let chance = gameConfig.tipChance || 0.5;
@@ -612,7 +626,6 @@
         }
 
         function startSearching() {
-            // FIX: STRICT OFFLINE CHECK
             if (state.scheduledOffline) { goOffline(); return; }
             if (!state.isOnline) return;
 
@@ -622,6 +635,7 @@
             document.getElementById('rest-icon').textContent = '🔍';
             document.getElementById('status-label').textContent = 'Ищем заказ...';
             document.getElementById('order-dest').textContent = 'Ожидание...';
+            document.getElementById('order-offer').textContent = '-- PLN'; // Reset Price
             document.getElementById('accept-timer').style.display = 'none';
             document.getElementById('delivery-timer').textContent = '';
             resetSlider('online');
@@ -632,22 +646,45 @@
             document.getElementById('pedal-btn').textContent = 'ПОИСК...';
             updateTrack(0);
             setTimeout(() => { 
-                // Double check before creating order
                 if (state.isOnline && state.isSearching && !state.scheduledOffline) createOrder(); 
             }, 2000);
             syncToCloud(); 
         }
 
         function createOrder() {
-            if (!state.isOnline) return; // EXTRA SAFETY
+            if (!state.isOnline) return;
             state.isSearching = false;
             const r = restaurants[Math.floor(Math.random() * restaurants.length)];
+            
+            // 1. RANDOM DISTANCE (0.8km to 6.5km)
+            const dist = (0.8 + Math.random() * 5.7).toFixed(1);
+            
+            // 2. CALCULATE PRICE (Base + Dist*Rate)
+            let estimatedPay = (gameConfig.basePickupPay || 4.0) + (dist * (gameConfig.perKmPay || 1.5));
+            
             let time = gameConfig.deliveryTime || 60;
-            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: time, tempWarned: false };
+            currentOrder = { 
+                rest: r, 
+                progress: 0, 
+                stage: 0, 
+                foodTemp: 100, 
+                accepted: false, 
+                timeLeft: time, 
+                tempWarned: false,
+                distance: dist,
+                offerPrice: estimatedPay // Store for later
+            };
+
             document.getElementById('rest-name').textContent = `Едем в ${r.name}`;
             document.getElementById('rest-icon').textContent = r.icon;
             document.getElementById('status-label').textContent = '🔥 ПРИМИ ЗАКАЗ! 🔥';
-            document.getElementById('order-dest').textContent = 'Забрать: 2.5 km';
+            
+            // UPDATE UI WITH PRICE AND DISTANCE
+            document.getElementById('order-dest').textContent = `Забрать: ${dist} km`;
+            const offerEl = document.getElementById('order-offer');
+            offerEl.style.display = 'block';
+            offerEl.textContent = `💰 ${estimatedPay.toFixed(2)} PLN`;
+
             document.getElementById('pedal-btn').textContent = 'ПРИНЯТЬ ЗАКАЗ';
             document.getElementById('pedal-btn').disabled = false;
             const bar = document.getElementById('accept-timer');
@@ -682,7 +719,7 @@
                 if (state.isSearching) { goOffline(); }
                 else {
                     state.scheduledOffline = true;
-                    saveGame(); // PERSIST OFFLINE INTENT
+                    saveGame(); 
                     const box = document.getElementById('online-slider-box');
                     const txt = document.getElementById('online-slider-text');
                     box.classList.add('scheduled'); txt.textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА";
@@ -915,3 +952,4 @@
     </script>
 </body>
 </html>
+
