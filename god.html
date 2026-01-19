@@ -3,315 +3,354 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WARSZAWA GOD MODE ⚡</title>
+    <title>WARSZAWA LIVE COMMANDER ⚡</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --bg: #0f0f13; --card: #1e1e24; --accent: #00e5ff; --text: #ffffff; --danger: #ff2e2e; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 15px; padding-bottom: 80px; }
+        :root { --bg: #0f0f13; --card: #1e1e24; --accent: #00e5ff; --green: #00e676; --red: #ff3d00; }
+        body { background: var(--bg); color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; padding-bottom: 50px; }
         
+        /* Header */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        h1 { margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); }
-        .status { font-size: 10px; padding: 4px 8px; border-radius: 4px; background: #333; color: #888; }
-        .status.online { background: #00ff6620; color: #00ff66; }
+        h1 { margin: 0; font-size: 22px; color: var(--accent); letter-spacing: 1px; }
+        .status { font-size: 11px; padding: 4px 8px; border-radius: 6px; background: #333; color: #777; font-weight: bold; }
+        .status.connected { background: rgba(0, 230, 118, 0.1); color: var(--green); }
 
-        .search-box { width: 100%; padding: 12px; background: var(--card); border: 1px solid #333; color: #fff; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; font-size: 16px; }
+        /* Search */
+        .search-bar { width: 100%; padding: 12px; background: var(--card); border: 1px solid #333; color: white; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; font-size: 16px; outline: none; }
+        .search-bar:focus { border-color: var(--accent); }
 
-        .player-card {
-            background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 15px;
-            display: flex; justify-content: space-between; align-items: center;
-            border-left: 3px solid var(--accent); position: relative;
-        }
-        .player-card.banned { border-left-color: var(--danger); opacity: 0.7; }
+        /* Player List */
+        .player-card { background: var(--card); padding: 15px; margin-bottom: 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #444; transition: all 0.2s; cursor: pointer; }
+        .player-card:active { transform: scale(0.98); }
+        .player-card.online { border-left-color: var(--green); box-shadow: 0 0 10px rgba(0, 230, 118, 0.1); }
+        .player-card.banned { border-left-color: var(--red); opacity: 0.6; }
+
+        .p-main { flex: 1; }
+        .p-name { font-weight: bold; font-size: 15px; margin-bottom: 4px; }
+        .p-id { font-size: 11px; color: #666; font-family: monospace; }
+        .p-bal { font-size: 14px; color: var(--accent); font-weight: bold; margin-top: 5px; }
         
-        .p-info h3 { margin: 0 0 5px 0; font-size: 16px; }
-        .p-info p { margin: 0; font-size: 12px; color: #888; }
-        .p-balance { font-size: 14px; color: #bbb; margin-top: 5px; }
-        .p-balance span { color: var(--accent); font-weight: bold; }
+        .p-stats-mini { display: flex; gap: 8px; font-size: 10px; color: #aaa; margin-top: 5px; }
+        .p-stats-mini i { width: 12px; text-align: center; }
 
-        .btn-edit { background: #333; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-mini { background: #333; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: bold; font-size: 12px; }
 
-        /* Модальное окно */
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 100; overflow-y: auto;
-            align-items: flex-start; justify-content: center; padding-top: 20px;
-        }
-        .modal.open { display: flex; }
+        /* MODAL (Live Editor) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: flex-end; justify-content: center; }
+        .modal.open { display: flex; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         
-        .editor {
-            background: #25252b; width: 90%; max-width: 400px; padding: 20px; border-radius: 16px;
-            box-shadow: 0 0 20px rgba(0,229,255, 0.2); margin-bottom: 50px;
-        }
-        .editor h2 { margin-top: 0; color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px; }
-
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; }
-        .form-group input {
-            width: 100%; padding: 10px; background: #111; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 16px;
-        }
-
-        .row { display: flex; gap: 10px; }
-        .row .form-group { flex: 1; }
-
-        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .btn-save { background: var(--accent); color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; }
-        .btn-close { background: #333; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; }
+        .editor-sheet { background: #18181b; width: 100%; max-width: 500px; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 25px; box-sizing: border-box; max-height: 90vh; overflow-y: auto; box-shadow: 0 -5px 30px rgba(0,0,0,0.5); }
         
-        .btn-ban {
-            grid-column: span 2; background: #ff2e2e20; color: #ff2e2e; border: 1px solid #ff2e2e; 
-            padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer;
-        }
-        .btn-unban {
-             grid-column: span 2; background: #00ff6620; color: #00ff66; border: 1px solid #00ff66;
-             padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer;
-        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-        .quick-actions { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
-        .chip { background: #333; color: #fff; border:none; padding: 5px 10px; border-radius: 20px; font-size: 10px; cursor: pointer; }
+        .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .sheet-title { font-size: 18px; font-weight: bold; color: white; }
+        .live-tag { background: var(--red); color: white; font-size: 9px; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* Controls */
+        .control-group { background: #222; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+        .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: block; }
+        
+        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .val-disp { font-family: monospace; font-size: 14px; color: var(--accent); }
+
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn { padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 13px; color: white; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-act { background: #333; }
+        .btn-act:active { background: #444; transform: scale(0.98); }
+        .btn-blue { background: #009de0; }
+        .btn-green { background: var(--green); color: black; }
+        .btn-red { background: rgba(255, 61, 0, 0.15); color: var(--red); border: 1px solid var(--red); }
+
+        input[type=range] { width: 100%; accent-color: var(--accent); }
+        .inv-row { display: flex; align-items: center; background: #2a2a2a; padding: 8px; border-radius: 8px; margin-bottom: 5px; }
+        .inv-icon { width: 30px; font-size: 16px; text-align: center; }
+        .inv-name { flex: 1; font-size: 13px; }
+        .inv-qty { font-weight: bold; color: white; width: 30px; text-align: center; }
+        .inv-btn { width: 25px; height: 25px; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; }
 
     </style>
 </head>
 <body>
 
     <div class="header">
-        <h1>Admin God Mode 👁️</h1>
-        <div class="status" id="connection-status">Connecting...</div>
+        <h1>ADMIN <span style="font-size:12px; color:#555">LIVE</span></h1>
+        <div id="status" class="status">Connecting...</div>
     </div>
 
-    <input type="text" id="search" class="search-box" placeholder="Поиск по имени или ID..." onkeyup="filterPlayers()">
+    <input type="text" id="search" class="search-bar" placeholder="🔍 Поиск курьера..." onkeyup="filterList()">
+    
+    <div id="player-list">
+        <div style="text-align:center; padding:20px; color:#555">Загрузка базы...</div>
+    </div>
 
-    <div id="players-list"></div>
-
-    <div id="editorModal" class="modal">
-        <div class="editor">
-            <h2 id="editor-title">Редактор</h2>
-            <input type="hidden" id="edit-id">
-
-            <div class="row">
-                <div class="form-group">
-                    <label>💰 Баланс (PLN)</label>
-                    <input type="number" id="edit-balance">
+    <div id="editor" class="modal" onclick="if(event.target===this) closeEditor()">
+        <div class="editor-sheet">
+            <div class="sheet-header">
+                <div>
+                    <div class="sheet-title" id="ed-name">Player</div>
+                    <div style="font-size:11px; color:#666" id="ed-id">ID: ...</div>
                 </div>
-                <div class="form-group">
-                    <label>🏦 Долг (Debt)</label>
-                    <input type="number" id="edit-debt">
-                </div>
-            </div>
-            
-            <div class="quick-actions">
-                <button class="chip" onclick="setVal('edit-balance', 1000000)">+1 MLN</button>
-                <button class="chip" onclick="setVal('edit-debt', 0)">Простить долг</button>
+                <div><span class="live-tag">LIVE SYNC</span></div>
             </div>
 
-            <hr style="border-color:#333; opacity:0.3">
-
-            <div class="row">
-                <div class="form-group">
-                    <label>⚡ Энергия</label>
-                    <input type="number" id="edit-energy">
+            <div class="control-group">
+                <span class="label">Финансы</span>
+                <div class="row">
+                    <span>💰 Баланс:</span>
+                    <span id="ed-balance" class="val-disp">0.00 PLN</span>
                 </div>
-                <div class="form-group">
-                    <label>💧 Вода</label>
-                    <input type="number" id="edit-water">
+                <div class="action-grid" style="margin-bottom:15px">
+                    <button class="btn btn-act" onclick="cmd('MATH_VAR', 'balance', 100)">+100</button>
+                    <button class="btn btn-act" onclick="cmd('MATH_VAR', 'balance', 1000)">+1k</button>
+                    <button class="btn btn-act" onclick="cmd('MATH_VAR', 'balance', -100)">-100</button>
+                    <button class="btn btn-act" onclick="cmd('SET_VAR', 'balance', 0)">СБРОС</button>
                 </div>
-                <div class="form-group">
-                    <label>😎 Настр.</label>
-                    <input type="number" id="edit-mood">
+                
+                <div class="row">
+                    <span>🏦 Долг:</span>
+                    <span id="ed-debt" class="val-disp" style="color:orange">0.00</span>
                 </div>
-            </div>
-
-            <div class="form-group">
-                <label>🚀 Ракеты (Ускорение)</label>
-                <input type="number" id="edit-rocket">
-            </div>
-            <div class="form-group">
-                <label>🍫 Шоколадки</label>
-                <input type="number" id="edit-choco">
+                <button class="btn btn-green" style="width:100%" onclick="cmd('SET_VAR', 'debt', 0); cmd('SET_VAR', 'debtOverdue', false)">✅ ПРОСТИТЬ ДОЛГ</button>
             </div>
 
-            <div class="actions">
-                <button class="btn-close" onclick="closeModal()">Отмена</button>
-                <button class="btn-save" onclick="saveData()">СОХРАНИТЬ</button>
-                <button id="btn-ban-action" class="btn-ban" onclick="toggleBan()">ЗАБАНИТЬ ИГРОКА 🚫</button>
+            <div class="control-group">
+                <span class="label">Инвентарь</span>
+                <div id="inv-list"></div>
             </div>
+
+            <div class="control-group">
+                <span class="label">Состояние</span>
+                <div style="margin-bottom:10px">
+                    <div class="row"><span>⚡ Энергия</span> <span id="disp-energy">100%</span></div>
+                    <input type="range" id="rng-energy" onchange="cmd('SET_VAR', 'needs.energy', parseInt(this.value))">
+                </div>
+                <div style="margin-bottom:10px">
+                    <div class="row"><span>💧 Вода</span> <span id="disp-water">100%</span></div>
+                    <input type="range" id="rng-water" onchange="cmd('SET_VAR', 'needs.water', parseInt(this.value))">
+                </div>
+                <div style="margin-bottom:10px">
+                    <div class="row"><span>😎 Настроение</span> <span id="disp-mood">100%</span></div>
+                    <input type="range" id="rng-mood" onchange="cmd('SET_VAR', 'needs.mood', parseInt(this.value))">
+                </div>
+            </div>
+
+            <div class="action-grid">
+                <button class="btn btn-blue" onclick="cmd('SET_VAR', 'taxi.unlocked', true)">🚖 Открыть Такси</button>
+                <button class="btn btn-act" onclick="cmd('EVAL_CODE', 'location.reload()', 0)">🔄 Перезагрузить его</button>
+                <button id="btn-ban" class="btn btn-red" style="grid-column:span 2" onclick="toggleBan()">🚫 ЗАБАНИТЬ</button>
+            </div>
+
+            <button class="btn btn-act" style="width:100%; margin-top:20px; background:#111" onclick="closeEditor()">Закрыть</button>
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
     <script>
-        // ==========================================
-        // НАСТРОЙКИ (Взяты из твоего файла index (3).html)
-        // ==========================================
+        // CONFIG
         const firebaseConfig = {
-            apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
-            authDomain: "warszawa-courier.firebaseapp.com",
-            databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "warszawa-courier",
-            storageBucket: "warszawa-courier.firebasestorage.app",
-            messagingSenderId: "295860613508",
-            appId: "1:295860613508:web:86fe8364377d6875612dd1",
-            measurementId: "G-TGSCHBVLX2"
+          apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
+          authDomain: "warszawa-courier.firebaseapp.com",
+          databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "warszawa-courier",
+          storageBucket: "warszawa-courier.firebasestorage.app",
+          messagingSenderId: "295860613508",
+          appId: "1:295860613508:web:86fe8364377d6875612dd1",
+          measurementId: "G-TGSCHBVLX2"
         };
-        // ==========================================
 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
         let allPlayers = [];
-        let currentPlayer = null;
+        let activePlayerId = null;
+        let activeListener = null;
 
-        // Следим за подключением
-        db.ref('.info/connected').on('value', snap => {
-            const status = document.getElementById('connection-status');
-            if (snap.val() === true) {
-                status.innerText = "ONLINE";
-                status.classList.add('online');
-            } else {
-                status.innerText = "OFFLINE";
-                status.classList.remove('online');
-            }
+        // 1. GLOBAL LISTENER
+        db.ref('.info/connected').on('value', s => {
+            const el = document.getElementById('status');
+            if(s.val()) { el.textContent = "CONNECTED"; el.classList.add('connected'); }
+            else { el.textContent = "OFFLINE"; el.classList.remove('connected'); }
         });
 
-        // Загрузка игроков
-        db.ref('players').on('value', (snap) => {
+        db.ref('players').on('value', snap => {
             const data = snap.val();
-            const list = document.getElementById('players-list');
-            list.innerHTML = '';
             allPlayers = [];
+            const list = document.getElementById('player-list');
+            list.innerHTML = '';
 
-            if(data) {
-                Object.keys(data).forEach(key => {
-                    allPlayers.push({ id: key, ...data[key] });
-                });
-                // Сортируем: сначала богатые
-                allPlayers.sort((a,b) => (b.balance || 0) - (a.balance || 0));
-                renderList(allPlayers);
-            } else {
-                list.innerHTML = '<div style="text-align:center; color:#555; margin-top:30px">База данных пуста...</div>';
-            }
+            if(!data) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#555">Пусто...</div>'; return; }
+
+            Object.entries(data).forEach(([id, p]) => {
+                allPlayers.push({id, ...p});
+            });
+
+            // Сортировка: Онлайн выше, потом богатые
+            allPlayers.sort((a,b) => {
+                const aOnline = (Date.now() - (a.lastSeen||0) < 15000);
+                const bOnline = (Date.now() - (b.lastSeen||0) < 15000);
+                if(aOnline && !bOnline) return -1;
+                if(!aOnline && bOnline) return 1;
+                return (b.balance||0) - (a.balance||0);
+            });
+
+            renderList(allPlayers);
         });
 
-        function renderList(players) {
-            const list = document.getElementById('players-list');
+        function renderList(arr) {
+            const list = document.getElementById('player-list');
             list.innerHTML = '';
-            players.forEach(p => {
-                const isBanned = p.isBanned ? 'banned' : '';
-                const banText = p.isBanned ? '<span style="color:red; font-weight:bold">[BAN]</span>' : '';
-                const name = p.username ? '@'+p.username : (p.firstName || p.name || 'Без имени');
+            arr.forEach(p => {
+                const isOnline = (Date.now() - (p.lastSeen||0)) < 15000;
+                const name = p.name || p.username || 'Без имени';
+                const bal = parseFloat(p.balance||0).toFixed(2);
+                const s = p.stats || {energy:100, water:100, mood:100};
                 
-                const html = `
-                <div class="player-card ${isBanned}" onclick="openEditor('${p.id}')">
-                    <div class="p-info">
-                        <h3>${name} ${banText}</h3>
-                        <p>ID: ${p.id}</p>
-                        <div class="p-balance">
-                            Баланс: <span>${formatMoney(p.balance)}</span> | Долг: <span style="color:orange">${p.debt || 0}</span>
+                const div = document.createElement('div');
+                div.className = `player-card ${isOnline?'online':''} ${p.isBanned?'banned':''}`;
+                div.onclick = () => openEditor(p.id);
+                div.innerHTML = `
+                    <div class="p-main">
+                        <div class="p-name">${name} ${p.isBanned ? '<span style="color:red">[BAN]</span>' : ''}</div>
+                        <div class="p-id">ID: ${p.id}</div>
+                        <div class="p-bal">${bal} PLN</div>
+                        <div class="p-stats-mini">
+                            <span><i class="fa-solid fa-bolt"></i> ${Math.floor(s.energy||100)}%</span>
+                            <span><i class="fa-solid fa-droplet"></i> ${Math.floor(s.water||100)}%</span>
+                            <span><i class="fa-solid fa-circle-check"></i> ${isOnline ? 'ONLINE' : 'OFFLINE'}</span>
                         </div>
                     </div>
-                    <button class="btn-edit">✏️</button>
-                </div>
+                    <button class="btn-mini">EDIT</button>
                 `;
-                list.innerHTML += html;
+                list.appendChild(div);
             });
         }
 
-        window.openEditor = function(id) {
-            const p = allPlayers.find(x => x.id === id);
-            if(!p) return;
-            currentPlayer = p;
-
-            document.getElementById('editorModal').classList.add('open');
-            document.getElementById('editor-title').innerText = p.username || p.name || p.id;
-            
-            document.getElementById('edit-id').value = id;
-            document.getElementById('edit-balance').value = p.balance || 0;
-            document.getElementById('edit-debt').value = p.debt || 0;
-            
-            // Если stats хранится как needs
-            const stats = p.stats || p.needs || {};
-            document.getElementById('edit-energy').value = stats.energy || 100;
-            document.getElementById('edit-water').value = stats.water || 100;
-            document.getElementById('edit-mood').value = stats.mood || 100;
-            
-            const inv = p.inventory || {};
-            document.getElementById('edit-rocket').value = inv.rocket || 0;
-            document.getElementById('edit-choco').value = inv.bar || 0; // Сникерс (bar)
-
-            const btnBan = document.getElementById('btn-ban-action');
-            if(p.isBanned) {
-                btnBan.innerText = "РАЗБАНИТЬ ИГРОКА ✅";
-                btnBan.className = "btn-unban";
-            } else {
-                btnBan.innerText = "ЗАБАНИТЬ ИГРОКА 🚫";
-                btnBan.className = "btn-ban";
-            }
-        }
-
-        window.saveData = function() {
-            if(!currentPlayer) return;
-            const id = currentPlayer.id;
-            
-            const updates = {
-                balance: parseFloat(document.getElementById('edit-balance').value),
-                debt: parseFloat(document.getElementById('edit-debt').value),
-                "needs/energy": parseInt(document.getElementById('edit-energy').value), // Обновляем needs
-                "needs/water": parseInt(document.getElementById('edit-water').value),
-                "needs/mood": parseInt(document.getElementById('edit-mood').value),
-                "stats/energy": parseInt(document.getElementById('edit-energy').value), // И stats на всякий случай
-                "stats/water": parseInt(document.getElementById('edit-water').value),
-                "stats/mood": parseInt(document.getElementById('edit-mood').value),
-                "inventory/rocket": parseInt(document.getElementById('edit-rocket').value),
-                "inventory/bar": parseInt(document.getElementById('edit-choco').value)
-            };
-
-            db.ref('players/' + id).update(updates).then(() => {
-                closeModal();
-                alert('Успешно сохранено! ✅');
-            }).catch(err => {
-                alert('Ошибка: ' + err.message);
-            });
-        }
-
-        window.toggleBan = function() {
-            if(!currentPlayer) return;
-            const newState = !currentPlayer.isBanned;
-            db.ref('players/' + currentPlayer.id).update({ isBanned: newState });
-            closeModal();
-        }
-
-        window.closeModal = function() {
-            document.getElementById('editorModal').classList.remove('open');
-            currentPlayer = null;
-        }
-
-        window.setVal = function(id, val) {
-            document.getElementById(id).value = val;
-        }
-        
-        window.filterPlayers = function() {
+        function filterList() {
             const term = document.getElementById('search').value.toLowerCase();
             const filtered = allPlayers.filter(p => 
-                (p.username && p.username.toLowerCase().includes(term)) || 
-                (p.name && p.name.toLowerCase().includes(term)) ||
+                (p.name && p.name.toLowerCase().includes(term)) || 
                 p.id.toString().includes(term)
             );
             renderList(filtered);
         }
 
-        function formatMoney(n) {
-            return (n || 0).toFixed(2) + ' PLN';
+        // 2. LIVE EDITOR LOGIC
+        function openEditor(id) {
+            activePlayerId = id;
+            document.getElementById('editor').classList.add('open');
+            
+            // Подписываемся на КОНКРЕТНОГО игрока для мгновенных обновлений в модалке
+            if(activeListener) db.ref('players/' + id).off('value', activeListener);
+            
+            activeListener = db.ref('players/' + id).on('value', snap => {
+                const p = snap.val();
+                if(!p) return;
+                
+                // Header
+                document.getElementById('ed-name').textContent = p.name || 'Игрок';
+                document.getElementById('ed-id').textContent = id;
+                
+                // Finance
+                document.getElementById('ed-balance').textContent = (p.balance||0).toFixed(2) + ' PLN';
+                document.getElementById('ed-debt').textContent = (p.debt||0).toFixed(2) + ' PLN';
+
+                // Stats
+                const s = p.stats || p.needs || {energy:100, water:100, mood:100};
+                updateSlider('energy', s.energy);
+                updateSlider('water', s.water);
+                updateSlider('mood', s.mood);
+
+                // Inventory
+                renderInventory(p.inventory || {});
+
+                // Ban Button
+                const btnBan = document.getElementById('btn-ban');
+                if(p.isBanned) {
+                    btnBan.textContent = "✅ РАЗБАНИТЬ";
+                    btnBan.style.background = "#00e676";
+                    btnBan.style.color = "black";
+                } else {
+                    btnBan.textContent = "🚫 ЗАБАНИТЬ";
+                    btnBan.style.background = "rgba(255, 61, 0, 0.15)";
+                    btnBan.style.color = "#ff3d00";
+                }
+            });
         }
-        
-        // Пароль при входе (по умолчанию warszawa123)
-        const pass = localStorage.getItem('admin_pass');
-        if(pass !== 'warszawa123') {
-            const input = prompt("Введите пароль Бога (warszawa123):");
-            if(input === 'warszawa123') { 
-                localStorage.setItem('admin_pass', input);
-            } else {
-                document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:50px">ACCESS DENIED ⛔</h1>';
+
+        function closeEditor() {
+            document.getElementById('editor').classList.remove('open');
+            if(activePlayerId && activeListener) {
+                db.ref('players/' + activePlayerId).off('value', activeListener);
             }
+            activePlayerId = null;
+        }
+
+        function updateSlider(key, val) {
+            val = Math.floor(val || 0);
+            document.getElementById('disp-'+key).textContent = val + '%';
+            // Обновляем ползунок только если он не в фокусе (чтобы не дергался пока тянешь)
+            if(document.activeElement !== document.getElementById('rng-'+key)) {
+                document.getElementById('rng-'+key).value = val;
+            }
+        }
+
+        function renderInventory(inv) {
+            const list = document.getElementById('inv-list');
+            list.innerHTML = '';
+            
+            const items = [
+                {id: 'water', icon: '💧', name: 'Вода'},
+                {id: 'bar', icon: '🍫', name: 'Сникерс'},
+                {id: 'energy_drink', icon: '🚀', name: 'Red Bull'},
+                {id: 'coffee', icon: '☕', name: 'Кофе'}
+            ];
+
+            items.forEach(it => {
+                const qty = inv[it.id] || 0;
+                const div = document.createElement('div');
+                div.className = 'inv-row';
+                div.innerHTML = `
+                    <div class="inv-icon">${it.icon}</div>
+                    <div class="inv-name">${it.name}</div>
+                    <div class="inv-qty">${qty}</div>
+                    <div style="display:flex; gap:5px; margin-left:10px">
+                        <button class="inv-btn" style="background:#444; color:white" onclick="cmd('MATH_VAR', 'inventory.${it.id}', 1)">+</button>
+                        <button class="inv-btn" style="background:#222; color:#aaa" onclick="cmd('MATH_VAR', 'inventory.${it.id}', -1)">-</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // 3. COMMAND SENDER (The Magic)
+        function cmd(type, path, value) {
+            if(!activePlayerId) return;
+            
+            // Если мы баним, меняем в базе НАПРЯМУЮ, чтобы клиент сразу вылетел
+            // (Client listener в index.html ловит это мгновенно)
+            if(type === 'BAN_TOGGLE') {
+                // Логика бана ниже
+                return;
+            }
+
+            // Для остального используем Inbox для безопасности
+            const payload = { type, path, value, timestamp: Date.now() };
+            db.ref('players/' + activePlayerId + '/adminInbox').push(payload);
+            
+            // Визуальный фидбек
+            if(navigator.vibrate) navigator.vibrate(20);
+        }
+
+        function toggleBan() {
+            if(!activePlayerId) return;
+            // Сначала читаем текущее состояние, потом инвертируем
+            db.ref('players/' + activePlayerId + '/isBanned').once('value', s => {
+                const isBanned = s.val();
+                db.ref('players/' + activePlayerId).update({ isBanned: !isBanned });
+            });
         }
 
     </script>
