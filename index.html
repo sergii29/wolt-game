@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Warsaw City Sim</title>
+    <title>Warsaw Courier Sim</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -36,6 +36,7 @@
         .debt-warning { color: var(--accent-red); font-size: 10px; font-weight: bold; display: none; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
+        /* --- UI BARS (RESTORED 7 ITEMS) --- */
         .equip-bar { position: absolute; top: 70px; left: 15px; right: 15px; display: flex; gap: 4px; z-index: 999; pointer-events: none; }
         .equip-item { flex: 1; background: rgba(0,0,0,0.8); border-radius: 6px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(4px); }
         .equip-icon { font-size: 10px; margin-bottom: 2px; color: #ccc; }
@@ -50,11 +51,10 @@
 
         .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333; }
 
-        /* Dynamic styles for Taxi Mode */
-        .taxi-active .pedal-btn { background: var(--taxi-yellow); color: black; box-shadow: 0 4px 0 #f57f17; }
-        .taxi-active #online-slider-knob { background: var(--taxi-yellow); color:black; }
-        .taxi-active .equip-item.fuel-bar .progress-mini-fill { background: var(--taxi-yellow); }
-
+        /* --- TAXI MODE STYLES --- */
+        .taxi-active .pedal-btn { background: var(--taxi-yellow) !important; color: black !important; box-shadow: 0 4px 0 #f57f17 !important; }
+        .taxi-active #online-slider-knob { background: var(--taxi-yellow) !important; color:black !important; }
+        
         .slider-container { position: relative; width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
         .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; }
         .slider-knob { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px; background: var(--wolt-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; }
@@ -140,9 +140,10 @@
 
     <div class="equip-bar" id="main-ui-bars">
         <div class="equip-item"><i class="fa-solid fa-bicycle equip-icon" id="icon-vehicle"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-vehicle" style="width: 100%"></div></div><span class="equip-label" id="lbl-vehicle">ВЕЛ</span></div>
-        
-        <div class="equip-item" id="box-energy"><i class="fa-solid fa-bolt equip-icon" id="icon-energy" style="color:yellow"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-energy" style="background:yellow; width: 100%"></div></div><span class="equip-label" id="lbl-energy">СИЛЫ</span></div>
-        
+        <div class="equip-item"><i class="fa-solid fa-box-open equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-bag" style="width: 100%"></div></div><span class="equip-label">СУМКА</span></div>
+        <div class="equip-item"><i class="fa-solid fa-mobile-screen equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-phone" style="width: 100%"></div></div><span class="equip-label">СВЯЗЬ</span></div>
+        <div class="equip-item"><i class="fa-solid fa-shirt equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-gear" style="width: 100%"></div></div><span class="equip-label">ОДЕЖДА</span></div>
+        <div class="equip-item"><i class="fa-solid fa-bolt equip-icon" id="icon-energy" style="color:yellow"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-energy" style="background:yellow; width: 100%"></div></div><span class="equip-label" id="lbl-energy">СИЛЫ</span></div>
         <div class="equip-item"><i class="fa-solid fa-droplet equip-icon" style="color:cyan"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-water" style="background:cyan; width: 100%"></div></div><span class="equip-label">ВОДА</span></div>
         <div class="equip-item"><i class="fa-solid fa-face-smile equip-icon" style="color:#d500f9"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-mood" style="background:#d500f9; width: 100%"></div></div><span class="equip-label">НАСТР</span></div>
     </div>
@@ -277,8 +278,7 @@
             tipChance: 0.5, tipBonusChance: 0.3, tipMinTemp: 60, tipMinMood: 80,
             itemPrices: {},
             surge: { enabled: false, chance: 0.3, bonuses: [0.05, 0.07, 0.10, 0.20, 0.25] },
-            // NEW: Taxi Config
-            taxi: { fuelPrice: 5.5, policeLevel: 0 } // 0=None, 1=Low, 2=Raid
+            taxi: { fuelPrice: 5.5, policeLevel: 0 } 
         };
 
         const ITEMS_DB = {
@@ -290,7 +290,6 @@
             bar: { name: 'Сникерс', type: 'buy', cost: 4.5, icon: 'fa-cookie-bite', effect: { energy: 20, mood: 15 }, desc: 'Баланс энергии.', target: 'energy' },
             energy_drink: { name: 'Red Bull', type: 'buy', cost: 7.0, icon: 'fa-bolt', effect: { energy: 50, mood: 5, water: -5 }, desc: 'Энергетик временно останавливает расход энергии!', target: 'energy', special: 'no_drain' },
             coffee: { name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot', effect: { mood: 30, energy: 10 }, desc: 'Для Настроения!', target: 'mood' },
-            // TAXI ITEMS
             fuel: { name: 'Бензин (5L)', type: 'buy', cost: 5.5, icon: 'fa-gas-pump', effect: { fuel: 20 }, desc: 'Топливо для работы', target: 'fuel' }
         };
 
@@ -307,7 +306,6 @@
             history: [],
             energyBoostActive: false,
             career: { totalOrders: 0 },
-            // NEW: Taxi State (Active = driving car)
             taxi: { unlocked: false, active: false, fuel: 100, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
         };
 
@@ -508,6 +506,8 @@
 
         function updateUI() {
             document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN';
+            
+            // Standard update for all bars
             ['bike','bag','phone','gear'].forEach(k => updateBar(`bar-${k}`, state.items[k]));
             ['energy','water','mood'].forEach(k => updateBar(`bar-${k}`, state.needs[k]));
             
@@ -533,6 +533,7 @@
             
             if (isTaxi) {
                 body.classList.add('taxi-active');
+                
                 // Change Energy Bar to Fuel Bar
                 const eBar = document.getElementById('bar-energy');
                 const eIcon = document.getElementById('icon-energy');
@@ -543,13 +544,14 @@
                 eLbl.textContent = "БЕНЗИН";
                 eBar.style.width = state.taxi.fuel + '%';
 
+                // Change Bike to Car
                 document.getElementById('icon-vehicle').className = 'fa-solid fa-car equip-icon';
                 document.getElementById('lbl-vehicle').textContent = "АВТО";
-                document.getElementById('menu-shop-text').textContent = "АЗС / Магазин";
                 
-                // Button Text Logic handled in loop/render
+                document.getElementById('menu-shop-text').textContent = "АЗС / Магазин";
             } else {
                 body.classList.remove('taxi-active');
+                
                 // Reset to Energy
                 const eBar = document.getElementById('bar-energy');
                 const eIcon = document.getElementById('icon-energy');
@@ -560,8 +562,10 @@
                 eLbl.textContent = "СИЛЫ";
                 eBar.style.width = state.needs.energy + '%';
 
+                // Reset to Bike
                 document.getElementById('icon-vehicle').className = 'fa-solid fa-bicycle equip-icon';
                 document.getElementById('lbl-vehicle').textContent = "ВЕЛ";
+                
                 document.getElementById('menu-shop-text').textContent = "Магазин / Инвентарь";
             }
         }
@@ -582,11 +586,7 @@
                 if (currentOrder.timeLeft <= 0) { failOrder("time"); return; }
                 
                 let baseCooling = gameConfig.coolingRate || 0.5;
-                
-                // If Taxi, cooling is slower (Air Conditioning bonus logic handled here or assume car is faster)
-                // Let's keep it same for now or slight bonus
-                let bagQuality = state.taxi.active ? 100 : state.items.bag; // Car has good isolation
-                
+                let bagQuality = state.taxi.active ? 100 : state.items.bag; 
                 let decay = baseCooling * (1 + ((100 - bagQuality) / 100));
                 currentOrder.foodTemp -= decay;
                 
@@ -616,17 +616,16 @@
                 // --- TAXI LOGIC ---
                 if (state.taxi.fuel <= 0) {
                     showToast('⛽ Бак пуст! Нужна заправка!', 'warn');
-                    openQuickInv(true); // Open inv to buy fuel or can't drive
+                    openQuickInv(true); 
                     return;
                 }
                 
-                state.taxi.fuel -= 2.0; // Car consumes fuel
-                state.items.bike -= 0.05; // Car wear (using bike var for now or add vehicle var)
+                state.taxi.fuel -= 2.0; 
+                state.items.bike -= 0.05; 
                 
                 // POLICE MECHANIC
                 const policeLvl = gameConfig.taxi ? (gameConfig.taxi.policeLevel || 0) : 0;
                 if (policeLvl > 0) {
-                    // Level 1: 5% chance, Level 2 (Raid): 20% chance
                     let risk = policeLvl === 1 ? 0.05 : 0.20;
                     if (Math.random() < risk) {
                         const fine = 50 * policeLvl;
@@ -635,7 +634,7 @@
                     }
                 }
 
-                currentOrder.progress += 15; // Cars are faster
+                currentOrder.progress += 15; 
             } 
             else {
                 // --- COURIER LOGIC (Old) ---
@@ -725,7 +724,6 @@
             state.items.bag -= 1.5; state.items.gear -= 0.8;
             
             if (state.debtOverdue && state.debt > 0) {
-                // NEW: Dynamic Garnishment Rate
                 const rate = getGarnishmentRate();
                 let penalty = totalEarn * rate; 
                 
@@ -876,15 +874,56 @@
             });
         }
 
+        // --- FIXED SLIDER (BLOCKS SCROLL) ---
         function setupSlider(prefix, callback) {
             const knob = document.getElementById(`${prefix}-slider-knob`);
             const box = document.getElementById(`${prefix}-slider-box`);
             const fill = document.getElementById(`${prefix}-slider-fill`);
-            let isDragging = false, startX = 0;
-            knob.addEventListener('mousedown', start); knob.addEventListener('touchstart', start);
-            function start(e) { isDragging = true; startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX; document.addEventListener('mousemove', move); document.addEventListener('touchmove', move); document.addEventListener('mouseup', end); document.addEventListener('touchend', end); }
-            function move(e) { if (!isDragging) return; const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX; let x = clientX - startX; let max = box.offsetWidth - knob.offsetWidth - 8; x = Math.max(0, Math.min(x, max)); knob.style.transform = `translateX(${x}px)`; fill.style.width = `${(x / max) * 100}%`; if (x >= max * 0.95) { isDragging = false; end(); callback(); } }
-            function end() { isDragging = false; document.removeEventListener('mousemove', move); document.removeEventListener('touchmove', move); document.removeEventListener('mouseup', end); document.removeEventListener('touchend', end); knob.style.transform = 'translateX(0)'; fill.style.width = '0%'; }
+            
+            let isDragging = false;
+            let startX = 0;
+
+            const start = (e) => {
+                isDragging = true;
+                startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX;
+                document.addEventListener('mousemove', move);
+                document.addEventListener('touchmove', move, { passive: false });
+                document.addEventListener('mouseup', end);
+                document.addEventListener('touchend', end);
+            };
+
+            const move = (e) => {
+                if (!isDragging) return;
+                
+                if(e.type === 'touchmove') e.preventDefault(); 
+
+                const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX;
+                let x = clientX - startX;
+                let max = box.offsetWidth - knob.offsetWidth - 8;
+                x = Math.max(0, Math.min(x, max));
+                
+                knob.style.transform = `translateX(${x}px)`;
+                fill.style.width = `${(x / max) * 100}%`;
+                
+                if (x >= max * 0.95) {
+                    isDragging = false;
+                    end();
+                    callback();
+                }
+            };
+
+            const end = () => {
+                isDragging = false;
+                document.removeEventListener('mousemove', move);
+                document.removeEventListener('touchmove', move);
+                document.removeEventListener('mouseup', end);
+                document.removeEventListener('touchend', end);
+                knob.style.transform = 'translateX(0)';
+                fill.style.width = '0%';
+            };
+
+            knob.addEventListener('mousedown', start);
+            knob.addEventListener('touchstart', start, { passive: false });
         }
 
         function resetSlider(prefix) { document.getElementById(`${prefix}-slider-knob`).style.transform = 'translateX(0)'; document.getElementById(`${prefix}-slider-fill`).style.width = '0%'; }
@@ -897,16 +936,13 @@
             const isTaxi = state.taxi && state.taxi.active;
             
             if (isTaxi) {
-                // Show Fuel if active
                 const fuelItem = ITEMS_DB.fuel;
                 const div = document.createElement('div'); div.className = 'inv-item';
                 div.innerHTML = `<span><i class="fa-solid ${fuelItem.icon}"></i> Заправка (5L)</span><span class="inv-count" style="background:#ff9100; color:black">${fuelItem.cost} PLN</span>`;
                 div.onclick = () => buyFuelInstant(); 
                 menu.appendChild(div);
-                
                 menu.innerHTML += `<div style="padding:5px; color:#aaa; font-size:10px; text-align:center">Магазин еды недоступен в машине</div>`;
             } else {
-                // Normal Courier Inventory
                 let lowest = 'none', min = 100;
                 if (state.needs.water < min) { min = state.needs.water; lowest = 'water'; }
                 if (state.needs.energy < min) { min = state.needs.energy; lowest = 'energy'; }
@@ -1018,7 +1054,6 @@
         }
 
         function renderShop(c) {
-            // --- HYBRID SHOP RENDER ---
             if (state.taxi && state.taxi.active) {
                 c.innerHTML = `
                 <div class="shop-section">
@@ -1034,7 +1069,6 @@
                 `;
                 return;
             }
-            // --------------------------
 
             let html = '';
             const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
@@ -1127,7 +1161,6 @@
                 </div>`;
             }
 
-            // Calculate current Garnishment Rate for the Banner
             const garnishmentPercent = (getGarnishmentRate() * 100).toFixed(0);
 
             c.innerHTML = `
@@ -1316,4 +1349,3 @@
     </script>
 </body>
 </html>
-
