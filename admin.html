@@ -62,7 +62,7 @@
 <body>
 
     <div style="display:flex; justify-content:space-between; align-items:center">
-        <h1>ADMIN <span style="font-size:12px; color:#666">v1.6</span></h1>
+        <h1>ADMIN <span style="font-size:12px; color:#666">v1.6 (Fix)</span></h1>
         <div style="font-size:12px; color:#aaa" id="connection-status">Disconnected</div>
     </div>
 
@@ -115,6 +115,7 @@
             <div class="setting-row"><span class="setting-label">Таймер заказа (сек)</span> <input type="number" id="deliveryTime" placeholder="60"></div>
             <div class="setting-row"><span class="setting-label">Скорость остывания еды</span> <input type="number" id="coolingRate" step="0.1" placeholder="0.5"></div>
             <div class="setting-row"><span class="setting-label">Шанс пробки (%)</span> <input type="number" id="trafficChance" placeholder="10"></div>
+            <div class="setting-row"><span class="setting-label">Длительность пробки (мс)</span> <input type="number" id="trafficDuration" placeholder="3000"></div>
         </div>
 
         <div class="setting-group">
@@ -344,7 +345,9 @@
                 data.itemPrices[inp.dataset.item] = parseFloat(val) || 0; 
             });
             
-            db.ref('config').update(data).then(() => alert('✅ Настройки успешно сохранены!'));
+            db.ref('config').update(data)
+                .then(() => alert('✅ Настройки успешно сохранены!'))
+                .catch(e => alert('❌ Ошибка при сохранении: ' + e.message));
         }
 
         // --- PLAYER ACTIONS ---
@@ -396,3 +399,4 @@
     </script>
 </body>
 </html>
+
