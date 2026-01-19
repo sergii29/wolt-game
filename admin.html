@@ -46,7 +46,7 @@
 <body>
 
     <div style="display:flex; justify-content:space-between; align-items:center">
-        <h1>ADMIN <span style="font-size:12px; color:#666">v1.1</span></h1>
+        <h1>ADMIN <span style="font-size:12px; color:#666">v1.2</span></h1>
         <div style="font-size:12px; color:#aaa" id="connection-status">Disconnected</div>
     </div>
 
@@ -61,14 +61,15 @@
 
     <div id="settings" class="panel">
         <div class="setting-group">
-            <h3>💸 Экономика</h3>
+            <h3>💸 Экономика и Тарифы</h3>
             <div class="setting-row"><span>Базовая оплата (PLN)</span> <input type="number" id="basePay" placeholder="12"></div>
             <div class="setting-row"><span>Разброс оплаты (+/- PLN)</span> <input type="number" id="payVariance" placeholder="6"></div>
             <div class="setting-row"><span>Инфляция за уровень (%)</span> <input type="number" id="inflationRate" placeholder="10"></div>
         </div>
 
         <div class="setting-group">
-            <h3>🛣 Город и Трафик</h3>
+            <h3>🛣 Город и Доставка</h3>
+            <div class="setting-row"><span>Время на доставку (сек)</span> <input type="number" id="deliveryTime" placeholder="60"></div>
             <div class="setting-row"><span>Шанс пробки/светофора (%)</span> <input type="number" id="trafficChance" placeholder="10"></div>
             <div class="setting-row"><span>Длительность пробки (мс)</span> <input type="number" id="trafficDuration" placeholder="3000"></div>
         </div>
@@ -128,9 +129,7 @@
     </div>
 
     <script>
-        // ==========================================
-        // НАСТРОЙКИ FIREBASE (Вставлены твои ключи)
-        // ==========================================
+        // CONFIG
         const firebaseConfig = {
           apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
           authDomain: "warszawa-courier.firebaseapp.com",
@@ -141,23 +140,12 @@
           appId: "1:295860613508:web:86fe8364377d6875612dd1",
           measurementId: "G-TGSCHBVLX2"
         };
-        // ==========================================
         
-        // СТАНДАРТНЫЕ ЗНАЧЕНИЯ (Отображаются, если в базе пусто)
+        // DEFAULTS
         const DEFAULTS = {
-            basePay: 12,
-            payVariance: 6,
-            inflationRate: 0.1,
-            trafficChance: 0.1,
-            trafficDuration: 3000,
-            energyDrain: 0.15,
-            waterDrain: 0.10,
-            itemPrices: {
-                water: 2.0,
-                bar: 4.5,
-                energy_drink: 7.0,
-                coffee: 9.0
-            }
+            basePay: 12, payVariance: 6, inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 3000,
+            energyDrain: 0.15, waterDrain: 0.10, deliveryTime: 60,
+            itemPrices: { water: 2.0, bar: 4.5, energy_drink: 7.0, coffee: 9.0 }
         };
 
         let db;
@@ -181,13 +169,10 @@
         }
 
         function startListening() {
-            // ИГРОКИ
+            // PLAYERS
             db.ref('players').on('value', snap => {
-                const list = document.getElementById('players-list');
-                list.innerHTML = '';
-                const data = snap.val();
-                if(!data) { list.innerHTML = 'Нет игроков'; return; }
-
+                const list = document.getElementById('players-list'); list.innerHTML = '';
+                const data = snap.val(); if(!data) { list.innerHTML = 'Нет игроков'; return; }
                 Object.entries(data).forEach(([id, p]) => {
                     const isOnline = (Date.now() - (p.lastSeen || 0)) < 10000;
                     const div = document.createElement('div');
@@ -198,31 +183,25 @@
                             <div>Баланс: ${parseFloat(p.balance).toFixed(2)} PLN</div>
                             <div style="font-size:11px; color:#aaa">Долг: ${p.debt ? p.debt.toFixed(0) : 0}</div>
                         </div>
-                        <div class="p-actions">
-                            <button class="btn btn-blue" onclick="openEdit('${id}', ${p.balance})">Edit</button>
-                        </div>
-                    `;
+                        <div class="p-actions"><button class="btn btn-blue" onclick="openEdit('${id}', ${p.balance})">Edit</button></div>`;
                     list.appendChild(div);
                 });
             });
 
-            // НАСТРОЙКИ (Загружаем из базы, или берем дефолт)
+            // SETTINGS LOAD
             db.ref('config').on('value', snap => {
-                const cfg = snap.val() || DEFAULTS; // Если в базе нет, берем DEFAULTS
-
-                // Безопасное чтение значений (если в базе неполные данные)
+                const cfg = snap.val() || DEFAULTS;
                 document.getElementById('basePay').value = cfg.basePay ?? DEFAULTS.basePay;
                 document.getElementById('payVariance').value = cfg.payVariance ?? DEFAULTS.payVariance;
                 document.getElementById('inflationRate').value = ((cfg.inflationRate ?? DEFAULTS.inflationRate) * 100).toFixed(0);
                 document.getElementById('trafficChance').value = ((cfg.trafficChance ?? DEFAULTS.trafficChance) * 100).toFixed(0);
                 document.getElementById('trafficDuration').value = cfg.trafficDuration ?? DEFAULTS.trafficDuration;
+                document.getElementById('deliveryTime').value = cfg.deliveryTime ?? DEFAULTS.deliveryTime; // New field
                 document.getElementById('energyDrain').value = cfg.energyDrain ?? DEFAULTS.energyDrain;
                 document.getElementById('waterDrain').value = cfg.waterDrain ?? DEFAULTS.waterDrain;
-                
                 const prices = cfg.itemPrices || DEFAULTS.itemPrices;
                 document.querySelectorAll('.price-input').forEach(inp => {
-                    const item = inp.dataset.item;
-                    if(prices[item]) inp.value = prices[item];
+                    const item = inp.dataset.item; if(prices[item]) inp.value = prices[item];
                 });
             });
         }
@@ -234,15 +213,12 @@
                 inflationRate: parseFloat(document.getElementById('inflationRate').value) / 100,
                 trafficChance: parseFloat(document.getElementById('trafficChance').value) / 100,
                 trafficDuration: parseInt(document.getElementById('trafficDuration').value),
+                deliveryTime: parseInt(document.getElementById('deliveryTime').value), // Save new field
                 energyDrain: parseFloat(document.getElementById('energyDrain').value),
                 waterDrain: parseFloat(document.getElementById('waterDrain').value),
                 itemPrices: {}
             };
-            
-            document.querySelectorAll('.price-input').forEach(inp => {
-                data.itemPrices[inp.dataset.item] = parseFloat(inp.value);
-            });
-
+            document.querySelectorAll('.price-input').forEach(inp => { data.itemPrices[inp.dataset.item] = parseFloat(inp.value); });
             db.ref('config').update(data).then(() => alert('Настройки сохранены и применены ко всем игрокам!'));
         }
 
@@ -256,22 +232,11 @@
 
         function sendCmd(type, payload = {}) {
             const id = document.getElementById('m-player-id').value;
-            db.ref('players/' + id + '/adminInbox').push({
-                type: type,
-                ...payload,
-                timestamp: Date.now()
-            });
+            db.ref('players/' + id + '/adminInbox').push({ type: type, ...payload, timestamp: Date.now() });
         }
 
-        function adminSetBalance() {
-            sendCmd('SET_BALANCE', { val: document.getElementById('m-balance').value });
-        }
-        function adminGiveItem() {
-            sendCmd('ADD_ITEM', { 
-                item: document.getElementById('m-item-select').value,
-                qty: parseInt(document.getElementById('m-item-qty').value)
-            });
-        }
+        function adminSetBalance() { sendCmd('SET_BALANCE', { val: document.getElementById('m-balance').value }); }
+        function adminGiveItem() { sendCmd('ADD_ITEM', { item: document.getElementById('m-item-select').value, qty: parseInt(document.getElementById('m-item-qty').value) }); }
         function adminRepairAll() { sendCmd('REPAIR_ALL'); }
         function adminWipeDebt() { sendCmd('WIPE_DEBT'); }
         function adminResetPlayer(charge) { sendCmd('FULL_RESET', { charge: charge }); }
