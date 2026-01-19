@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WARSZAWA GOD MODE ⚡</title>
+    <style>
+        :root { --bg: #0f0f13; --card: #1e1e24; --accent: #00e5ff; --text: #ffffff; --danger: #ff2e2e; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 15px; padding-bottom: 80px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { margin: 0; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); }
+        .status { font-size: 10px; padding: 4px 8px; border-radius: 4px; background: #333; color: #888; }
+        .status.online { background: #00ff6620; color: #00ff66; }
+
+        .search-box { width: 100%; padding: 12px; background: var(--card); border: 1px solid #333; color: #fff; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; font-size: 16px; }
+
+        .player-card {
+            background: var(--card); border-radius: 12px; padding: 15px; margin-bottom: 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-left: 3px solid var(--accent); position: relative;
+        }
+        .player-card.banned { border-left-color: var(--danger); opacity: 0.7; }
+        
+        .p-info h3 { margin: 0 0 5px 0; font-size: 16px; }
+        .p-info p { margin: 0; font-size: 12px; color: #888; }
+        .p-balance { font-size: 14px; color: #bbb; margin-top: 5px; }
+        .p-balance span { color: var(--accent); font-weight: bold; }
+
+        .btn-edit { background: #333; color: #fff; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+        /* Модальное окно */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100; overflow-y: auto;
+            align-items: flex-start; justify-content: center; padding-top: 20px;
+        }
+        .modal.open { display: flex; }
+        
+        .editor {
+            background: #25252b; width: 90%; max-width: 400px; padding: 20px; border-radius: 16px;
+            box-shadow: 0 0 20px rgba(0,229,255, 0.2); margin-bottom: 50px;
+        }
+        .editor h2 { margin-top: 0; color: var(--accent); border-bottom: 1px solid #333; padding-bottom: 10px; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 11px; color: #888; margin-bottom: 5px; text-transform: uppercase; }
+        .form-group input {
+            width: 100%; padding: 10px; background: #111; border: 1px solid #444; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 16px;
+        }
+
+        .row { display: flex; gap: 10px; }
+        .row .form-group { flex: 1; }
+
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        .btn-save { background: var(--accent); color: #000; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; }
+        .btn-close { background: #333; color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: bold; }
+        
+        .btn-ban {
+            grid-column: span 2; background: #ff2e2e20; color: #ff2e2e; border: 1px solid #ff2e2e; 
+            padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer;
+        }
+        .btn-unban {
+             grid-column: span 2; background: #00ff6620; color: #00ff66; border: 1px solid #00ff66;
+             padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer;
+        }
+
+        .quick-actions { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
+        .chip { background: #333; color: #fff; border:none; padding: 5px 10px; border-radius: 20px; font-size: 10px; cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Admin God Mode 👁️</h1>
+        <div class="status" id="connection-status">Connecting...</div>
+    </div>
+
+    <input type="text" id="search" class="search-box" placeholder="Поиск по имени или ID..." onkeyup="filterPlayers()">
+
+    <div id="players-list"></div>
+
+    <div id="editorModal" class="modal">
+        <div class="editor">
+            <h2 id="editor-title">Редактор</h2>
+            <input type="hidden" id="edit-id">
+
+            <div class="row">
+                <div class="form-group">
+                    <label>💰 Баланс (PLN)</label>
+                    <input type="number" id="edit-balance">
+                </div>
+                <div class="form-group">
+                    <label>🏦 Долг (Debt)</label>
+                    <input type="number" id="edit-debt">
+                </div>
+            </div>
+            
+            <div class="quick-actions">
+                <button class="chip" onclick="setVal('edit-balance', 1000000)">+1 MLN</button>
+                <button class="chip" onclick="setVal('edit-debt', 0)">Простить долг</button>
+            </div>
+
+            <hr style="border-color:#333; opacity:0.3">
+
+            <div class="row">
+                <div class="form-group">
+                    <label>⚡ Энергия</label>
+                    <input type="number" id="edit-energy">
+                </div>
+                <div class="form-group">
+                    <label>💧 Вода</label>
+                    <input type="number" id="edit-water">
+                </div>
+                <div class="form-group">
+                    <label>😎 Настр.</label>
+                    <input type="number" id="edit-mood">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>🚀 Ракеты (Ускорение)</label>
+                <input type="number" id="edit-rocket">
+            </div>
+            <div class="form-group">
+                <label>🍫 Шоколадки</label>
+                <input type="number" id="edit-choco">
+            </div>
+
+            <div class="actions">
+                <button class="btn-close" onclick="closeModal()">Отмена</button>
+                <button class="btn-save" onclick="saveData()">СОХРАНИТЬ</button>
+                <button id="btn-ban-action" class="btn-ban" onclick="toggleBan()">ЗАБАНИТЬ ИГРОКА 🚫</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // ==========================================
+        // НАСТРОЙКИ (Взяты из твоего файла index (3).html)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
+            authDomain: "warszawa-courier.firebaseapp.com",
+            databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "warszawa-courier",
+            storageBucket: "warszawa-courier.firebasestorage.app",
+            messagingSenderId: "295860613508",
+            appId: "1:295860613508:web:86fe8364377d6875612dd1",
+            measurementId: "G-TGSCHBVLX2"
+        };
+        // ==========================================
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let allPlayers = [];
+        let currentPlayer = null;
+
+        // Следим за подключением
+        db.ref('.info/connected').on('value', snap => {
+            const status = document.getElementById('connection-status');
+            if (snap.val() === true) {
+                status.innerText = "ONLINE";
+                status.classList.add('online');
+            } else {
+                status.innerText = "OFFLINE";
+                status.classList.remove('online');
+            }
+        });
+
+        // Загрузка игроков
+        db.ref('players').on('value', (snap) => {
+            const data = snap.val();
+            const list = document.getElementById('players-list');
+            list.innerHTML = '';
+            allPlayers = [];
+
+            if(data) {
+                Object.keys(data).forEach(key => {
+                    allPlayers.push({ id: key, ...data[key] });
+                });
+                // Сортируем: сначала богатые
+                allPlayers.sort((a,b) => (b.balance || 0) - (a.balance || 0));
+                renderList(allPlayers);
+            } else {
+                list.innerHTML = '<div style="text-align:center; color:#555; margin-top:30px">База данных пуста...</div>';
+            }
+        });
+
+        function renderList(players) {
+            const list = document.getElementById('players-list');
+            list.innerHTML = '';
+            players.forEach(p => {
+                const isBanned = p.isBanned ? 'banned' : '';
+                const banText = p.isBanned ? '<span style="color:red; font-weight:bold">[BAN]</span>' : '';
+                const name = p.username ? '@'+p.username : (p.firstName || p.name || 'Без имени');
+                
+                const html = `
+                <div class="player-card ${isBanned}" onclick="openEditor('${p.id}')">
+                    <div class="p-info">
+                        <h3>${name} ${banText}</h3>
+                        <p>ID: ${p.id}</p>
+                        <div class="p-balance">
+                            Баланс: <span>${formatMoney(p.balance)}</span> | Долг: <span style="color:orange">${p.debt || 0}</span>
+                        </div>
+                    </div>
+                    <button class="btn-edit">✏️</button>
+                </div>
+                `;
+                list.innerHTML += html;
+            });
+        }
+
+        window.openEditor = function(id) {
+            const p = allPlayers.find(x => x.id === id);
+            if(!p) return;
+            currentPlayer = p;
+
+            document.getElementById('editorModal').classList.add('open');
+            document.getElementById('editor-title').innerText = p.username || p.name || p.id;
+            
+            document.getElementById('edit-id').value = id;
+            document.getElementById('edit-balance').value = p.balance || 0;
+            document.getElementById('edit-debt').value = p.debt || 0;
+            
+            // Если stats хранится как needs
+            const stats = p.stats || p.needs || {};
+            document.getElementById('edit-energy').value = stats.energy || 100;
+            document.getElementById('edit-water').value = stats.water || 100;
+            document.getElementById('edit-mood').value = stats.mood || 100;
+            
+            const inv = p.inventory || {};
+            document.getElementById('edit-rocket').value = inv.rocket || 0;
+            document.getElementById('edit-choco').value = inv.bar || 0; // Сникерс (bar)
+
+            const btnBan = document.getElementById('btn-ban-action');
+            if(p.isBanned) {
+                btnBan.innerText = "РАЗБАНИТЬ ИГРОКА ✅";
+                btnBan.className = "btn-unban";
+            } else {
+                btnBan.innerText = "ЗАБАНИТЬ ИГРОКА 🚫";
+                btnBan.className = "btn-ban";
+            }
+        }
+
+        window.saveData = function() {
+            if(!currentPlayer) return;
+            const id = currentPlayer.id;
+            
+            const updates = {
+                balance: parseFloat(document.getElementById('edit-balance').value),
+                debt: parseFloat(document.getElementById('edit-debt').value),
+                "needs/energy": parseInt(document.getElementById('edit-energy').value), // Обновляем needs
+                "needs/water": parseInt(document.getElementById('edit-water').value),
+                "needs/mood": parseInt(document.getElementById('edit-mood').value),
+                "stats/energy": parseInt(document.getElementById('edit-energy').value), // И stats на всякий случай
+                "stats/water": parseInt(document.getElementById('edit-water').value),
+                "stats/mood": parseInt(document.getElementById('edit-mood').value),
+                "inventory/rocket": parseInt(document.getElementById('edit-rocket').value),
+                "inventory/bar": parseInt(document.getElementById('edit-choco').value)
+            };
+
+            db.ref('players/' + id).update(updates).then(() => {
+                closeModal();
+                alert('Успешно сохранено! ✅');
+            }).catch(err => {
+                alert('Ошибка: ' + err.message);
+            });
+        }
+
+        window.toggleBan = function() {
+            if(!currentPlayer) return;
+            const newState = !currentPlayer.isBanned;
+            db.ref('players/' + currentPlayer.id).update({ isBanned: newState });
+            closeModal();
+        }
+
+        window.closeModal = function() {
+            document.getElementById('editorModal').classList.remove('open');
+            currentPlayer = null;
+        }
+
+        window.setVal = function(id, val) {
+            document.getElementById(id).value = val;
+        }
+        
+        window.filterPlayers = function() {
+            const term = document.getElementById('search').value.toLowerCase();
+            const filtered = allPlayers.filter(p => 
+                (p.username && p.username.toLowerCase().includes(term)) || 
+                (p.name && p.name.toLowerCase().includes(term)) ||
+                p.id.toString().includes(term)
+            );
+            renderList(filtered);
+        }
+
+        function formatMoney(n) {
+            return (n || 0).toFixed(2) + ' PLN';
+        }
+        
+        // Пароль при входе (по умолчанию warszawa123)
+        const pass = localStorage.getItem('admin_pass');
+        if(pass !== 'warszawa123') {
+            const input = prompt("Введите пароль Бога (warszawa123):");
+            if(input === 'warszawa123') { 
+                localStorage.setItem('admin_pass', input);
+            } else {
+                document.body.innerHTML = '<h1 style="color:red; text-align:center; margin-top:50px">ACCESS DENIED ⛔</h1>';
+            }
+        }
+
+    </script>
+</body>
+</html>
