@@ -62,7 +62,7 @@
 <body>
 
     <div style="display:flex; justify-content:space-between; align-items:center">
-        <h1>ADMIN <span style="font-size:12px; color:#666">v2.1</span></h1>
+        <h1>ADMIN <span style="font-size:12px; color:#666">v2.2</span></h1>
         <div style="font-size:12px; color:#aaa" id="connection-status">Disconnected</div>
     </div>
 
@@ -207,7 +207,8 @@
         
         // DEFAULTS
         const DEFAULTS = {
-            basePay: 12, payVariance: 6, inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 3000,
+            basePickupPay: 4.0, perKmPay: 1.5, payVariance: 2.0,
+            inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 3000,
             energyDrain: 0.15, waterDrain: 0.10, deliveryTime: 60, coolingRate: 0.5, 
             tipChance: 0.5, tipMinTemp: 60, tipMinMood: 80,
             itemPrices: { water: 2.0, bar: 4.5, energy_drink: 7.0, coffee: 9.0 }
@@ -255,11 +256,9 @@
                         if(p.inventory.energy_drink > 0) invText += `🚀${p.inventory.energy_drink} `;
                     }
 
-                    // Pass entire player object including career to openEdit
                     const div = document.createElement('div');
                     div.className = `player-card ${isOnline ? 'online' : 'offline'}`;
                     
-                    // SAFE EDIT CALL
                     const safeStats = JSON.stringify(p.stats || {}).replace(/"/g, '&quot;');
                     const careerCount = p.career ? (p.career.totalOrders || 0) : 0;
 
@@ -375,7 +374,7 @@
             document.getElementById('m-player-id').value = id;
             document.getElementById('m-player-name').textContent = "Редактор: " + name;
             document.getElementById('m-balance').value = balance;
-            document.getElementById('m-career-orders').textContent = careerOrders || 0; // Display count
+            document.getElementById('m-career-orders').textContent = careerOrders || 0;
             
             // Set sliders
             const e = stats.energy !== undefined ? stats.energy : 100;
@@ -402,7 +401,7 @@
         function adminRepairAll() { sendCmd('REPAIR_ALL'); }
         function adminWipeDebt() { sendCmd('WIPE_DEBT'); }
         function adminBreakGear() { sendCmd('BREAK_GEAR'); } 
-        function adminUnlockTaxi() { sendCmd('UNLOCK_TAXI'); } // NEW BUTTON ACTION
+        function adminUnlockTaxi() { sendCmd('UNLOCK_TAXI'); } 
         
         function adminSaveStats() {
             sendCmd('SET_STATS', {
