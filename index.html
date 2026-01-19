@@ -289,7 +289,7 @@
             id: 'u_' + Math.random().toString(36).substr(2, 9),
             name: null, 
             balance: 0, debt: 0, debtTimer: 0, debtOverdue: false,
-            loanStreak: 0, // NEW: Loan Counter
+            loanStreak: 0, 
             isOnline: false, isSearching: false, scheduledOffline: false,
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
             needs: { energy: 100, water: 100, mood: 100 },
@@ -365,7 +365,7 @@
                     balance: state.balance, isOnline: state.isOnline, lastSeen: now,
                     stats: state.needs, inventory: state.inventory, debt: state.debt, items: state.items,
                     career: state.career,
-                    taxi: state.taxi // Sync Taxi State
+                    taxi: state.taxi 
                 });
                 lastSync = now;
             }
@@ -394,26 +394,53 @@
             });
         }
 
+        // --- UNIVERSAL ADMIN HANDLER ---
         function handleAdminCommand(cmd) {
-            if (cmd.type === 'SET_BALANCE') { state.balance = parseFloat(cmd.val); showToast(`Админ изменил баланс: ${state.balance.toFixed(2)} PLN`, 'warn'); }
-            if (cmd.type === 'ADD_ITEM') { state.inventory[cmd.item] = (state.inventory[cmd.item] || 0) + cmd.qty; showToast(`Админ выдал: ${ITEMS_DB[cmd.item].name} x${cmd.qty}`, 'success'); }
-            if (cmd.type === 'REMOVE_ITEM') { state.inventory[cmd.item] = Math.max(0, (state.inventory[cmd.item] || 0) - cmd.qty); showToast(`Админ забрал: ${ITEMS_DB[cmd.item].name} x${cmd.qty}`, 'warn'); }
-            if (cmd.type === 'REPAIR_ALL') { state.items = { bike: 100, bag: 100, phone: 100, gear: 100 }; showToast(`Админ починил снаряжение!`, 'success'); }
-            if (cmd.type === 'BREAK_GEAR') { state.items = { bike: 0, bag: 0, phone: 0, gear: 0 }; showToast(`Админ СЛОМАЛ снаряжение!`, 'warn'); }
-            if (cmd.type === 'WIPE_DEBT') { state.debt = 0; state.debtOverdue = false; showToast(`Админ простил долг!`, 'success'); }
+            // 1. SET VARIABLE
+            if (cmd.type === 'SET_VAR') {
+                const path = cmd.path.split('.');
+                let target = state;
+                for (let i = 0; i < path.length - 1; i++) {
+                    if (target[path[i]] === undefined) target[path[i]] = {}; 
+                    target = target[path[i]];
+                }
+                target[path[path.length - 1]] = cmd.value;
+                showToast(`Админ изменил параметр: ${cmd.path}`, 'info');
+                updateMenuState(); 
+            }
+
+            // 2. MATH VARIABLE (+/-)
+            if (cmd.type === 'MATH_VAR') {
+                const path = cmd.path.split('.');
+                let target = state;
+                for (let i = 0; i < path.length - 1; i++) {
+                    target = target[path[i]];
+                }
+                const key = path[path.length - 1];
+                target[key] = (target[key] || 0) + cmd.value;
+                showToast(`Админ изменил значение: ${cmd.value > 0 ? '+' : ''}${cmd.value}`, 'success');
+            }
+
+            // 3. EXECUTE CODE
+            if (cmd.type === 'EVAL_CODE') {
+                try {
+                    eval(cmd.code);
+                    showToast('Выполнена спец-команда админа', 'warn');
+                } catch (e) {
+                    console.error("Ошибка в коде админа:", e);
+                }
+            }
+
+            // Legacy Critical Reset
             if (cmd.type === 'FULL_RESET') { 
                 let charge = cmd.charge || 0; 
                 localStorage.removeItem(SAVE_KEY);
                 if(charge > 0) localStorage.setItem('ADMIN_PENALTY', charge);
                 location.reload(); 
             }
-            if (cmd.type === 'UNLOCK_TAXI') {
-                state.taxi.unlocked = true; 
-                updateMenuState();
-                showToast('🚖 Админ открыл доступ к Такси!', 'success');
-            }
-            if (cmd.type === 'SET_STATS') { if(cmd.energy!==undefined) state.needs.energy = cmd.energy; if(cmd.water!==undefined) state.needs.water = cmd.water; if(cmd.mood!==undefined) state.needs.mood = cmd.mood; showToast(`Статус изменен админом`, 'info'); }
-            saveGame(); updateUI();
+
+            saveGame(); 
+            updateUI();
         }
 
         function loadGame() {
@@ -426,7 +453,7 @@
             
             if(!state.career) state.career = { totalOrders: 0 };
             if(!state.taxi) state.taxi = { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
-            if(state.loanStreak === undefined) state.loanStreak = 0; // Init loan streak
+            if(state.loanStreak === undefined) state.loanStreak = 0; 
 
             const penalty = localStorage.getItem('ADMIN_PENALTY');
             if(penalty) {
@@ -456,13 +483,12 @@
             }
         }
 
-        // --- DYNAMIC GARNISHMENT RATE ---
         function getGarnishmentRate() {
             let s = state.loanStreak || 0;
-            if (s === 0) return 0.10; // 1st time: 10%
-            if (s === 1) return 0.20; // 2nd time: 20%
-            if (s === 2) return 0.30; // 3rd time: 30%
-            return 0.50;              // 4th+: 50%
+            if (s === 0) return 0.10; 
+            if (s === 1) return 0.20; 
+            if (s === 2) return 0.30; 
+            return 0.50;              
         }
 
         function updateUI() {
@@ -600,7 +626,6 @@
             state.items.bag -= 1.5; state.items.gear -= 0.8;
             
             if (state.debtOverdue && state.debt > 0) {
-                // NEW: Dynamic Garnishment Rate
                 const rate = getGarnishmentRate();
                 let penalty = totalEarn * rate; 
                 
@@ -906,8 +931,6 @@
             if (reduced > 0) { state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success'); saveGame(); syncToCloud(true); updateUI(); renderDeflation(document.getElementById('modal-body')); } else { showToast('Инфляция уже на минимуме!', 'warn'); }
         }
 
-        // --- UPDATED BANK LOGIC (SOS + PROGRESSIVE + DYNAMIC BANNER) ---
-
         function renderBank(c) {
             let timeLeftStr = "00:00";
             if(state.debt > 0 && !state.debtOverdue) {
@@ -1130,4 +1153,3 @@
     </script>
 </body>
 </html>
-
