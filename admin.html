@@ -2,195 +2,53 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мобильная Админка</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel Mobile</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #121212; color: #eee; font-family: -apple-system, sans-serif; margin: 0; padding: 15px; padding-bottom: 80px; }
-        h1 { margin: 0 0 15px 0; font-size: 20px; color: #00ccff; display: flex; justify-content: space-between; align-items: center; }
-        
-        /* TABS */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #1e1e1e; display: flex; justify-content: space-around; padding: 10px; border-top: 1px solid #333; z-index: 100; }
-        .nav-item { color: #666; font-size: 10px; text-align: center; flex: 1; cursor: pointer; }
-        .nav-item i { font-size: 20px; display: block; margin-bottom: 4px; }
-        .nav-item.active { color: #00ccff; }
-
-        .panel { display: none; }
-        .panel.active { display: block; }
-
-        /* CARDS */
-        .card { background: #1e1e1e; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; }
-        .card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; }
-        .card-desc { font-size: 11px; color: #888; margin-top: -5px; margin-bottom: 10px; font-style: italic; }
-
-        /* INPUTS */
-        input[type="number"], select { background: #2c2c2c; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; width: 80px; font-weight: bold; text-align: center; }
-        input[type="text"] { width: 100%; box-sizing: border-box; }
-        input[type="range"] { width: 100%; margin: 10px 0; }
-        input[type="checkbox"] { transform: scale(1.5); }
-
-        /* BUTTONS */
-        .btn { border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; }
-        .btn-full { width: 100%; padding: 12px; margin-top: 10px; }
-        .btn-blue { background: #009de0; color: white; }
+        body { background: #121212; color: white; font-family: sans-serif; padding: 15px; margin: 0; padding-bottom: 80px; }
+        .card { background: #1e1e1e; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 4px solid #555; }
+        .online { border-left-color: #00e676; }
+        .btn { padding: 10px 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; }
+        .btn-blue { background: #009de0; }
         .btn-green { background: #00e676; color: black; }
-        .btn-red { background: #ff3d00; color: white; }
-        .btn-yellow { background: #ffcc00; color: black; }
-
-        /* PLAYER LIST */
-        .player-item { background: #252525; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #555; }
-        .player-item.online { border-left-color: #00e676; }
+        input { background: #333; border: 1px solid #555; color: white; padding: 8px; border-radius: 5px; width: 100px; text-align: center; }
         
-        /* MODAL */
-        #modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 200; display: none; overflow-y: auto; }
-        .modal-content { background: #121212; min-height: 100%; padding: 20px; box-sizing: border-box; }
+        /* Modal */
+        #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:100; overflow-y:auto; }
+        .modal-body { padding: 20px; }
     </style>
 </head>
 <body>
-
-    <h1>АДМИН БОГ <span id="status" style="font-size:10px; color:#666">...</span></h1>
-
-    <div id="tab-players" class="panel active">
-        <div id="players-list">Загрузка...</div>
-    </div>
-
-    <div id="tab-economy" class="panel">
-        <div class="card">
-            <div class="card-header" style="color:#00e676">💰 Зарплата Курьера</div>
-            
-            <div class="card-row">
-                <span>Базовая подача</span>
-                <input type="number" id="basePickupPay" placeholder="4.0">
-            </div>
-            <div class="card-desc">Сколько платят просто за приход в ресторан.</div>
-
-            <div class="card-row">
-                <span>Оплата за КМ</span>
-                <input type="number" id="perKmPay" placeholder="1.5">
-            </div>
-            <div class="card-desc">Бонус за каждый километр пути.</div>
-
-            <div class="card-row">
-                <span>Разброс цены (+/-)</span>
-                <input type="number" id="payVariance" placeholder="2.0">
-            </div>
-            <div class="card-desc">Случайная прибавка к заказу (чтобы не было скучно).</div>
-        </div>
-
-        <div class="card">
-            <div class="card-header" style="color:#ffcc00">🍎 Цены в Магазине</div>
-            <div class="card-row"><span>Вода</span> <input type="number" class="price-input" data-item="water"></div>
-            <div class="card-row"><span>Сникерс</span> <input type="number" class="price-input" data-item="bar"></div>
-            <div class="card-row"><span>Энергетик</span> <input type="number" class="price-input" data-item="energy_drink"></div>
-            <div class="card-row"><span>Кофе</span> <input type="number" class="price-input" data-item="coffee"></div>
-        </div>
-
-        <div class="card">
-            <div class="card-header" style="color:#ff3d00">📈 Инфляция</div>
-            <div class="card-row">
-                <span>Рост цен (%)</span>
-                <input type="number" id="inflationRate" placeholder="10">
-            </div>
-            <div class="card-desc">На сколько % дорожает еда с каждым уровнем ремонта игрока.</div>
-        </div>
-
-        <button class="btn btn-green btn-full" onclick="saveSettings()">💾 СОХРАНИТЬ ЭКОНОМИКУ</button>
-    </div>
-
-    <div id="tab-system" class="panel">
-        
-        <div class="card" style="border: 1px solid #ffcc00">
-            <div class="card-header" style="color:#ffcc00">🚖 Такси Настройки</div>
-            <div class="card-row">
-                <span>Цена Бензина</span>
-                <input type="number" id="fuelPrice" placeholder="5.5">
-            </div>
-            <div class="card-row">
-                <span>Уровень Полиции (0-2)</span>
-                <input type="number" id="policeLevel" placeholder="0">
-            </div>
-            <div class="card-desc">0 = Нет штрафов. 2 = Облава (штрафуют часто).</div>
-        </div>
-
-        <div class="card" style="border: 1px solid #ff3d00">
-            <div class="card-header" style="color:#ff3d00">🔥 Горящие Заказы</div>
-            <div class="card-row">
-                <span>Включить бонусы?</span>
-                <input type="checkbox" id="surgeEnabled">
-            </div>
-            <div class="card-row">
-                <span>Шанс (0.1-1.0)</span>
-                <input type="number" id="surgeChance" step="0.1">
-            </div>
-            <div class="card-desc">Иногда добавляет +20% к цене заказа, чтобы мотивировать.</div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">⚡ Сложность игры</div>
-            <div class="card-row"><span>Трата Энергии</span> <input type="number" id="energyDrain" step="0.01"></div>
-            <div class="card-desc">Сколько сил уходит за 1 клик.</div>
-            <div class="card-row"><span>Трата Воды</span> <input type="number" id="waterDrain" step="0.01"></div>
-        </div>
-
-        <button class="btn btn-green btn-full" onclick="saveSettings()">💾 СОХРАНИТЬ НАСТРОЙКИ</button>
-    </div>
+    <h2 style="color:#00ccff; margin-top:0">Wolt Admin <span id="status" style="font-size:12px; color:#666">...</span></h2>
+    
+    <div id="players-list">Loading...</div>
 
     <div id="modal">
-        <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
-                <h2 id="m-name" style="margin:0">Игрок</h2>
-                <button class="btn" onclick="closeModal()">Закрыть</button>
-            </div>
+        <div class="modal-body">
+            <h2 id="m-name">Player</h2>
+            <p style="color:#888; font-size:12px">ID: <span id="m-id-display"></span></p>
             <input type="hidden" id="m-id">
-
+            
             <div class="card">
-                <div class="card-header">💳 Финансы</div>
-                <div class="card-row">
-                    <input type="number" id="m-balance" style="width:100%" placeholder="Баланс">
-                    <button class="btn btn-blue" onclick="cmd('SET_VAR', {path:'balance', value: parseFloat(val('m-balance'))})">OK</button>
-                </div>
-                <div style="display:flex; gap:10px; margin-top:10px">
-                    <button class="btn btn-blue" style="flex:1" onclick="cmd('SET_VAR', {path:'debt', value:0}); cmd('SET_VAR', {path:'debtOverdue', value:false})">Простить Долг</button>
+                <p>Баланс:</p>
+                <div style="display:flex; gap:10px">
+                    <input type="number" id="m-balance">
+                    <button class="btn btn-blue" onclick="setBalance()">SET</button>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header">🎒 Инвентарь</div>
-                <div class="card-row">
-                    <select id="m-item">
-                        <option value="water">Вода</option>
-                        <option value="bar">Сникерс</option>
-                        <option value="energy_drink">Энергетик</option>
-                    </select>
-                    <input type="number" id="m-qty" value="1" style="width:50px">
-                    <button class="btn btn-green" onclick="giveItem(1)">+</button>
-                    <button class="btn btn-red" onclick="giveItem(-1)">-</button>
-                </div>
+                <p>Действия:</p>
+                <button class="btn btn-green" onclick="sendCmd('UNLOCK_TAXI')">Открыть Такси</button>
+                <br><br>
+                <button class="btn btn-blue" onclick="sendCmd('REPAIR_ALL')">Починить Всё</button>
             </div>
 
-            <div class="card">
-                <div class="card-header">🚖 Такси Управление</div>
-                <button class="btn btn-yellow btn-full" onclick="cmd('SET_VAR', {path:'taxi.unlocked', value:true})">🔓 Открыть доступ (Магазин)</button>
-                <div style="margin-top:10px; display:flex; gap:10px">
-                    <button class="btn btn-green" style="flex:1" onclick="forceTaxi(true)">Посадить в авто</button>
-                    <button class="btn btn-red" style="flex:1" onclick="forceTaxi(false)">Вернуть велик</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header" style="color:red">☠️ Опасная зона</div>
-                <button class="btn btn-red btn-full" onclick="cmd('FULL_RESET', {charge:0})">СБРОСИТЬ ПРОГРЕСС</button>
-            </div>
+            <button class="btn" style="background:#333; width:100%; margin-top:20px" onclick="document.getElementById('modal').style.display='none'">CLOSE</button>
         </div>
-    </div>
-
-    <div class="bottom-nav">
-        <div class="nav-item active" onclick="tab('players', this)"><i class="fa-solid fa-users"></i>Игроки</div>
-        <div class="nav-item" onclick="tab('economy', this)"><i class="fa-solid fa-coins"></i>Деньги</div>
-        <div class="nav-item" onclick="tab('system', this)"><i class="fa-solid fa-gears"></i>Система</div>
     </div>
 
     <script>
@@ -205,122 +63,56 @@
           measurementId: "G-TGSCHBVLX2"
         };
 
-        const DEFAULTS = { basePickupPay: 4.0, perKmPay: 1.5, payVariance: 2.0, inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 3000, energyDrain: 0.15, waterDrain: 0.10, tipChance: 0.5, itemPrices: { water: 2.0, bar: 4.5, energy_drink: 7.0, coffee: 9.0 }, surge: { enabled: false, chance: 0.3 }, taxi: { fuelPrice: 5.5, policeLevel: 0 } };
-
-        let db;
-        try { firebase.initializeApp(firebaseConfig); db = firebase.database(); document.getElementById('status').textContent = "ONLINE"; document.getElementById('status').style.color = "#00e676"; init(); } 
-        catch(e) { console.error(e); document.getElementById('status').textContent = "ERROR"; }
-
-        function init() {
-            // Load Players
+        try {
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.database();
+            document.getElementById('status').textContent = "ONLINE";
+            
             db.ref('players').on('value', snap => {
-                const list = document.getElementById('players-list'); list.innerHTML = '';
-                const data = snap.val() || {};
+                const list = document.getElementById('players-list');
+                list.innerHTML = '';
+                const data = snap.val();
+                if(!data) return;
+                
                 Object.entries(data).forEach(([id, p]) => {
                     const isOnline = (Date.now() - (p.lastSeen || 0)) < 15000;
                     const div = document.createElement('div');
-                    div.className = `player-item ${isOnline ? 'online' : ''}`;
+                    div.className = `card ${isOnline ? 'online' : ''}`;
                     div.innerHTML = `
-                        <div>
-                            <div style="font-weight:bold; color:white">${p.name || id}</div>
-                            <div style="font-size:12px; color:#aaa">Баланс: <span style="color:#00ccff">${parseFloat(p.balance||0).toFixed(2)}</span></div>
+                        <div style="display:flex; justify-content:space-between; align-items:center">
+                            <div>
+                                <b>${p.name || 'Guest'}</b><br>
+                                <span style="font-size:10px; color:#aaa">${id}</span>
+                            </div>
+                            <div style="text-align:right">
+                                <div style="color:#00ccff; font-weight:bold">${parseFloat(p.balance||0).toFixed(2)}</div>
+                                <button class="btn btn-blue" style="padding:5px 10px; margin-top:5px" onclick="openPlayer('${id}', '${p.name}', ${p.balance})">EDIT</button>
+                            </div>
                         </div>
-                        <button class="btn btn-blue" onclick="openPlayer('${id}', '${p.name||id}', ${p.balance||0})">Edit</button>
                     `;
                     list.appendChild(div);
                 });
             });
 
-            // Load Config
-            db.ref('config').on('value', snap => {
-                const cfg = snap.val() || DEFAULTS;
-                const set = (id, val) => { const el = document.getElementById(id); if(el) el.value = val; };
-                
-                set('basePickupPay', cfg.basePickupPay);
-                set('perKmPay', cfg.perKmPay);
-                set('payVariance', cfg.payVariance);
-                set('inflationRate', ((cfg.inflationRate||0.1)*100).toFixed(0));
-                
-                set('fuelPrice', cfg.taxi ? cfg.taxi.fuelPrice : 5.5);
-                set('policeLevel', cfg.taxi ? cfg.taxi.policeLevel : 0);
-                
-                if(cfg.surge) {
-                    document.getElementById('surgeEnabled').checked = cfg.surge.enabled;
-                    set('surgeChance', cfg.surge.chance);
-                }
-                
-                set('energyDrain', cfg.energyDrain);
-                set('waterDrain', cfg.waterDrain);
-
-                const prices = cfg.itemPrices || {};
-                document.querySelectorAll('.price-input').forEach(inp => {
-                    if(prices[inp.dataset.item]) inp.value = prices[inp.dataset.item];
-                });
-            });
-        }
-
-        // --- UI FUNCTIONS ---
-        function tab(name, el) {
-            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-            document.getElementById('tab-'+name).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            el.classList.add('active');
-        }
+        } catch(e) { document.getElementById('status').textContent = "ERROR"; console.error(e); }
 
         function openPlayer(id, name, balance) {
             document.getElementById('m-id').value = id;
+            document.getElementById('m-id-display').textContent = id;
             document.getElementById('m-name').textContent = name;
             document.getElementById('m-balance').value = balance;
             document.getElementById('modal').style.display = 'block';
         }
-        function closeModal() { document.getElementById('modal').style.display = 'none'; }
-        
-        // --- COMMANDS ---
-        function cmd(type, payload) {
+
+        function sendCmd(type, extra = {}) {
             const id = document.getElementById('m-id').value;
-            db.ref('players/' + id + '/adminInbox').push({ type, ...payload, timestamp: Date.now() });
-            alert('Команда отправлена!');
+            firebase.database().ref('players/' + id + '/adminInbox').push({ type, ...extra, timestamp: Date.now() });
+            alert('Sent!');
         }
 
-        function val(id) { return document.getElementById(id).value; }
-
-        function giveItem(qty) {
-            const item = val('m-item');
-            const amount = parseInt(val('m-qty')) * qty; // qty is 1 or -1
-            cmd('MATH_VAR', { path: 'inventory.' + item, value: amount });
-        }
-
-        function forceTaxi(state) {
-            cmd('SET_VAR', { path: 'taxi.active', value: state });
-            if(state) cmd('MATH_VAR', { path: 'taxi.fuel', value: 50 }); // Даем бензин для старта
-        }
-
-        function saveSettings() {
-            const getNum = (id) => parseFloat(document.getElementById(id).value);
-            
-            const data = {
-                basePickupPay: getNum('basePickupPay'),
-                perKmPay: getNum('perKmPay'),
-                payVariance: getNum('payVariance'),
-                inflationRate: getNum('inflationRate') / 100,
-                energyDrain: getNum('energyDrain'),
-                waterDrain: getNum('waterDrain'),
-                taxi: {
-                    fuelPrice: getNum('fuelPrice'),
-                    policeLevel: getNum('policeLevel')
-                },
-                surge: {
-                    enabled: document.getElementById('surgeEnabled').checked,
-                    chance: getNum('surgeChance')
-                },
-                itemPrices: {}
-            };
-
-            document.querySelectorAll('.price-input').forEach(inp => {
-                data.itemPrices[inp.dataset.item] = parseFloat(inp.value);
-            });
-
-            db.ref('config').update(data).then(() => alert('Настройки сохранены!'));
+        function setBalance() {
+            const val = parseFloat(document.getElementById('m-balance').value);
+            sendCmd('SET_VAR', { path: 'balance', value: val });
         }
     </script>
 </body>
