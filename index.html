@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Warsaw Courier Sim</title>
+    <title>Warsaw City Sim</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -49,6 +49,11 @@
         .toast-success { border-color: var(--accent-green); color: var(--accent-green); }
 
         .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333; }
+
+        /* Dynamic styles for Taxi Mode */
+        .taxi-active .pedal-btn { background: var(--taxi-yellow); color: black; box-shadow: 0 4px 0 #f57f17; }
+        .taxi-active #online-slider-knob { background: var(--taxi-yellow); color:black; }
+        .taxi-active .equip-item.fuel-bar .progress-mini-fill { background: var(--taxi-yellow); }
 
         .slider-container { position: relative; width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
         .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; }
@@ -133,12 +138,11 @@
         <button class="stats-btn" onclick="openModal('stats')"><i class="fa-solid fa-chart-simple"></i></button>
     </div>
 
-    <div class="equip-bar">
-        <div class="equip-item"><i class="fa-solid fa-bicycle equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-bike" style="width: 100%"></div></div><span class="equip-label">ВЕЛ</span></div>
-        <div class="equip-item"><i class="fa-solid fa-box-open equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-bag" style="width: 100%"></div></div><span class="equip-label">СУМКА</span></div>
-        <div class="equip-item"><i class="fa-solid fa-mobile-screen equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-phone" style="width: 100%"></div></div><span class="equip-label">СВЯЗЬ</span></div>
-        <div class="equip-item"><i class="fa-solid fa-shirt equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-gear" style="width: 100%"></div></div><span class="equip-label">ОДЕЖДА</span></div>
-        <div class="equip-item"><i class="fa-solid fa-bolt equip-icon" style="color:yellow"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-energy" style="background:yellow; width: 100%"></div></div><span class="equip-label">СИЛЫ</span></div>
+    <div class="equip-bar" id="main-ui-bars">
+        <div class="equip-item"><i class="fa-solid fa-bicycle equip-icon" id="icon-vehicle"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-vehicle" style="width: 100%"></div></div><span class="equip-label" id="lbl-vehicle">ВЕЛ</span></div>
+        
+        <div class="equip-item" id="box-energy"><i class="fa-solid fa-bolt equip-icon" id="icon-energy" style="color:yellow"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-energy" style="background:yellow; width: 100%"></div></div><span class="equip-label" id="lbl-energy">СИЛЫ</span></div>
+        
         <div class="equip-item"><i class="fa-solid fa-droplet equip-icon" style="color:cyan"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-water" style="background:cyan; width: 100%"></div></div><span class="equip-label">ВОДА</span></div>
         <div class="equip-item"><i class="fa-solid fa-face-smile equip-icon" style="color:#d500f9"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-mood" style="background:#d500f9; width: 100%"></div></div><span class="equip-label">НАСТР</span></div>
     </div>
@@ -151,7 +155,7 @@
             <div id="player-name-display" style="font-size:18px; color:var(--wolt-blue); font-weight:bold; margin-bottom:5px"></div>
             <div id="player-id-display" style="font-size:10px; color:#666; display:block; margin-bottom:20px">Loading ID...</div>
             
-            <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--wolt-blue)"></i> Магазин / Инвентарь</div>
+            <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--wolt-blue)"></i> <span id="menu-shop-text">Магазин / Инвентарь</span></div>
             <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
             <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
             <div class="menu-item" onclick="openModal('stats')"><i class="fa-solid fa-clock-rotate-left"></i> История</div>
@@ -271,7 +275,10 @@
             energyDrain: 0.15, waterDrain: 0.10, moodDrain: 0.05, 
             deliveryTime: 60, coolingRate: 0.5, 
             tipChance: 0.5, tipBonusChance: 0.3, tipMinTemp: 60, tipMinMood: 80,
-            itemPrices: {}
+            itemPrices: {},
+            surge: { enabled: false, chance: 0.3, bonuses: [0.05, 0.07, 0.10, 0.20, 0.25] },
+            // NEW: Taxi Config
+            taxi: { fuelPrice: 5.5, policeLevel: 0 } // 0=None, 1=Low, 2=Raid
         };
 
         const ITEMS_DB = {
@@ -282,7 +289,9 @@
             water: { name: 'Вода (0.5л)', type: 'buy', cost: 2.0, icon: 'fa-bottle-water', effect: { water: 35, energy: 5 }, desc: 'Спасает от жажды.', target: 'water' },
             bar: { name: 'Сникерс', type: 'buy', cost: 4.5, icon: 'fa-cookie-bite', effect: { energy: 20, mood: 15 }, desc: 'Баланс энергии.', target: 'energy' },
             energy_drink: { name: 'Red Bull', type: 'buy', cost: 7.0, icon: 'fa-bolt', effect: { energy: 50, mood: 5, water: -5 }, desc: 'Энергетик временно останавливает расход энергии!', target: 'energy', special: 'no_drain' },
-            coffee: { name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot', effect: { mood: 30, energy: 10 }, desc: 'Для Настроения!', target: 'mood' }
+            coffee: { name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot', effect: { mood: 30, energy: 10 }, desc: 'Для Настроения!', target: 'mood' },
+            // TAXI ITEMS
+            fuel: { name: 'Бензин (5L)', type: 'buy', cost: 5.5, icon: 'fa-gas-pump', effect: { fuel: 20 }, desc: 'Топливо для работы', target: 'fuel' }
         };
 
         let state = {
@@ -298,7 +307,8 @@
             history: [],
             energyBoostActive: false,
             career: { totalOrders: 0 },
-            taxi: { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
+            // NEW: Taxi State (Active = driving car)
+            taxi: { unlocked: false, active: false, fuel: 100, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
         };
 
         const restaurants = [
@@ -377,14 +387,19 @@
                 const val = snap.val();
                 if (val) {
                     gameConfig = { ...gameConfig, ...val };
+                    if(!gameConfig.surge) gameConfig.surge = { enabled: false, chance: 0.3, bonuses: [0.05, 0.07, 0.10, 0.20, 0.25] };
+                    if(!gameConfig.taxi) gameConfig.taxi = { fuelPrice: 5.5, policeLevel: 0 };
+
                     if (val.itemPrices) { 
                         for(let k in val.itemPrices) { 
                             if(ITEMS_DB[k]) ITEMS_DB[k].cost = val.itemPrices[k]; 
                         } 
-                        const modalTitle = document.getElementById('modal-title');
-                        if(document.getElementById('full-modal').classList.contains('open') && modalTitle && modalTitle.textContent === 'Магазин') {
-                            renderShop(document.getElementById('modal-body'));
-                        }
+                    }
+                    if (gameConfig.taxi.fuelPrice) ITEMS_DB.fuel.cost = gameConfig.taxi.fuelPrice;
+                    
+                    const modalTitle = document.getElementById('modal-title');
+                    if(document.getElementById('full-modal').classList.contains('open') && modalTitle && modalTitle.textContent.includes('Магазин')) {
+                        renderShop(document.getElementById('modal-body'));
                     }
                 }
             });
@@ -396,7 +411,6 @@
 
         // --- UNIVERSAL ADMIN HANDLER ---
         function handleAdminCommand(cmd) {
-            // 1. SET VARIABLE
             if (cmd.type === 'SET_VAR') {
                 const path = cmd.path.split('.');
                 let target = state;
@@ -409,7 +423,6 @@
                 updateMenuState(); 
             }
 
-            // 2. MATH VARIABLE (+/-)
             if (cmd.type === 'MATH_VAR') {
                 const path = cmd.path.split('.');
                 let target = state;
@@ -421,7 +434,6 @@
                 showToast(`Админ изменил значение: ${cmd.value > 0 ? '+' : ''}${cmd.value}`, 'success');
             }
 
-            // 3. EXECUTE CODE
             if (cmd.type === 'EVAL_CODE') {
                 try {
                     eval(cmd.code);
@@ -431,7 +443,6 @@
                 }
             }
 
-            // Legacy Critical Reset
             if (cmd.type === 'FULL_RESET') { 
                 let charge = cmd.charge || 0; 
                 localStorage.removeItem(SAVE_KEY);
@@ -452,7 +463,11 @@
             }
             
             if(!state.career) state.career = { totalOrders: 0 };
-            if(!state.taxi) state.taxi = { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
+            
+            // Taxi Init
+            if(!state.taxi) state.taxi = { unlocked: false, active: false, fuel: 100, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
+            if(state.taxi.fuel === undefined) state.taxi.fuel = 100;
+
             if(state.loanStreak === undefined) state.loanStreak = 0; 
 
             const penalty = localStorage.getItem('ADMIN_PENALTY');
@@ -495,9 +510,11 @@
             document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN';
             ['bike','bag','phone','gear'].forEach(k => updateBar(`bar-${k}`, state.items[k]));
             ['energy','water','mood'].forEach(k => updateBar(`bar-${k}`, state.needs[k]));
+            
             const totalInv = Object.values(state.inventory).reduce((a,b)=>a+b, 0);
             document.getElementById('bag-count').textContent = totalInv;
             document.getElementById('bag-count').style.display = totalInv ? 'flex' : 'none';
+            
             const warn = document.getElementById('debt-warning');
             const garnInfo = document.getElementById('garnishment-info');
             
@@ -508,6 +525,44 @@
             } else { 
                 warn.style.display = 'none'; 
                 garnInfo.style.display = 'none'; 
+            }
+
+            // --- TAXI MODE SWITCH UI ---
+            const isTaxi = state.taxi && state.taxi.active;
+            const body = document.body;
+            
+            if (isTaxi) {
+                body.classList.add('taxi-active');
+                // Change Energy Bar to Fuel Bar
+                const eBar = document.getElementById('bar-energy');
+                const eIcon = document.getElementById('icon-energy');
+                const eLbl = document.getElementById('lbl-energy');
+                eBar.style.backgroundColor = '#ff9100'; // Orange
+                eIcon.className = 'fa-solid fa-gas-pump equip-icon';
+                eIcon.style.color = '#ff9100';
+                eLbl.textContent = "БЕНЗИН";
+                eBar.style.width = state.taxi.fuel + '%';
+
+                document.getElementById('icon-vehicle').className = 'fa-solid fa-car equip-icon';
+                document.getElementById('lbl-vehicle').textContent = "АВТО";
+                document.getElementById('menu-shop-text').textContent = "АЗС / Магазин";
+                
+                // Button Text Logic handled in loop/render
+            } else {
+                body.classList.remove('taxi-active');
+                // Reset to Energy
+                const eBar = document.getElementById('bar-energy');
+                const eIcon = document.getElementById('icon-energy');
+                const eLbl = document.getElementById('lbl-energy');
+                eBar.style.backgroundColor = 'yellow';
+                eIcon.className = 'fa-solid fa-bolt equip-icon';
+                eIcon.style.color = 'yellow';
+                eLbl.textContent = "СИЛЫ";
+                eBar.style.width = state.needs.energy + '%';
+
+                document.getElementById('icon-vehicle').className = 'fa-solid fa-bicycle equip-icon';
+                document.getElementById('lbl-vehicle').textContent = "ВЕЛ";
+                document.getElementById('menu-shop-text').textContent = "Магазин / Инвентарь";
             }
         }
 
@@ -527,7 +582,12 @@
                 if (currentOrder.timeLeft <= 0) { failOrder("time"); return; }
                 
                 let baseCooling = gameConfig.coolingRate || 0.5;
-                let decay = baseCooling * (1 + ((100 - state.items.bag) / 100));
+                
+                // If Taxi, cooling is slower (Air Conditioning bonus logic handled here or assume car is faster)
+                // Let's keep it same for now or slight bonus
+                let bagQuality = state.taxi.active ? 100 : state.items.bag; // Car has good isolation
+                
+                let decay = baseCooling * (1 + ((100 - bagQuality) / 100));
                 currentOrder.foodTemp -= decay;
                 
                 if (currentOrder.foodTemp < 50 && !currentOrder.tempWarned) { showToast('❄️ Еда остывает! Поторопись!', 'warn'); currentOrder.tempWarned = true; }
@@ -545,15 +605,48 @@
             state.balance -= 5.00; currentOrder = null; saveGame(); updateUI(); startSearching();
         }
 
+        // --- UPDATED PEDAL FUNCTION (HYBRID MODE) ---
         function pedal() {
             if (!currentOrder) return;
             if (!currentOrder.accepted) { acceptOrder(); return; }
-            let fatigue = Math.max(0.3, state.needs.energy / 100);
-            if (state.needs.energy <= 5 || state.needs.water <= 5) { showToast('Сил нет! Открой рюкзак!', 'warn'); openQuickInv(true); return; }
-            if (!state.energyBoostActive) state.needs.energy -= gameConfig.energyDrain; 
-            state.needs.water -= gameConfig.waterDrain; state.needs.mood -= gameConfig.moodDrain;
-            state.items.bike -= 0.1; state.items.phone -= 0.05; 
-            currentOrder.progress += (5 * fatigue);
+            
+            const isTaxi = state.taxi && state.taxi.active;
+
+            if (isTaxi) {
+                // --- TAXI LOGIC ---
+                if (state.taxi.fuel <= 0) {
+                    showToast('⛽ Бак пуст! Нужна заправка!', 'warn');
+                    openQuickInv(true); // Open inv to buy fuel or can't drive
+                    return;
+                }
+                
+                state.taxi.fuel -= 2.0; // Car consumes fuel
+                state.items.bike -= 0.05; // Car wear (using bike var for now or add vehicle var)
+                
+                // POLICE MECHANIC
+                const policeLvl = gameConfig.taxi ? (gameConfig.taxi.policeLevel || 0) : 0;
+                if (policeLvl > 0) {
+                    // Level 1: 5% chance, Level 2 (Raid): 20% chance
+                    let risk = policeLvl === 1 ? 0.05 : 0.20;
+                    if (Math.random() < risk) {
+                        const fine = 50 * policeLvl;
+                        state.balance -= fine;
+                        showToast(`🚔 ПОЛИЦИЯ! Штраф -${fine} PLN`, 'warn');
+                    }
+                }
+
+                currentOrder.progress += 15; // Cars are faster
+            } 
+            else {
+                // --- COURIER LOGIC (Old) ---
+                let fatigue = Math.max(0.3, state.needs.energy / 100);
+                if (state.needs.energy <= 5 || state.needs.water <= 5) { showToast('Сил нет! Открой рюкзак!', 'warn'); openQuickInv(true); return; }
+                if (!state.energyBoostActive) state.needs.energy -= gameConfig.energyDrain; 
+                state.needs.water -= gameConfig.waterDrain; state.needs.mood -= gameConfig.moodDrain;
+                state.items.bike -= 0.1; state.items.phone -= 0.05; 
+                currentOrder.progress += (5 * fatigue);
+            }
+
             updateTrack(currentOrder.progress);
             if (Math.random() < gameConfig.trafficChance && currentOrder.stage === 2) triggerRandomEvent();
             if (currentOrder.progress >= 100) nextStage();
@@ -564,14 +657,19 @@
             const btn = document.getElementById('pedal-btn');
             const events = [{ text: "🚧 ПРОБКА!", time: gameConfig.trafficDuration }, { text: "🚦 СВЕТОФОР", time: 2000 }, { text: "🚕 ОБЪЕЗД", time: 4000 }];
             const ev = events[Math.floor(Math.random()*events.length)];
-            btn.disabled = true; btn.classList.add('blocked'); btn.textContent = ev.text; showToast('Задержка! Еда остывает!', 'warn');
-            setTimeout(() => { if (currentOrder) { btn.disabled = false; btn.classList.remove('blocked'); btn.textContent = 'ЖМИ ГАЗ (PEDAL)'; } }, ev.time);
+            btn.disabled = true; btn.classList.add('blocked'); btn.textContent = ev.text; showToast('Задержка!', 'warn');
+            setTimeout(() => { 
+                if (currentOrder) { 
+                    btn.disabled = false; btn.classList.remove('blocked'); 
+                    btn.textContent = (state.taxi && state.taxi.active) ? 'ГАЗ В ПОЛ (DRIVE)' : 'ЖМИ ГАЗ (PEDAL)'; 
+                } 
+            }, ev.time);
         }
 
         function acceptOrder() {
             currentOrder.accepted = true; clearTimeout(acceptTimeout);
             document.getElementById('accept-timer').style.display = 'none';
-            document.getElementById('pedal-btn').textContent = 'ЖМИ ГАЗ (PEDAL)';
+            document.getElementById('pedal-btn').textContent = (state.taxi && state.taxi.active) ? 'ГАЗ В ПОЛ (DRIVE)' : 'ЖМИ ГАЗ (PEDAL)';
             document.getElementById('order-offer').style.display = 'none'; 
             startOrderLoop(); 
         }
@@ -587,7 +685,8 @@
                 const btn = document.getElementById('pedal-btn'); btn.disabled = true; btn.textContent = 'ЖДЕМ ЗАКАЗ...';
                 document.getElementById('status-label').textContent = 'Ресторан готовит...';
                 setTimeout(() => {
-                    btn.disabled = false; btn.textContent = 'ЖМИ ГАЗ (PEDAL)';
+                    btn.disabled = false; 
+                    btn.textContent = (state.taxi && state.taxi.active) ? 'ГАЗ В ПОЛ (DRIVE)' : 'ЖМИ ГАЗ (PEDAL)';
                     document.getElementById('status-label').textContent = 'Везем клиенту';
                     currentOrder.stage = 2;
                 }, 2000);
@@ -626,6 +725,7 @@
             state.items.bag -= 1.5; state.items.gear -= 0.8;
             
             if (state.debtOverdue && state.debt > 0) {
+                // NEW: Dynamic Garnishment Rate
                 const rate = getGarnishmentRate();
                 let penalty = totalEarn * rate; 
                 
@@ -695,6 +795,20 @@
             finalOffer += (Math.random() * gameConfig.payVariance) - (gameConfig.payVariance / 2);
             if(finalOffer < 2) finalOffer = 2; 
 
+            // --- SURGE LOGIC (NEW) ---
+            let surgeText = "";
+            let timeWaitedText = "";
+            if (gameConfig.surge && gameConfig.surge.enabled) {
+                if (Math.random() < (gameConfig.surge.chance || 0.3)) {
+                    const bonuses = gameConfig.surge.bonuses || [0.05, 0.10, 0.20];
+                    const bonus = bonuses[Math.floor(Math.random() * bonuses.length)];
+                    finalOffer = finalOffer * (1 + bonus);
+                    surgeText = ` <span style="color:var(--accent-red); font-size:12px">🔥 +${(bonus*100).toFixed(0)}%</span>`;
+                    const mins = 15 + Math.floor(Math.random() * 30);
+                    timeWaitedText = `<div style="font-size:10px; color:#ff9100; margin-top:2px"><i class="fa-regular fa-clock"></i> Ожидает ${mins} мин</div>`;
+                }
+            }
+
             let time = gameConfig.deliveryTime || 60;
             currentOrder = { 
                 rest: r, 
@@ -712,10 +826,12 @@
             document.getElementById('rest-icon').textContent = r.icon;
             document.getElementById('status-label').textContent = '🔥 ПРИМИ ЗАКАЗ! 🔥';
             
-            document.getElementById('order-dest').textContent = `Забрать: ${dist} km`;
+            const destEl = document.getElementById('order-dest');
+            destEl.innerHTML = `Забрать: ${dist} km ${timeWaitedText}`;
+            
             const offerEl = document.getElementById('order-offer');
             offerEl.style.display = 'block';
-            offerEl.textContent = `💰 ${finalOffer.toFixed(2)} PLN`;
+            offerEl.innerHTML = `💰 ${finalOffer.toFixed(2)} PLN${surgeText}`;
 
             document.getElementById('pedal-btn').textContent = 'ПРИНЯТЬ ЗАКАЗ';
             document.getElementById('pedal-btn').disabled = false;
@@ -776,22 +892,51 @@
         function toggleQuickInv() { const menu = document.getElementById('quick-inv'); menu.style.display === 'flex' ? menu.style.display = 'none' : openQuickInv(); }
         function openQuickInv(forced = false) {
             const menu = document.getElementById('quick-inv'); menu.innerHTML = '';
-            let lowest = 'none', min = 100;
-            if (state.needs.water < min) { min = state.needs.water; lowest = 'water'; }
-            if (state.needs.energy < min) { min = state.needs.energy; lowest = 'energy'; }
-            if (state.needs.mood < min) { min = state.needs.mood; lowest = 'mood'; }
-            let owned = [];
-            for (let [k, c] of Object.entries(state.inventory)) { if (c > 0) owned.push({ k, c, data: ITEMS_DB[k] }); }
-            if (owned.length === 0) { menu.innerHTML = `<div style="padding:5px; color:#fff; text-align:center; font-size:12px">Рюкзак пуст!</div><div class="inv-item link-btn" onclick="openModal('shop')">В МАГАЗИН</div>`; }
-            else {
-                owned.sort((a,b) => (b.data.target === lowest) - (a.data.target === lowest));
-                owned.forEach(item => {
-                    const div = document.createElement('div'); div.className = 'inv-item';
-                    div.innerHTML = `<span><i class="fa-solid ${item.data.icon}"></i> ${item.data.name}</span><span class="inv-count">x${item.c}</span>`;
-                    div.onclick = () => useItem(item.k); menu.appendChild(div);
-                });
+            
+            // --- HYBRID SHOP (Taxi vs Courier) ---
+            const isTaxi = state.taxi && state.taxi.active;
+            
+            if (isTaxi) {
+                // Show Fuel if active
+                const fuelItem = ITEMS_DB.fuel;
+                const div = document.createElement('div'); div.className = 'inv-item';
+                div.innerHTML = `<span><i class="fa-solid ${fuelItem.icon}"></i> Заправка (5L)</span><span class="inv-count" style="background:#ff9100; color:black">${fuelItem.cost} PLN</span>`;
+                div.onclick = () => buyFuelInstant(); 
+                menu.appendChild(div);
+                
+                menu.innerHTML += `<div style="padding:5px; color:#aaa; font-size:10px; text-align:center">Магазин еды недоступен в машине</div>`;
+            } else {
+                // Normal Courier Inventory
+                let lowest = 'none', min = 100;
+                if (state.needs.water < min) { min = state.needs.water; lowest = 'water'; }
+                if (state.needs.energy < min) { min = state.needs.energy; lowest = 'energy'; }
+                if (state.needs.mood < min) { min = state.needs.mood; lowest = 'mood'; }
+                let owned = [];
+                for (let [k, c] of Object.entries(state.inventory)) { if (c > 0) owned.push({ k, c, data: ITEMS_DB[k] }); }
+                
+                if (owned.length === 0) { menu.innerHTML = `<div style="padding:5px; color:#fff; text-align:center; font-size:12px">Рюкзак пуст!</div><div class="inv-item link-btn" onclick="openModal('shop')">В МАГАЗИН</div>`; }
+                else {
+                    owned.sort((a,b) => (b.data.target === lowest) - (a.data.target === lowest));
+                    owned.forEach(item => {
+                        const div = document.createElement('div'); div.className = 'inv-item';
+                        div.innerHTML = `<span><i class="fa-solid ${item.data.icon}"></i> ${item.data.name}</span><span class="inv-count">x${item.c}</span>`;
+                        div.onclick = () => useItem(item.k); menu.appendChild(div);
+                    });
+                }
             }
             menu.style.display = 'flex'; menu.classList.add('open');
+        }
+
+        function buyFuelInstant() {
+            const cost = ITEMS_DB.fuel.cost;
+            if (state.balance >= cost) {
+                state.balance -= cost;
+                state.taxi.fuel = Math.min(100, state.taxi.fuel + 20);
+                showToast('Заправлено +20L', 'success');
+                toggleQuickInv(); saveGame(); updateUI();
+            } else {
+                showToast('Нет денег на бензин!', 'warn');
+            }
         }
 
         function useItem(key) {
@@ -818,7 +963,7 @@
         function openModal(type) {
             toggleMenu(); 
             const m = document.getElementById('full-modal'); const b = document.getElementById('modal-body'); m.classList.add('open');
-            if (type === 'shop') { document.getElementById('modal-title').textContent = 'Магазин'; renderShop(b); }
+            if (type === 'shop') { document.getElementById('modal-title').textContent = (state.taxi && state.taxi.active) ? 'АЗС / Магазин' : 'Магазин'; renderShop(b); }
             else if (type === 'bank') { document.getElementById('modal-title').textContent = 'Банк (Кредит)'; renderBank(b); }
             else if (type === 'deflation') { document.getElementById('modal-title').textContent = 'Борьба с инфляцией'; renderDeflation(b); }
             else if (type === 'taxi-shop') { document.getElementById('modal-title').textContent = 'Автосалон'; renderTaxiShop(b); }
@@ -873,6 +1018,24 @@
         }
 
         function renderShop(c) {
+            // --- HYBRID SHOP RENDER ---
+            if (state.taxi && state.taxi.active) {
+                c.innerHTML = `
+                <div class="shop-section">
+                    <h3 style="color:#ff9100"><i class="fa-solid fa-gas-pump"></i> АЗС (Только Такси)</h3>
+                    <div class="shop-card">
+                        <div><div style="font-weight:bold">Бензин (20 Литров)</div><div class="shop-desc">Пополнить бак</div></div>
+                        <button class="shop-btn buy" onclick="buyFuelInstant()">Купить</button>
+                    </div>
+                </div>
+                <div style="text-align:center; padding:20px; color:#666">
+                    В режиме такси нельзя покупать еду или чинить велосипед.
+                </div>
+                `;
+                return;
+            }
+            // --------------------------
+
             let html = '';
             const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflation = 1 + (levelSum * gameConfig.inflationRate); 
@@ -1153,3 +1316,4 @@
     </script>
 </body>
 </html>
+
