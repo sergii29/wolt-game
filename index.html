@@ -402,7 +402,6 @@
                         for(let k in val.itemPrices) { 
                             if(ITEMS_DB[k]) ITEMS_DB[k].cost = val.itemPrices[k]; 
                         } 
-                        // FORCE SHOP REFRESH
                         const modalTitle = document.getElementById('modal-title');
                         if(document.getElementById('full-modal').classList.contains('open') && modalTitle && modalTitle.textContent === 'Магазин') {
                             renderShop(document.getElementById('modal-body'));
@@ -444,14 +443,13 @@
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); syncToCloud(); }
 
         function checkDebt() {
-            // FIX: Don't re-render entire bank UI, just update text to keep keyboard open
             if (state.debt > 0 && !state.debtOverdue) {
                 if (Date.now() > state.debtTimer) {
                     state.debtOverdue = true; showToast('СРОК КРЕДИТА ИСТЕК! ШТРАФ 20%', 'warn'); updateUI();
                     if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) renderBank(document.getElementById('modal-body'));
                 } else {
                     if(document.getElementById('full-modal').classList.contains('open') && document.getElementById('modal-title').textContent.includes('Банк')) {
-                       updateBankTimer(); // ONLY UPDATE TIMER TEXT
+                       updateBankTimer();
                     }
                 }
             }
@@ -484,7 +482,6 @@
                 document.getElementById('delivery-timer').textContent = `⏱ ${currentOrder.timeLeft}с`;
                 if (currentOrder.timeLeft <= 0) { failOrder("time"); return; }
                 
-                // USE CONFIG FOR COOLING RATE
                 let baseCooling = gameConfig.coolingRate || 0.5;
                 let decay = baseCooling * (1 + ((100 - state.items.bag) / 100));
                 currentOrder.foodTemp -= decay;
@@ -559,17 +556,15 @@
             let pay = (gameConfig.basePay + (Math.random() * gameConfig.payVariance)) * inflationMult;
             let tip = 0;
             
-            // TIP LOGIC FROM CONFIG
             let minTemp = gameConfig.tipMinTemp || 60;
             let minMood = gameConfig.tipMinMood || 80;
             let chance = gameConfig.tipChance || 0.5;
-            let bonusChance = gameConfig.tipBonusChance || 0.3;
             
             if (currentOrder.foodTemp > minTemp) { 
-                if (Math.random() > (1.0 - chance)) tip += (2 + Math.random() * 3) * inflationMult; 
+                if (Math.random() <= chance) tip += (2 + Math.random() * 3) * inflationMult; 
             }
             if (state.needs.mood > minMood && currentOrder.foodTemp > 40) { 
-                if (Math.random() > (1.0 - bonusChance)) tip += 3 * inflationMult; 
+                if (Math.random() <= 0.3) tip += 3 * inflationMult; 
             }
             
             if (tip > 0) { pay += tip; let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) ? `🔥 Быстро и весело! +${tip.toFixed(2)} чай!` : `👍 Клиент доволен! +${tip.toFixed(2)} чай`; showToast(msg, 'success'); } 
@@ -586,6 +581,10 @@
         }
 
         function startSearching() {
+            // FIX: STRICT OFFLINE CHECK
+            if (state.scheduledOffline) { goOffline(); return; }
+            if (!state.isOnline) return;
+
             stopOrderLoop(); state.isSearching = true;
             document.getElementById('active-order-view').style.display = 'flex';
             document.getElementById('rest-name').textContent = 'Поиск...';
@@ -601,11 +600,15 @@
             document.getElementById('pedal-btn').disabled = true;
             document.getElementById('pedal-btn').textContent = 'ПОИСК...';
             updateTrack(0);
-            setTimeout(() => { if (state.isOnline && state.isSearching) createOrder(); }, 2000);
+            setTimeout(() => { 
+                // Double check before creating order
+                if (state.isOnline && state.isSearching && !state.scheduledOffline) createOrder(); 
+            }, 2000);
             syncToCloud(); 
         }
 
         function createOrder() {
+            if (!state.isOnline) return; // EXTRA SAFETY
             state.isSearching = false;
             const r = restaurants[Math.floor(Math.random() * restaurants.length)];
             let time = gameConfig.deliveryTime || 60;
@@ -642,6 +645,7 @@
                 if (state.isSearching) { goOffline(); }
                 else {
                     state.scheduledOffline = true;
+                    saveGame(); // PERSIST OFFLINE INTENT
                     const box = document.getElementById('online-slider-box');
                     const txt = document.getElementById('online-slider-text');
                     box.classList.add('scheduled'); txt.textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА";
@@ -758,7 +762,6 @@
             if (reduced > 0) { state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success'); saveGame(); updateUI(); renderDeflation(document.getElementById('modal-body')); } else { showToast('Инфляция уже на минимуме!', 'warn'); }
         }
 
-        // FIXED BANK RENDERING (KEYBOARD ISSUE)
         function renderBank(c) {
             let timeLeftStr = "00:00";
             if(state.debt > 0 && !state.debtOverdue) {
@@ -767,9 +770,8 @@
                 timeLeftStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
             }
 
-            // Check if Bank UI is already rendered to prevent input overwrite
             if(document.getElementById('bank-ui-root')) {
-                updateBankTimer(); // Just update text, calc inside
+                updateBankTimer(); 
                 return;
             }
 
@@ -796,7 +798,6 @@
             const timerDisplay = document.getElementById('bank-timer-display');
             const debtDisplay = document.getElementById('bank-debt-display');
             
-            // Calculate time inside update function to avoid 00:00 bug
             let timeStr = "00:00";
             if(state.debt > 0 && !state.debtOverdue) {
                 let diff = Math.max(0, state.debtTimer - Date.now());
@@ -822,7 +823,7 @@
             if (!amt || amt <= 0) return;
             state.balance += amt; state.debt += amt; state.debtTimer = Date.now() + (5 * 60 * 1000); state.debtOverdue = false;
             showToast(`Взят кредит: ${amt} PLN`, 'success'); input.value = ''; 
-            document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); // Full Re-render on action
+            document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
             saveGame(); updateUI();
         }
         function repayLoan() {
@@ -831,7 +832,7 @@
             if (amt > state.balance) amt = state.balance; if (amt > state.debt) amt = state.debt;
             state.balance -= amt; state.debt -= amt; if (state.debt <= 0.01) { state.debt = 0; state.debtOverdue = false; }
             showToast(`Погашено: ${amt} PLN`, 'success'); input.value = ''; 
-            document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); // Full Re-render on action
+            document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
             saveGame(); updateUI();
         }
         function renderHistory(c) { c.innerHTML = state.history.slice().reverse().map(h=>`<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between"><b>${h.rest}</b><span>+${h.earn}</span></div>`).join(''); }
@@ -861,4 +862,3 @@
     </script>
 </body>
 </html>
-
