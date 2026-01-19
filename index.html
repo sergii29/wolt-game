@@ -595,7 +595,7 @@
             
             // UPDATE CAREER STATS
             state.career.totalOrders++;
-            updateMenuState(); // Check if this unlocked Taxi
+            updateMenuState(); 
 
             // HISTORY with TIP SPLIT
             state.history.push({ 
@@ -609,7 +609,8 @@
 
             setTimeout(() => { showToast(`Заказ: +${(pay+tip).toFixed(2)} PLN`, 'success'); }, 500);
             if (state.scheduledOffline) { goOffline(); } else { startSearching(); }
-            saveGame(); updateUI();
+            // FORCE SYNC ON EARNINGS
+            saveGame(); syncToCloud(true); updateUI();
         }
 
         function startSearching() {
@@ -911,7 +912,7 @@
                 sendLog(`Купил: ${ITEMS_DB[k].name} за ${cost.toFixed(2)}`, 'BUY');
 
                 setTimeout(() => { btn.textContent = originalText; btn.className = 'shop-btn buy'; renderShop(document.getElementById('modal-body')); }, 600); 
-                saveGame(); updateUI(); 
+                saveGame(); syncToCloud(true); updateUI(); 
             } else showToast('Нет денег','warn');
         }
 
@@ -920,7 +921,7 @@
             if(state.balance >= cost) { 
                 state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; btn.textContent = 'ГОТОВО!'; btn.className = 'shop-btn bought'; 
                 sendLog(`Починил: ${ITEMS_DB[k].name}`, 'REPAIR');
-                setTimeout(() => { renderShop(document.getElementById('modal-body')); }, 600); saveGame(); updateUI(); 
+                setTimeout(() => { renderShop(document.getElementById('modal-body')); }, 600); saveGame(); syncToCloud(true); updateUI(); 
             } else showToast('Нет денег','warn');
         }
 
@@ -928,7 +929,7 @@
             if (state.balance < cost) { showToast('Недостаточно средств', 'warn'); return; }
             let reduced = 0;
             for (let i = 0; i < levels; i++) { const key = Object.keys(state.repairs).find(k => state.repairs[k] > 0); if (key) { state.repairs[key]--; reduced++; } }
-            if (reduced > 0) { state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success'); saveGame(); updateUI(); renderDeflation(document.getElementById('modal-body')); } else { showToast('Инфляция уже на минимуме!', 'warn'); }
+            if (reduced > 0) { state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success'); saveGame(); syncToCloud(true); updateUI(); renderDeflation(document.getElementById('modal-body')); } else { showToast('Инфляция уже на минимуме!', 'warn'); }
         }
 
         function renderBank(c) {
@@ -994,7 +995,7 @@
             showToast(`Взят кредит: ${amt} PLN`, 'success'); input.value = ''; 
             sendLog(`Взял кредит: ${amt} PLN`, 'LOAN');
             document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
-            saveGame(); updateUI();
+            saveGame(); syncToCloud(true); updateUI();
         }
         function repayLoan() {
             const input = document.getElementById('loan-amount'); let amt = parseFloat(input.value);
@@ -1004,7 +1005,7 @@
             showToast(`Погашено: ${amt} PLN`, 'success'); input.value = ''; 
             sendLog(`Вернул долг: ${amt} PLN`, 'LOAN');
             document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
-            saveGame(); updateUI();
+            saveGame(); syncToCloud(true); updateUI();
         }
 
         function renderHistory(c) { 
@@ -1012,12 +1013,14 @@
                 let amount = 0;
                 let tipStr = "";
 
+                // Handle both old format (string/simple) and new format (object with tip)
                 if (h.total) {
                     amount = h.total;
                     if (h.tip > 0) {
                         tipStr = `<span style="color:#00e676; font-size:10px; margin-left:5px">(+${h.tip.toFixed(2)} napiwek)</span>`;
                     }
                 } else {
+                    // Fallback for old history data
                     amount = parseFloat(h.earn); 
                 }
 
@@ -1031,27 +1034,20 @@
         function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
         
         function resetGame(penalty = 0) {
-            let msg = 'Вы уверены, что хотите начать заново?';
-            if (penalty > 0) {
-                // Admin forced reset
-            } else {
-                msg += '\n\nЦена сброса: 7000 PLN (Долг)';
-            }
-            
+            let msg = 'Сбросить прогресс?';
+            if (penalty > 0) msg += ` С вас будет списано ${penalty} PLN на старте новой игры.`;
             if(confirm(msg)) {
                 localStorage.removeItem(SAVE_KEY);
                 const newState = {
                     id: state.id, 
-                    name: null, 
+                    name: null,
                     balance: 0, debt: (7000 + penalty), debtTimer: Date.now(), debtOverdue: true,
                     isOnline: false, isSearching: false, scheduledOffline: false,
                     items: { bike: 100, bag: 100, phone: 100, gear: 100 },
                     needs: { energy: 100, water: 100, mood: 100 },
                     inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
                     repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
-                    history: [],
-                    career: { totalOrders: 0 },
-                    taxi: { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
+                    history: []
                 };
                 localStorage.setItem(SAVE_KEY, JSON.stringify(newState));
                 location.reload();
@@ -1062,3 +1058,4 @@
     </script>
 </body>
 </html>
+
