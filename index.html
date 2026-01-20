@@ -10,9 +10,23 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
-        :root { --bg-dark: #1a1a1a; --text-primary: #ffffff; --text-secondary: #a0a0a0; --accent-blue: #00ccff; --accent-green: #00e676; --accent-orange: #ff9100; --accent-red: #ff3d00; --brand-blue: #0088cc; --taxi-yellow: #ffcc00; --taxi-black: #222; }
+        :root {
+            --bg-dark: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent-blue: #00ccff;
+            --accent-green: #00e676;
+            --accent-orange: #ff9100;
+            --accent-red: #ff3d00;
+            --accent-purple: #d500f9;
+            --brand-blue: #0088cc; 
+            --taxi-yellow: #ffcc00;
+            --taxi-black: #222;
+        }
+
         body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-dark); color: var(--text-primary); overflow: hidden; user-select: none; }
         #map { height: 100%; width: 100%; z-index: 1; filter: brightness(0.8) contrast(1.2); }
+
         .top-bar { position: absolute; top: 0; left: 0; right: 0; padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 1000; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); pointer-events: none; }
         .menu-btn, .stats-btn { background: white; color: black; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); pointer-events: auto; cursor: pointer; border: none; }
         .balance-display { background: rgba(0, 0, 0, 0.8); padding: 8px 16px; border-radius: 20px; text-align: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
@@ -20,36 +34,46 @@
         .balance-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; }
         .debt-warning { color: var(--accent-red); font-size: 10px; font-weight: bold; display: none; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
         .equip-bar { position: absolute; top: 70px; left: 15px; right: 15px; display: flex; gap: 4px; z-index: 999; pointer-events: none; }
         .equip-item { flex: 1; background: rgba(0,0,0,0.8); border-radius: 6px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(4px); }
         .equip-icon { font-size: 10px; margin-bottom: 2px; color: #ccc; }
         .progress-mini { width: 80%; height: 3px; background: #444; border-radius: 2px; overflow: hidden; margin-bottom: 2px; }
         .progress-mini-fill { height: 100%; background: var(--accent-green); transition: width 0.3s; }
         .equip-label { font-size: 7px; text-transform: uppercase; color: #888; font-weight: 700; letter-spacing: 0.5px; }
+
         .game-toast { position: absolute; top: 140px; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(0, 0, 0, 0.9); color: white; padding: 10px 20px; border-radius: 25px; font-weight: bold; font-size: 14px; z-index: 1001; opacity: 0; transition: all 0.3s; pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 1px solid #333; }
         .game-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         .toast-warn { border-color: var(--accent-orange); color: var(--accent-orange); }
         .toast-success { border-color: var(--accent-green); color: var(--accent-green); }
+
         .bottom-sheet { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; z-index: 1002; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333; }
+
         .slider-container { position: relative; width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.3s; }
         .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; }
         .slider-knob { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px; background: var(--brand-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; }
         .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 136, 204, 0.2); z-index: 0; }
+        
         .slider-container.taxi-mode { background: #fff9c4; border: 1px solid #fbc02d; }
         .slider-container.taxi-mode .slider-knob { background: var(--taxi-yellow); color: black; }
         .slider-container.taxi-mode .slider-fill { background: rgba(255, 204, 0, 0.3); }
         .slider-container.taxi-mode .slider-text { color: #f57f17; }
+        
         .slider-container.scheduled { background: #ffebee; border: 1px solid #ffcdd2; }
         .slider-container.scheduled .slider-knob { background: var(--accent-red); }
         .slider-container.scheduled .slider-text { color: var(--accent-red); }
+
         .controls-row { display: flex; gap: 10px; margin-top: 15px; }
         .pedal-btn { flex: 1; background: var(--brand-blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 0 #006699; transition: all 0.1s; }
         .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
         .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
         .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
+        
         .pedal-btn.taxi-pedal { background: var(--taxi-black); color: var(--taxi-yellow); box-shadow: 0 4px 0 #444; }
+
         .bag-btn { width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #333; cursor: pointer; position: relative; }
         .bag-badge { position: absolute; top: -5px; right: -5px; background: var(--accent-red); color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
         .quick-inv { position: absolute; bottom: 90px; left: 20px; width: 220px; background: #252525; color: white; padding: 10px; border-radius: 16px; z-index: 1005; display: none; flex-direction: column; gap: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.6); border: 1px solid #444; }
         .quick-inv.open { display: flex; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .inv-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: background 0.2s; }
@@ -57,6 +81,7 @@
         .inv-item.link-btn { background: var(--brand-blue); justify-content: center; font-weight: bold; }
         .inv-count { background: var(--brand-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
         @keyframes popUp { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
         #side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         #side-menu-overlay.open { opacity: 1; pointer-events: auto; }
         #side-menu { position: absolute; top: 0; left: -85%; width: 85%; max-width: 320px; height: 100%; background: #1e1e1e; transition: left 0.3s; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; }
@@ -67,12 +92,15 @@
         .menu-item.locked { opacity: 0.5; cursor: not-allowed; color: #777; }
         .menu-item.taxi-item { border-bottom: 1px solid #444; }
         .menu-item.taxi-item i { width: 25px; text-align: center; }
+        
         .taxi-toggle-btn { background: #333; color: #777; width: 100%; padding: 15px; border-radius: 10px; border: 2px solid #444; font-weight: bold; margin-top: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .taxi-toggle-btn.active { background: var(--taxi-yellow); color: black; border-color: var(--taxi-yellow); box-shadow: 0 0 15px rgba(255, 204, 0, 0.4); }
+
         .full-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f5f5f5; color: black; z-index: 3000; transform: translateY(100%); transition: transform 0.3s; display: flex; flex-direction: column; }
         .full-modal.open { transform: translateY(0); }
         .modal-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; font-weight: bold; }
         .modal-content { flex: 1; overflow-y: auto; padding: 15px; }
+
         .shop-section { margin-bottom: 25px; }
         .shop-section h3 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
         .shop-card { background: white; padding: 15px; border-radius: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
@@ -80,6 +108,7 @@
         .shop-btn.buy { background: var(--brand-blue); color: white; }
         .shop-btn.bought { background: var(--accent-green); border-color: var(--accent-green); color: white; transform: scale(1.05); }
         .shop-btn:disabled { background: #eee; color: #aaa; border-color: #eee; cursor: not-allowed; }
+
         .bank-input { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #ddd; font-size: 24px; font-weight: bold; margin-bottom: 15px; box-sizing: border-box; }
         .bank-actions { display: flex; gap: 10px; }
         .bank-btn { flex: 1; padding: 15px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; }
@@ -87,11 +116,13 @@
         .btn-repay { background: var(--accent-orange); color: #3e2723; }
         .debt-alert-box { background: #ffebee; color: #c62828; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #ef9a9a; display: none; }
         .govt-btn { background: #37474f; color: white; border-color: #37474f; }
+        
         .accept-timer-bg { width: 100%; height: 6px; background: #eee; margin-top: 8px; border-radius: 3px; overflow: hidden; display: none; }
         .accept-timer-fill { height: 100%; background: var(--accent-red); width: 100%; }
         @keyframes shrinkTimer { from { width: 100%; } to { width: 0%; } }
         .animate-timer { animation: shrinkTimer 15s linear forwards; }
         .delivery-timer { font-size: 11px; color: #666; margin-top: 2px; font-weight: bold; }
+
         /* AUTH STYLES */
         .auth-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 4000; display: none; justify-content: center; align-items: center; }
         .auth-box { background: #1e1e1e; padding: 25px; border-radius: 16px; width: 80%; max-width: 320px; border: 1px solid #333; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
@@ -102,6 +133,7 @@
         .btn-register { background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); margin-top: 10px; }
         .auth-footer { text-align: center; font-size: 10px; color: #666; margin-top: 15px; line-height: 1.4; }
         .close-auth { position: absolute; top: 10px; right: 10px; color: #666; font-size: 20px; cursor: pointer; }
+
     </style>
 </head>
 <body>
@@ -200,6 +232,7 @@
             <div id="demo-mode-alert" style="color:#ff3d00; font-size:11px; margin:5px 0; display:none; border:1px solid #ff3d00; padding:5px; border-radius:5px; background:rgba(0,0,0,0.05); font-weight:bold; text-align:center;">
                 ⚠️ ДЕМО РЕЖИМ: Прогресс не сохраняется без входа!
             </div>
+
             <p style="color:#888; font-size:13px">Спрос: Высокий • Инфляция: Активна</p>
             <div class="slider-container" id="offline-slider-box">
                 <div class="slider-fill" id="offline-slider-fill"></div>
@@ -293,16 +326,22 @@
             bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open', desc: 'Заплатка дыр' },
             phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen', desc: 'Оплата интернета' },
             gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt', desc: 'Химчистка' },
+            
+            // TAXI SPECIFIC ITEMS
             car_main: { name: 'Автосервис', type: 'repair', baseCost: 100, icon: 'fa-wrench', desc: 'Ремонт подвески и ТО.' },
             car_interior: { name: 'Химчистка салона', type: 'repair', baseCost: 40, icon: 'fa-sparkles', desc: 'Чистота для клиентов.' },
             car_tires: { name: 'Шиномонтаж', type: 'repair', baseCost: 80, icon: 'fa-circle-notch', desc: 'Смена резины.' },
+            
             water: { name: 'Вода (0.5л)', type: 'buy', cost: 2.0, icon: 'fa-bottle-water', effect: { water: 35, energy: 5 }, desc: 'Спасает от жажды.', target: 'water' },
             bar: { name: 'Сникерс', type: 'buy', cost: 4.5, icon: 'fa-cookie-bite', effect: { energy: 20, mood: 15 }, desc: 'Баланс энергии.', target: 'energy' },
             energy_drink: { name: 'Red Bull', type: 'buy', cost: 7.0, icon: 'fa-bolt', effect: { energy: 50, mood: 5, water: -5 }, desc: 'Энергетик временно останавливает расход энергии!', target: 'energy', special: 'no_drain' },
             coffee: { name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot', effect: { mood: 30, energy: 10 }, desc: 'Для Настроения!', target: 'mood' },
+            
+            // FUEL (For taxi mode)
             gas: { name: 'Бензин (10л)', type: 'buy', cost: 12.0, icon: 'fa-gas-pump', effect: { energy: 80 }, desc: 'Заправка авто.', target: 'energy' }
         };
 
+        // DEFAULT STATE (Used for resets and new players)
         const DEFAULT_STATE = {
             name: null, 
             balance: 0, debt: 0, debtTimer: 0, debtOverdue: false,
@@ -319,7 +358,7 @@
             taxi: { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
         };
 
-        let state = JSON.parse(JSON.stringify(DEFAULT_STATE)); 
+        let state = JSON.parse(JSON.stringify(DEFAULT_STATE)); // Copy default
         state.id = 'u_' + Math.random().toString(36).substr(2, 9);
 
         const restaurants = [
@@ -360,22 +399,30 @@
             
             loadGame();
 
+            // TELEGRAM VS ANDROID DETECTION
             if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                // TELEGRAM MODE
                 state.id = tg.initDataUnsafe.user.id.toString();
                 state.name = tg.initDataUnsafe.user.first_name;
                 if(tg.initDataUnsafe.user.username) {
                     state.name += ` (@${tg.initDataUnsafe.user.username})`;
                 }
                 saveGame();
-            } else if (!state.name) {
-                state.name = "Guest Courier";
-                saveGame();
+                // Auth button is hidden by updateAuthUI()
+            } else {
+                // ANDROID / WEB MODE
+                if (!state.name) {
+                    state.name = "Guest Courier";
+                }
             }
             
+            // CHECK AUTH STATE for existing users
             if(state.name !== "Guest Courier" && !state.isAuth) {
+                // Assume they are logged in if they have a name in Android mode
                 state.isAuth = true; 
             }
 
+            // DEMO ALERT
             if(state.name === "Guest Courier" && !tg.initDataUnsafe.user) {
                 document.getElementById('demo-mode-alert').style.display = 'block';
             } else {
@@ -389,10 +436,11 @@
             setInterval(checkDebt, 1000); 
             listenToCloud(); syncToCloud(true);
             updateMenuState();
-            updateAuthUI(); 
-            updateUI(); 
+            updateAuthUI(); // NEW: Update button state
+            updateUI(); // force initial UI
         }
 
+        // AUTH FUNCTIONS
         function openAuthModal() {
             toggleMenu();
             document.getElementById('auth-modal').style.display = 'flex';
@@ -423,12 +471,12 @@
 
                     db.ref('users_lookup/' + login).set(userData)
                       .then(() => {
-                          state.name = login; 
-                          state.isAuth = true; 
+                          state.name = login; // Update name to login
+                          state.isAuth = true; // Set auth flag
                           saveGame();
                           syncToCloud(true);
                           updateUI();
-                          updateAuthUI(); 
+                          updateAuthUI(); // Update button to Logout
                           closeAuthModal();
                           showToast('✅ Регистрация успешна!', 'success');
                           document.getElementById('player-name-display').textContent = state.name;
@@ -454,33 +502,42 @@
                     return;
                 }
 
+                // LOGIN SUCCESS
                 const targetId = data.playerId;
                 showToast('Вход выполняется...', 'success');
                 
+                // Fetch data for this ID
                 db.ref('players/' + targetId).once('value', playerSnap => {
                     let playerData = playerSnap.val();
                     
+                    // FIX: If player data is missing (deleted from DB but login exists), create new
                     if (!playerData) {
                          playerData = JSON.parse(JSON.stringify(DEFAULT_STATE));
                          playerData.name = login;
                     }
                     
+                    // MERGE SAFE LOGIC
                     state = { ...DEFAULT_STATE, ...playerData };
                     state.id = targetId; 
                     state.isAuth = true;
                     
+                    // SANITIZE DATA (Fix old save files)
                     if(!state.items) state.items = { bike: 100, bag: 100, phone: 100, gear: 100 };
                     if(!state.needs) state.needs = { energy: 100, water: 100, mood: 100 };
                     if(!state.taxi) state.taxi = { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
                     if(!state.inventory) state.inventory = { water: 0, bar: 0, energy_drink: 0, coffee: 0, gas: 0 };
 
                     saveGame(); 
+                    
+                    // UPDATE UI INSTANTLY WITHOUT RELOAD
                     updateUI();
                     updateMenuState();
                     updateAuthUI();
                     document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
                     document.getElementById('player-name-display').textContent = state.name;
                     document.getElementById('demo-mode-alert').style.display = 'none';
+                    
+                    // Restart listeners for new ID
                     listenToCloud(); 
                     closeAuthModal();
                     showToast(`Привет, ${state.name}!`, 'success');
@@ -499,21 +556,26 @@
             const btn = document.getElementById('auth-menu-item');
             if(!btn) return;
 
+            // Hide for Telegram
             const tg = window.Telegram.WebApp;
             if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 btn.style.display = 'none';
                 return;
             }
 
+            // Android Logic
             btn.style.display = 'flex';
             
+            // Check if logged in (by flag or by name check for legacy compatibility)
             const isLoggedIn = state.isAuth || (state.name && state.name !== "Guest Courier");
 
             if (isLoggedIn) {
+                // SHOW LOGOUT
                 btn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 🚪 Выход';
                 btn.style.color = 'var(--accent-red)';
                 btn.onclick = performLogout;
             } else {
+                // SHOW LOGIN
                 btn.innerHTML = '<i class="fa-solid fa-key"></i> 🔐 Вход / Регистрация';
                 btn.style.color = 'var(--accent-green)';
                 btn.onclick = openAuthModal;
@@ -550,6 +612,7 @@
 
         function listenToCloud() {
             if (!db) return;
+            // 1. Listen for Config changes
             db.ref('config').on('value', (snap) => {
                 const val = snap.val();
                 if (val) {
@@ -566,6 +629,8 @@
                 }
             });
 
+            // 2. Listen for Player Data changes (Admin Ban/Money)
+            // WE MUST OFF previous listeners if any to avoid duplicates
             db.ref('players/' + state.id).off(); 
             
             db.ref('players/' + state.id).on('value', (snap) => {
@@ -583,13 +648,16 @@
                     return; 
                 }
 
+                // Balance Sync from Admin
                 if (data.balance !== undefined && Math.abs(data.balance - state.balance) > 0.1) {
                     state.balance = data.balance;
                     updateUI();
+                    // Optional toast if it was a big change
                     if(Math.abs(data.balance - state.balance) > 5) showToast('💰 Баланс изменен', 'info');
                 }
             });
 
+            // 3. Listen for Commands
             db.ref('players/' + state.id + '/adminInbox').off();
             db.ref('players/' + state.id + '/adminInbox').on('child_added', (snap) => {
                 const cmd = snap.val();
@@ -638,14 +706,17 @@
                 const saved = localStorage.getItem(SAVE_KEY);
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    state = { ...DEFAULT_STATE, ...parsed }; 
+                    state = { ...DEFAULT_STATE, ...parsed }; // Merge ensuring defaults
                     
+                    // Sanitize ID
                     if (!state.id) state.id = 'u_' + Math.random().toString(36).substr(2, 9);
                     
+                    // Restore complex objects if missing
                     if(!state.taxi) state.taxi = DEFAULT_STATE.taxi;
                     if(!state.career) state.career = DEFAULT_STATE.career;
                     
                 } else {
+                    // New game
                     state.id = 'u_' + Math.random().toString(36).substr(2, 9);
                 }
                 
@@ -707,15 +778,18 @@
                 garnInfo.style.display = 'none'; 
             }
 
+            // TAXI UI UPDATES
             const isTaxi = state.taxi.active;
             const sliders = document.querySelectorAll('.slider-container');
             const pedal = document.getElementById('pedal-btn');
             
+            // 1. Update Sliders
             sliders.forEach(s => {
                 if(isTaxi) s.classList.add('taxi-mode');
                 else s.classList.remove('taxi-mode');
             });
 
+            // 2. Update Icons and Text
             const vehLabel = document.getElementById('label-vehicle');
             const vehIcon = document.getElementById('icon-vehicle');
             
@@ -732,6 +806,7 @@
             const trackIcon = document.getElementById('track-icon');
 
             if(isTaxi) {
+                // TAXI MODE UI
                 vehLabel.textContent = "АВТО";
                 vehIcon.className = "fa-solid fa-car equip-icon";
                 
@@ -752,6 +827,7 @@
                 if(!currentOrder) pedal.textContent = "ПОИСК КЛИЕНТА...";
                 pedal.classList.add('taxi-pedal');
             } else {
+                // COURIER MODE UI
                 vehLabel.textContent = "ВЕЛ";
                 vehIcon.className = "fa-solid fa-bicycle equip-icon";
                 
@@ -773,6 +849,7 @@
                 pedal.classList.remove('taxi-pedal');
             }
 
+            // 3. Update Toggle Button Text
             const btn = document.getElementById('taxi-toggle-btn');
             if(isTaxi) {
                 btn.classList.add('active');
@@ -803,7 +880,8 @@
                     let decay = baseCooling * (1 + ((100 - state.items.bag) / 100));
                     currentOrder.foodTemp -= decay;
                 } else {
-                    let interior = state.items.bag; 
+                    // Taxi passenger patience decays slowly, accelerated by bad interior
+                    let interior = state.items.bag; // Using bag slot as Interior
                     let decay = 0.2 + ((100 - interior) / 500);
                     currentOrder.foodTemp -= decay; 
                 }
@@ -832,18 +910,23 @@
             
             let fatigue = Math.max(0.3, state.needs.energy / 100);
             
+            // Taxi logic
             if(state.taxi.active) {
+                 // Check fuel (energy)
                  if(state.needs.energy <= 0) {
                      showToast('⛽ БЕНЗИН КОНЧИЛСЯ!', 'warn');
-                     openQuickInv(true); 
+                     openQuickInv(true); // Force open inv to buy/use gas
                      return;
                  }
-                 state.needs.energy -= 0.5; 
-                 state.needs.mood -= 0.02; 
-                 state.items.bike -= 0.2; 
-                 state.items.gear -= 0.1; 
-                 currentOrder.progress += 4; 
+                 state.needs.energy -= 0.5; // Fuel burn per click
+                 state.needs.mood -= 0.02; // Driving is less stressful than biking
+                 state.items.bike -= 0.2; // Car suspension wear (mapped to bike)
+                 state.items.gear -= 0.1; // Tires wear (mapped to gear)
+                 
+                 // Progress
+                 currentOrder.progress += 4; // Cars are fast
             } else {
+                // Bike Logic
                 if (state.needs.energy <= 5 || state.needs.water <= 5) { showToast('Сил нет! Открой рюкзак!', 'warn'); openQuickInv(true); return; }
                 if (!state.energyBoostActive) state.needs.energy -= gameConfig.energyDrain; 
                 state.needs.water -= gameConfig.waterDrain; 
@@ -887,11 +970,15 @@
                 const btn = document.getElementById('pedal-btn'); btn.disabled = true; 
                 
                 if(state.taxi.active) {
+                    // Taxi Interaction
                     btn.textContent = 'КЛИЕНТ САДИТСЯ...';
                     document.getElementById('status-label').textContent = 'Посадка...';
+                    
+                    // Show client greeting
                     const name = currentOrder.clientName;
                     const msg = currentOrder.clientMsg;
                     showToast(`💬 ${name}: "${msg}"`, 'info');
+
                 } else {
                     btn.textContent = 'ЖДЕМ ЗАКАЗ...';
                     document.getElementById('status-label').textContent = 'Ресторан готовит...';
@@ -916,6 +1003,8 @@
             let minTemp = gameConfig.tipMinTemp || 60;
             let minMood = gameConfig.tipMinMood || 80;
             let chance = gameConfig.tipChance || 0.5;
+            
+            // Taxi tips are higher
             let tipMult = state.taxi.active ? 2.5 : 1.0;
 
             if (currentOrder.foodTemp > minTemp) { 
@@ -938,13 +1027,14 @@
             if(!state.taxi.active) {
                 state.items.bag -= 1.5; state.items.gear -= 0.8;
             } else {
-                state.items.bike -= 1.0; 
-                state.items.bag -= 2.0; 
+                state.items.bike -= 1.0; // Car wear
+                state.items.bag -= 2.0; // Interior gets dirty
             }
             
             if (state.debtOverdue && state.debt > 0) {
                 const rate = getGarnishmentRate();
                 let penalty = totalEarn * rate; 
+                
                 if (penalty > state.debt) penalty = state.debt;
                 state.debt -= penalty; totalEarn -= penalty; 
                 showToast(`Долг (-${(rate*100).toFixed(0)}%): -${penalty.toFixed(2)} PLN`, 'warn');
@@ -998,6 +1088,7 @@
             if (!state.isOnline) return;
             state.isSearching = false;
             
+            // Taxi vs Bike Logic
             let r;
             if(state.taxi.active) {
                  r = taxiDestinations[Math.floor(Math.random() * taxiDestinations.length)];
@@ -1013,8 +1104,9 @@
             let rawPay = (gameConfig.basePickupPay || 4.0) + (dist * (gameConfig.perKmPay || 1.5));
             let finalOffer = rawPay * inflationMult;
             
+            // TAXI MULTIPLIER
             if(state.taxi.active) {
-                finalOffer = finalOffer * 4.0; 
+                finalOffer = finalOffer * 4.0; // TAXI PAYS MORE
             }
             
             finalOffer += (Math.random() * gameConfig.payVariance) - (gameConfig.payVariance / 2);
@@ -1031,6 +1123,7 @@
                 tempWarned: false,
                 distance: dist,
                 offerPrice: finalOffer,
+                // Taxi Specifics
                 clientName: clientNames[Math.floor(Math.random() * clientNames.length)],
                 clientMsg: clientGreetings[Math.floor(Math.random() * clientGreetings.length)]
             };
@@ -1104,15 +1197,20 @@
         function openQuickInv(forced = false) {
             const menu = document.getElementById('quick-inv'); menu.innerHTML = '';
             
-            let neededStat = 'energy'; 
+            // Filter logic based on Mode
+            let neededStat = 'energy'; // default
             
             let owned = [];
             for (let [k, c] of Object.entries(state.inventory)) { 
                 if (c > 0) {
+                     // Check if item is valid for current mode
                      const itemData = ITEMS_DB[k];
                      if(state.taxi.active) {
+                         // In taxi mode, hide non-relevant stuff if needed? No, let user eat snickers.
+                         // But prioritize Gas
                          owned.push({ k, c, data: itemData });
                      } else {
+                         // In bike mode, hide Gas
                          if(k !== 'gas') owned.push({ k, c, data: itemData });
                      }
                 } 
@@ -1178,6 +1276,7 @@
                 });
                 msg.style.display = 'none';
 
+                // Check if ready for taxi work
                 const hasCar = state.taxi.vehicle !== null;
                 const hasLic = state.taxi.licenses.driver && state.taxi.licenses.insurance && state.taxi.licenses.taxi;
                 
@@ -1202,6 +1301,7 @@
         }
 
         function toggleTaxiMode() {
+            // Safety check
             if (!state.taxi.vehicle || !state.taxi.licenses.driver || !state.taxi.licenses.insurance) {
                 showToast('Купите машину и лицензии!', 'warn');
                 return;
@@ -1281,7 +1381,7 @@
                 sendLog(`Купил машину: ${id}`, 'BUY');
                 saveGame(); syncToCloud(true); updateUI();
                 renderTaxiShop(document.getElementById('modal-body'));
-                updateMenuState(); 
+                updateMenuState(); // Check if toggle button should appear
             } else {
                 showToast('Недостаточно средств', 'warn');
             }
@@ -1295,7 +1395,7 @@
                 sendLog(`Купил лицензию: ${id}`, 'BUY');
                 saveGame(); syncToCloud(true); updateUI();
                 renderTaxiLicenses(document.getElementById('modal-body'));
-                updateMenuState(); 
+                updateMenuState(); // Check if toggle button should appear
             } else {
                 showToast('Недостаточно средств', 'warn');
             }
@@ -1306,12 +1406,14 @@
             const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflation = 1 + (levelSum * gameConfig.inflationRate); 
             
+            // Consumables (Show Gas only in Taxi Mode)
             html += '<div class="shop-section"><h3>🎒 Расходники</h3>';
             ['gas', 'water', 'bar', 'energy_drink', 'coffee'].forEach(k => {
+                // If Taxi mode, show GAS. If Courier mode, hide GAS.
                 if(state.taxi.active) {
-                    if(k !== 'gas' && k !== 'coffee' && k !== 'water' && k !== 'bar' && k !== 'energy_drink') return; 
+                    if(k !== 'gas' && k !== 'coffee' && k !== 'water' && k !== 'bar' && k !== 'energy_drink') return; // Show all for now, maybe filtered?
                 } else {
-                    if(k === 'gas') return; 
+                    if(k === 'gas') return; // Hide gas in bike mode
                 }
 
                 const i = ITEMS_DB[k];
@@ -1321,19 +1423,25 @@
             });
             html += '</div>';
 
+            // Repairs (Swap items based on Mode)
             html += '<div class="shop-section"><h3>🛠 Сервис (Только 0%)</h3>';
             
+            // Mapping real item keys to display logic
             let repairKeys = [];
             if(state.taxi.active) {
+                // Taxi Mode: Map slots to Car stuff visually
+                // We use the same slots in DB but show different items to buy repair for
+                // Let's use custom logic here since costs are different
+                
                 const carItems = [
-                    { key: 'bike', db: ITEMS_DB.car_main },      
-                    { key: 'bag', db: ITEMS_DB.car_interior },   
-                    { key: 'gear', db: ITEMS_DB.car_tires }      
+                    { key: 'bike', db: ITEMS_DB.car_main },      // Car Health
+                    { key: 'bag', db: ITEMS_DB.car_interior },   // Interior
+                    { key: 'gear', db: ITEMS_DB.car_tires }      // Tires
                 ];
 
                 carItems.forEach(obj => {
                     const i = obj.db;
-                    const base = i.baseCost + ((state.repairs[obj.key]||0)*2.0); 
+                    const base = i.baseCost + ((state.repairs[obj.key]||0)*2.0); // Higher scaling for car
                     const price = base * inflation;
                     const currentHealth = Math.floor(state.items[obj.key]);
                     const isBroken = currentHealth <= 0;
@@ -1342,6 +1450,7 @@
                 });
 
             } else {
+                // Courier Mode
                 ['bike', 'bag', 'phone', 'gear'].forEach(k => {
                     const i = ITEMS_DB[k];
                     const base = i.baseCost + ((state.repairs[k]||0)*0.5);
@@ -1377,7 +1486,7 @@
             if (state.items[k] > 0) return;
             if(state.balance >= cost) { 
                 state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; btn.textContent = 'ГОТОВО!'; btn.className = 'shop-btn bought'; 
-                
+                // Determine name based on mode
                 let itemName = ITEMS_DB[k] ? ITEMS_DB[k].name : 'Repair';
                 if(state.taxi.active) {
                     if(k==='bike') itemName = ITEMS_DB.car_main.name;
@@ -1417,6 +1526,7 @@
             else if (streak === 2) interestRate = 20; 
             else interestRate = 50;  
 
+            // --- НОВОЕ: РАСЧЕТ ЛИМИТА ---
             const limit = 1000 + (state.career.totalOrders * 50);
 
             const hasFood = (state.inventory.bar > 0 || state.inventory.water > 0 || state.inventory.energy_drink > 0);
@@ -1522,6 +1632,7 @@
             const amt = parseFloat(input.value);
             if (!amt || amt <= 0) return;
 
+            // --- НОВОЕ: ПРОВЕРКА ЛИМИТА И ДОЛГА ---
             const limit = 1000 + (state.career.totalOrders * 50);
 
             if (state.debt > 0.1) {
@@ -1533,6 +1644,7 @@
                 showToast(`⛔ Лимит доверия: ${limit} PLN. Работайте больше!`, 'warn');
                 return;
             }
+            // ----------------------------------------
 
             let streak = state.loanStreak || 0;
             let interest = 0;
