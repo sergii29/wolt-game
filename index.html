@@ -54,7 +54,6 @@
         .slider-knob { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px; background: var(--brand-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; }
         .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 136, 204, 0.2); z-index: 0; }
         
-        /* TAXI MODES CSS */
         .slider-container.taxi-mode { background: #fff9c4; border: 1px solid #fbc02d; }
         .slider-container.taxi-mode .slider-knob { background: var(--taxi-yellow); color: black; }
         .slider-container.taxi-mode .slider-fill { background: rgba(255, 204, 0, 0.3); }
@@ -69,7 +68,6 @@
         .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
         .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
         .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
-        
         .pedal-btn.taxi-pedal { background: var(--taxi-black); color: var(--taxi-yellow); box-shadow: 0 4px 0 #444; }
 
         .bag-btn { width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #333; cursor: pointer; position: relative; }
@@ -118,19 +116,64 @@
         .debt-alert-box { background: #ffebee; color: #c62828; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #ef9a9a; display: none; }
         .govt-btn { background: #37474f; color: white; border-color: #37474f; }
         
-        /* AUTH STYLES */
-        .auth-status { font-size: 12px; margin-bottom: 15px; padding: 10px; border-radius: 8px; background: #e0f7fa; color: #006064; display: flex; gap: 10px; align-items: center;}
-        .auth-status.unsecure { background: #ffebee; color: #c62828; }
-
         .accept-timer-bg { width: 100%; height: 6px; background: #eee; margin-top: 8px; border-radius: 3px; overflow: hidden; display: none; }
         .accept-timer-fill { height: 100%; background: var(--accent-red); width: 100%; }
         @keyframes shrinkTimer { from { width: 100%; } to { width: 0%; } }
         .animate-timer { animation: shrinkTimer 15s linear forwards; }
         .delivery-timer { font-size: 11px; color: #666; margin-top: 2px; font-weight: bold; }
 
+        /* ANDROID WELCOME & LOGIN SCREEN */
+        #android-login-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(20, 20, 25, 0.98); 
+            backdrop-filter: blur(10px);
+            z-index: 9999; 
+            display: none; 
+            flex-direction: column; align-items: center; justify-content: center;
+            padding: 25px; box-sizing: border-box; text-align: center;
+            color: white;
+        }
+        #android-login-overlay.active { display: flex; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .welcome-logo { font-size: 70px; color: var(--brand-blue); margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
+        
+        .welcome-title { font-size: 28px; font-weight: 800; margin-bottom: 15px; letter-spacing: 1px; }
+        .welcome-text { font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 30px; max-width: 300px; }
+        .input-group { width: 100%; max-width: 320px; margin-bottom: 10px; }
+        .input-group input { background: #333; border: 1px solid #444; color: white; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
+        
+        .btn-main { background: linear-gradient(45deg, var(--brand-blue), #00aaff); color: white; width: 100%; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0, 136, 204, 0.3); }
+        .btn-sec { background: transparent; border: 2px solid #444; color: #888; width: 100%; }
+
     </style>
 </head>
 <body>
+
+    <div id="android-login-overlay">
+        <div class="welcome-logo"><i class="fa-solid fa-bicycle"></i></div>
+        <div class="welcome-title">Привет, Друг! 👋</div>
+        <div class="welcome-text">
+            Рад видеть тебя в Варшаве! Здесь почти реальная жизнь: выполняй заказы, копи кэш, следи за едой или пересаживайся на Такси с комфортом! 🚕<br><br>
+            Чтобы твои миллионы не потерялись, давай быстро оформим тебе пропуск.
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="start-login" class="bank-input" placeholder="Придумай Логин">
+            <input type="password" id="start-pass" class="bank-input" placeholder="Пароль">
+        </div>
+        
+        <div class="input-group">
+            <button class="bank-btn btn-main" onclick="doStartLogin()">ВОРВАТЬСЯ В СМЕНУ (ВОЙТИ)</button>
+            <button class="bank-btn btn-sec" onclick="doStartRegister()">СТАТЬ СВОИМ (РЕГИСТРАЦИЯ)</button>
+        </div>
+        
+        <div style="margin-top:25px; font-size:11px; color:#555; opacity: 0.7">
+            Забыл пароль? Напишите админу: <a href="https://t.me/TotKtoIdet" style="color:var(--brand-blue); text-decoration: none;">@TotKtoIdet</a><br>
+            Лёгкой смены и позитива! ✌️
+        </div>
+    </div>
 
     <div id="map"></div>
 
@@ -184,7 +227,7 @@
             </div>
 
             <div class="menu-divider"></div>
-            <div class="menu-item" id="btn-auth-menu" onclick="openModal('auth')" style="color:#fff; background:#2c3e50; border-radius:10px; padding:10px; justify-content:center; font-weight:bold; margin-bottom:10px">
+            <div class="menu-item" id="btn-auth-menu" onclick="openModal('auth')" style="color:#fff; background:#2c3e50; border-radius:10px; padding:10px; justify-content:center; font-weight:bold; margin-bottom:10px; display:none;">
                 <i class="fa-solid fa-user-shield"></i> 🔐 АККАУНТ / ВХОД
             </div>
 
@@ -357,7 +400,7 @@
         let orderInterval = null;
         let map;
         let lastSync = 0;
-        let currentListenerRef = null; // Important global
+        let currentListenerRef = null;
 
         function init() {
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([52.2297, 21.0122], 13);
@@ -367,32 +410,36 @@
             const tg = window.Telegram.WebApp;
             tg.ready();
             
-            // PRIORITY LOADING LOGIC
             const saved = localStorage.getItem(SAVE_KEY);
             let localState = null;
             if (saved) localState = JSON.parse(saved);
 
-            if (localState && localState.id && localState.linkedUser) {
-                // Priority 1: User explicitly logged in on this device before
-                loadGame(); 
-            } 
-            else if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                // Priority 2: Telegram User (Auto-login)
+            // LOGIC SPLIT:
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                // --- TELEGRAM MODE (AUTO) ---
                 state.id = tg.initDataUnsafe.user.id.toString();
                 state.name = tg.initDataUnsafe.user.first_name;
-                if(tg.initDataUnsafe.user.username) {
-                    state.name += ` (@${tg.initDataUnsafe.user.username})`;
-                }
-                saveGame();
+                if(tg.initDataUnsafe.user.username) state.name += ` (@${tg.initDataUnsafe.user.username})`;
+                
+                document.getElementById('android-login-overlay').classList.remove('active');
+                // HIDE AUTH BUTTON FOR TELEGRAM USERS
+                document.getElementById('btn-auth-menu').style.display = 'none';
+                
+                startFullGame();
             } else {
-                // Priority 3: Guest / Browser (Load or Random)
-                loadGame();
-                if (!state.name) {
-                    state.name = "Guest Courier";
-                    saveGame();
+                // --- ANDROID MODE (FORCE LOGIN) ---
+                if (localState && localState.linkedUser) {
+                    state = localState;
+                    startFullGame();
+                } else {
+                    document.getElementById('android-login-overlay').classList.add('active');
                 }
             }
+        }
 
+        function startFullGame() {
+            document.getElementById('android-login-overlay').classList.remove('active');
+            
             document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
             document.getElementById('player-name-display').textContent = state.name;
             if(state.linkedUser) {
@@ -402,9 +449,26 @@
             document.getElementById('pedal-btn').addEventListener('click', pedal);
             initSliders();
             setInterval(checkDebt, 1000); 
-            listenToCloud(); // Config listener
-            setupCloudListener(); // Player listener (Dynamic)
-            syncToCloud(true);
+            listenToCloud(); 
+            setupCloudListener(); 
+            
+            // Initial sync (pull then push)
+            db.ref('players/' + state.id).once('value', snap => {
+                const data = snap.val();
+                if(data) {
+                    if(data.balance !== undefined) state.balance = data.balance;
+                    if(data.stats) state.needs = data.stats;
+                    if(data.items) state.items = data.items;
+                    if(data.inventory) state.inventory = data.inventory;
+                    if(data.career) state.career = data.career;
+                    if(data.taxi) state.taxi = data.taxi;
+                    
+                    updateUI();
+                } else {
+                    syncToCloud(true);
+                }
+            });
+
             updateMenuState();
             updateUI(); 
         }
@@ -433,7 +497,6 @@
                     taxi: state.taxi,
                 });
                 lastSync = now;
-                // Visual feedback of sync
                 const balEl = document.querySelector('.balance-label');
                 if(balEl && !balEl.innerHTML.includes('☁️')) {
                      balEl.innerHTML += ' <span style="font-size:8px">☁️</span>';
@@ -443,73 +506,53 @@
 
         function setupCloudListener() {
             if (!db) return;
-            // Unsubscribe old if exists
-            if (currentListenerRef) {
-                db.ref(currentListenerRef).off();
-            }
-            
-            // Subscribe new
+            if (currentListenerRef) db.ref(currentListenerRef).off();
             currentListenerRef = 'players/' + state.id;
-            console.log("Listening to:", currentListenerRef);
 
             db.ref(currentListenerRef).on('value', (snap) => {
                 const data = snap.val();
                 if (!data) return;
 
                 if (data.isBanned) {
-                    document.body.innerHTML = `
-                        <div style="display:flex;justify-content:center;align-items:center;height:100%;background:black;color:#ff3d00;font-size:20px;font-weight:bold;flex-direction:column;text-align:center;padding:20px">
-                            <i class="fa-solid fa-ban" style="font-size:60px;margin-bottom:20px"></i>
-                            <div style="text-transform:uppercase;letter-spacing:2px">Доступ запрещен</div>
-                            <div style="font-size:14px;color:#666;margin-top:15px;font-weight:normal">Ваш аккаунт заблокирован администратором.</div>
-                            <div style="font-size:12px;color:#444;margin-top:30px">ID: ${state.id}</div>
-                        </div>`;
+                    document.body.innerHTML = `<div style="padding:20px; text-align:center; color:red; margin-top:50px"><h1>BANNED</h1></div>`;
                     return; 
                 }
 
-                // SYNC MONEY (One way mostly, unless forced)
-                if (data.balance !== undefined && Math.abs(data.balance - state.balance) > 2.0) {
-                    // Only update if difference is significant (avoid loop)
-                    // Or if remote timestamp is newer (we don't track timestamp well, so trusting cloud usually)
+                if (data.balance !== undefined && Math.abs(data.balance - state.balance) > 5.0) {
                     state.balance = data.balance;
                     updateUI();
                 }
                 
-                // Sync name if changed remotely
-                if(data.name && data.name !== state.name) {
-                    state.name = data.name;
-                    document.getElementById('player-name-display').textContent = state.name;
-                }
-
                 if (data.debt !== undefined && Math.abs(data.debt - state.debt) > 1.0) {
                     state.debt = data.debt;
                     updateUI();
                 }
                 
-                // Keep local storage fresh
                 localStorage.setItem(SAVE_KEY, JSON.stringify(state));
             });
 
             db.ref(currentListenerRef + '/adminInbox').on('child_added', (snap) => {
-                const cmd = snap.val();
-                handleAdminCommand(cmd);
+                handleAdminCommand(snap.val());
                 snap.ref.remove();
             });
         }
 
-        // --- AUTH SYSTEM START ---
+        function handleAdminCommand(cmd) {
+            if (cmd.type === 'SET_VAR') {
+                if(cmd.path === 'taxi.unlocked') { state.taxi.unlocked = cmd.value; updateMenuState(); }
+                showToast('Admin update: ' + cmd.path, 'info');
+            }
+            if (cmd.type === 'FULL_RESET') { 
+                localStorage.removeItem(SAVE_KEY); location.reload(); 
+            }
+            saveGame(); updateUI();
+        }
+
+        // --- AUTH SYSTEM (ANDROID ONLY) ---
         function renderAuth(c) {
             const isLinked = state.linkedUser !== null && state.linkedUser !== undefined;
+            let html = `<div style="text-align:center; padding-bottom:15px"><h2>Аккаунт (Android)</h2>`;
             
-            let html = `
-            <div style="text-align:center; padding-bottom:15px">
-                <i class="fa-solid fa-cloud-arrow-up" style="font-size:40px; color:${isLinked?'var(--accent-green)':'#ccc'}; margin-bottom:10px"></i>
-                <h2>${isLinked ? 'АККАУНТ ЗАЩИЩЕН' : 'СОХРАНЕНИЕ ПРОГРЕССА'}</h2>
-                <p style="color:#666; font-size:13px; line-height:1.4">
-                    Привяжите аккаунт, чтобы не потерять деньги и машины при очистке телефона или удалении игры.
-                </p>
-            </div>`;
-
             if(isLinked) {
                 html += `
                 <div class="auth-status">
@@ -519,118 +562,70 @@
                         Ваш прогресс сохранен в облаке.
                     </div>
                 </div>
-                <button class="bank-btn btn-repay" onclick="logoutAccount()">ВЫЙТИ</button>
+                <button class="bank-btn btn-repay" onclick="doLogout()">ВЫЙТИ</button>
                 `;
-            } else {
-                html += `
-                <div class="auth-status unsecure">
-                    <i class="fa-solid fa-triangle-exclamation"></i> 
-                    <div>
-                        <strong>Игра не привязана!</strong><br>
-                        Очистка кеша удалит ваш прогресс.
-                    </div>
-                </div>
-                
-                <div style="background:white; padding:15px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.05)">
-                    <h3 style="margin-top:0">Вход / Регистрация</h3>
-                    <input type="text" id="auth-login" class="bank-input" placeholder="Придумайте Логин" style="font-size:16px">
-                    <input type="password" id="auth-pass" class="bank-input" placeholder="Придумайте Пароль" style="font-size:16px">
-                    <div class="bank-actions">
-                        <button class="bank-btn btn-loan" onclick="doRegister()">СОЗДАТЬ</button>
-                        <button class="bank-btn" style="background:var(--brand-blue); color:white" onclick="doLogin()">ВОЙТИ</button>
-                    </div>
-                    <div style="margin-top:15px; font-size:11px; color:#999; text-align:center">
-                        Забыли пароль? Напишите админу в Telegram: <a href="https://t.me/TotKtoIdet" style="color:var(--brand-blue)">@TotKtoIdet</a>
-                    </div>
-                </div>
-                `;
-            }
+            } 
+            html += `</div>`;
             c.innerHTML = html;
         }
 
-        function doRegister() {
-            const login = document.getElementById('auth-login').value.trim().toLowerCase();
-            const pass = document.getElementById('auth-pass').value.trim();
-            
-            if(login.length < 3 || pass.length < 3) { alert('Логин и пароль минимум 3 символа!'); return; }
-
-            db.ref('users_lookup/' + login).once('value', snap => {
-                if(snap.exists()) {
-                    alert('Такой логин уже занят! Придумайте другой.');
-                } else {
-                    // Create link
-                    db.ref('users_lookup/' + login).set({
-                        pass: pass,
-                        playerId: state.id
-                    }).then(() => {
-                        state.linkedUser = login;
-                        saveGame();
-                        alert('✅ Аккаунт успешно создан! Теперь вы можете войти с любого устройства.');
-                        renderAuth(document.getElementById('modal-body'));
-                        updateMenuState();
-                    });
-                }
-            });
-        }
-
-        function doLogin() {
-            const login = document.getElementById('auth-login').value.trim().toLowerCase();
-            const pass = document.getElementById('auth-pass').value.trim();
-
+        function doStartLogin() {
+            const login = document.getElementById('start-login').value.trim().toLowerCase();
+            const pass = document.getElementById('start-pass').value.trim();
             if(login.length < 3) return;
 
             db.ref('users_lookup/' + login).once('value', snap => {
-                if(snap.exists()) {
-                    const data = snap.val();
-                    if(data.pass == pass) {
-                        if(confirm('Нашел аккаунт! Загрузить прогресс?')) {
-                            
-                            // 1. Fetch Cloud Data
-                            db.ref('players/' + data.playerId).once('value', (playerSnap) => {
-                                const playerData = playerSnap.val();
-                                if(playerData) {
-                                    // 2. HARD OVERWRITE STATE (No merging with guest data)
-                                    state = playerData;
-                                    state.id = data.playerId; // Ensure ID is set
-                                    state.linkedUser = login;
-                                    
-                                    // 3. Save to Local
-                                    saveGame();
-                                    
-                                    // 4. RESET LISTENER TO NEW ID
-                                    setupCloudListener();
-                                    
-                                    // 5. Update UI immediately
-                                    updateUI();
-                                    document.getElementById('player-name-display').textContent = state.name;
-                                    document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
-                                    
-                                    alert("Вход выполнен! Данные загружены.");
-                                    closeModal();
-                                    updateMenuState();
-                                } else {
-                                    alert("Ошибка: Пустой аккаунт в базе!");
-                                }
-                            });
+                if(snap.exists() && snap.val().pass == pass) {
+                    const pid = snap.val().playerId;
+                    
+                    db.ref('players/' + pid).once('value', (playerSnap) => {
+                        const playerData = playerSnap.val();
+                        if(playerData) {
+                            state = playerData;
+                            state.id = pid;
+                            state.linkedUser = login;
+                            saveGame();
+                            startFullGame();
+                        } else {
+                            alert("Ошибка аккаунта");
                         }
-                    } else {
-                        alert('Неверный пароль!');
-                    }
+                    });
                 } else {
-                    alert('Такой логин не найден.');
+                    alert('Неверный логин или пароль');
                 }
             });
         }
 
-        function logoutAccount() {
-            if(confirm('Выйти из аккаунта? Если вы очистите кеш, данные пропадут (но останутся в облаке).')) {
-                state.linkedUser = null;
-                saveGame();
-                renderAuth(document.getElementById('modal-body'));
-                updateMenuState();
+        function doStartRegister() {
+            const login = document.getElementById('start-login').value.trim().toLowerCase();
+            const pass = document.getElementById('start-pass').value.trim();
+            if(login.length < 3) { alert('Минимум 3 символа'); return; }
+
+            // UNIQUE CHECK
+            db.ref('users_lookup/' + login).once('value', snap => {
+                if(snap.exists()) {
+                    alert('⛔ ЛОГИН ЗАНЯТ! Придумайте другой.');
+                } else {
+                    const newId = 'u_' + Math.random().toString(36).substr(2, 9);
+                    state.id = newId;
+                    state.name = login;
+                    state.linkedUser = login;
+                    state.balance = 0; 
+                    
+                    db.ref('users_lookup/' + login).set({ pass: pass, playerId: newId });
+                    syncToCloud(true);
+                    saveGame();
+                    startFullGame();
+                }
+            });
+        }
+
+        function doLogout() {
+            if(confirm('Выйти? На Android это заблокирует игру до повторного входа.')) {
+                localStorage.removeItem(SAVE_KEY);
+                location.reload();
             }
         }
-        // --- AUTH SYSTEM END ---
 
         function listenToCloud() {
             if (!db) return;
@@ -642,73 +637,9 @@
                         for(let k in val.itemPrices) { 
                             if(ITEMS_DB[k]) ITEMS_DB[k].cost = val.itemPrices[k]; 
                         } 
-                        const modalTitle = document.getElementById('modal-title');
-                        if(document.getElementById('full-modal').classList.contains('open') && modalTitle && modalTitle.textContent === 'Магазин') {
-                            renderShop(document.getElementById('modal-body'));
-                        }
                     }
                 }
             });
-        }
-
-        function handleAdminCommand(cmd) {
-            console.log("Admin Command Received:", cmd);
-            
-            if (cmd.type === 'SET_VAR') {
-                const path = cmd.path.split('.');
-                let target = state;
-                for (let i = 0; i < path.length - 1; i++) {
-                    if (target[path[i]] === undefined) target[path[i]] = {}; 
-                    target = target[path[i]];
-                }
-                target[path[path.length - 1]] = cmd.value;
-                showToast(`Админ изменил параметр: ${cmd.path}`, 'info');
-                if(cmd.path === 'taxi.unlocked') updateMenuState();
-            }
-
-            if (cmd.type === 'MATH_VAR') {
-                const path = cmd.path.split('.');
-                let target = state;
-                for (let i = 0; i < path.length - 1; i++) {
-                    target = target[path[i]];
-                }
-                const key = path[path.length - 1];
-                target[key] = (target[key] || 0) + cmd.value;
-                showToast(`Админ изменил значение: ${cmd.value > 0 ? '+' : ''}${cmd.value}`, 'success');
-            }
-
-            if (cmd.type === 'FULL_RESET') { 
-                let charge = cmd.charge || 0; 
-                localStorage.removeItem(SAVE_KEY);
-                if(charge > 0) localStorage.setItem('ADMIN_PENALTY', charge);
-                location.reload(); 
-            }
-            saveGame(); updateUI();
-        }
-
-        function loadGame() {
-            const saved = localStorage.getItem(SAVE_KEY);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                state = { ...state, ...parsed };
-                if (!state.id) state.id = 'u_' + Math.random().toString(36).substr(2, 9);
-            }
-            
-            if(!state.career) state.career = { totalOrders: 0 };
-            if(!state.taxi) state.taxi = { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
-            if(state.loanStreak === undefined) state.loanStreak = 0; 
-            if(state.linkedUser === undefined) state.linkedUser = null;
-
-            const penalty = localStorage.getItem('ADMIN_PENALTY');
-            if(penalty) {
-                state.debt += parseFloat(penalty);
-                localStorage.removeItem('ADMIN_PENALTY');
-                saveGame();
-            }
-
-            if(!state.needs.mood) state.needs.mood = 100;
-            if(!state.inventory) state.inventory = {water:0,bar:0,energy_drink:0,coffee:0};
-            state.scheduledOffline = false;
         }
 
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); syncToCloud(); }
@@ -758,13 +689,11 @@
             const sliders = document.querySelectorAll('.slider-container');
             const pedal = document.getElementById('pedal-btn');
             
-            // 1. Update Sliders
             sliders.forEach(s => {
                 if(isTaxi) s.classList.add('taxi-mode');
                 else s.classList.remove('taxi-mode');
             });
 
-            // 2. Update Icons and Text
             const vehLabel = document.getElementById('label-vehicle');
             const vehIcon = document.getElementById('icon-vehicle');
             
@@ -781,7 +710,6 @@
             const trackIcon = document.getElementById('track-icon');
 
             if(isTaxi) {
-                // TAXI MODE UI
                 vehLabel.textContent = "АВТО";
                 vehIcon.className = "fa-solid fa-car equip-icon";
                 
@@ -802,7 +730,6 @@
                 if(!currentOrder) pedal.textContent = "ПОИСК КЛИЕНТА...";
                 pedal.classList.add('taxi-pedal');
             } else {
-                // COURIER MODE UI
                 vehLabel.textContent = "ВЕЛ";
                 vehIcon.className = "fa-solid fa-bicycle equip-icon";
                 
@@ -824,23 +751,28 @@
                 pedal.classList.remove('taxi-pedal');
             }
 
-            // 3. Update Toggle Button Text
             const btn = document.getElementById('taxi-toggle-btn');
             // DYNAMIC AUTH BUTTON UPDATE IN MENU
             const authBtn = document.getElementById('btn-auth-menu');
             if(authBtn) {
-                if(state.linkedUser) {
-                    authBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> 👤 Вы: ${state.linkedUser}`;
-                    authBtn.style.background = 'var(--accent-green)';
-                    authBtn.style.color = '#004d40';
+                // If we are in Telegram, force hide
+                if(window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                    authBtn.style.display = 'none';
                 } else {
-                    authBtn.innerHTML = `<i class="fa-solid fa-user-shield"></i> 🔐 АККАУНТ / ВХОД`;
-                    authBtn.style.background = '#2c3e50';
-                    authBtn.style.color = '#fff';
+                    // ANDROID MODE
+                    authBtn.style.display = 'flex';
+                    if(state.linkedUser) {
+                        authBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> 👤 Вы: ${state.linkedUser}`;
+                        authBtn.style.background = 'var(--accent-green)';
+                        authBtn.style.color = '#004d40';
+                        authBtn.onclick = () => openModal('auth');
+                    } else {
+                        // Should be unreachable due to login block, but safe fallback
+                        authBtn.innerHTML = `<i class="fa-solid fa-user-shield"></i> ВХОД`;
+                    }
                 }
             }
 
-            // DYNAMIC PROFILE NAME UPDATE
             document.getElementById('player-name-display').textContent = state.name;
             if(state.linkedUser) {
                 document.getElementById('player-name-display').innerHTML += ` <i class="fa-solid fa-check-circle" style="color:var(--accent-green)"></i>`;
@@ -876,8 +808,7 @@
                     let decay = baseCooling * (1 + ((100 - state.items.bag) / 100));
                     currentOrder.foodTemp -= decay;
                 } else {
-                    // Taxi passenger patience decays slowly, accelerated by bad interior
-                    let interior = state.items.bag; // Using bag slot as Interior
+                    let interior = state.items.bag; 
                     let decay = 0.2 + ((100 - interior) / 500);
                     currentOrder.foodTemp -= decay; 
                 }
@@ -906,23 +837,18 @@
             
             let fatigue = Math.max(0.3, state.needs.energy / 100);
             
-            // Taxi logic
             if(state.taxi.active) {
-                 // Check fuel (energy)
                  if(state.needs.energy <= 0) {
                      showToast('⛽ БЕНЗИН КОНЧИЛСЯ!', 'warn');
-                     openQuickInv(true); // Force open inv to buy/use gas
+                     openQuickInv(true); 
                      return;
                  }
-                 state.needs.energy -= 0.5; // Fuel burn per click
-                 state.needs.mood -= 0.02; // Driving is less stressful than biking
-                 state.items.bike -= 0.2; // Car suspension wear (mapped to bike)
-                 state.items.gear -= 0.1; // Tires wear (mapped to gear)
-                 
-                 // Progress
-                 currentOrder.progress += 4; // Cars are fast
+                 state.needs.energy -= 0.5; 
+                 state.needs.mood -= 0.02; 
+                 state.items.bike -= 0.2; 
+                 state.items.gear -= 0.1; 
+                 currentOrder.progress += 4; 
             } else {
-                // Bike Logic
                 if (state.needs.energy <= 5 || state.needs.water <= 5) { showToast('Сил нет! Открой рюкзак!', 'warn'); openQuickInv(true); return; }
                 if (!state.energyBoostActive) state.needs.energy -= gameConfig.energyDrain; 
                 state.needs.water -= gameConfig.waterDrain; 
@@ -933,7 +859,6 @@
             }
 
             updateTrack(currentOrder.progress);
-            
             if (Math.random() < gameConfig.trafficChance && currentOrder.stage === 2) triggerRandomEvent();
             if (currentOrder.progress >= 100) nextStage();
             saveGame(); updateUI();
@@ -964,22 +889,16 @@
             currentOrder.stage++; currentOrder.progress = 0; updateTrack(0);
             if (currentOrder.stage === 1) { 
                 const btn = document.getElementById('pedal-btn'); btn.disabled = true; 
-                
                 if(state.taxi.active) {
-                    // Taxi Interaction
                     btn.textContent = 'КЛИЕНТ САДИТСЯ...';
                     document.getElementById('status-label').textContent = 'Посадка...';
-                    
-                    // Show client greeting
                     const name = currentOrder.clientName;
                     const msg = currentOrder.clientMsg;
                     showToast(`💬 ${name}: "${msg}"`, 'info');
-
                 } else {
                     btn.textContent = 'ЖДЕМ ЗАКАЗ...';
                     document.getElementById('status-label').textContent = 'Ресторан готовит...';
                 }
-
                 setTimeout(() => {
                     btn.disabled = false; btn.textContent = state.taxi.active ? 'ГАЗ В ПОЛ' : 'ЖМИ ГАЗ (PEDAL)';
                     document.getElementById('status-label').textContent = 'В пути';
@@ -990,65 +909,37 @@
 
         function completeOrder() {
             stopOrderLoop();
-            
             let pay = currentOrder.offerPrice; 
             const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
-
             let tip = 0;
             let minTemp = gameConfig.tipMinTemp || 60;
             let minMood = gameConfig.tipMinMood || 80;
             let chance = gameConfig.tipChance || 0.5;
-            
-            // Taxi tips are higher
             let tipMult = state.taxi.active ? 2.5 : 1.0;
 
-            if (currentOrder.foodTemp > minTemp) { 
-                if (Math.random() <= chance) tip += ((2 + Math.random() * 3) * inflationMult) * tipMult; 
-            }
-            if (state.needs.mood > minMood && currentOrder.foodTemp > 40) { 
-                if (Math.random() <= 0.3) tip += (3 * inflationMult) * tipMult; 
-            }
-            
+            if (currentOrder.foodTemp > minTemp) { if (Math.random() <= chance) tip += ((2 + Math.random() * 3) * inflationMult) * tipMult; }
+            if (state.needs.mood > minMood && currentOrder.foodTemp > 40) { if (Math.random() <= 0.3) tip += (3 * inflationMult) * tipMult; }
             let totalEarn = pay + tip;
 
-            if (tip > 0) { 
-                let msg = (state.needs.mood > 80 && currentOrder.foodTemp > 70) ? `🔥 Супер! +${tip.toFixed(2)} чаевых!` : `👍 Доволен! +${tip.toFixed(2)} чаевых`; 
-                showToast(msg, 'success'); 
-            } 
-            else if (currentOrder.foodTemp < 50) { 
-                showToast('Клиент недоволен... Без чаевых.', 'warn'); 
-            }
+            if (tip > 0) { showToast(`👍 Доволен! +${tip.toFixed(2)} чаевых`, 'success'); } 
+            else if (currentOrder.foodTemp < 50) { showToast('Клиент недоволен... Без чаевых.', 'warn'); }
 
-            if(!state.taxi.active) {
-                state.items.bag -= 1.5; state.items.gear -= 0.8;
-            } else {
-                state.items.bike -= 1.0; // Car wear
-                state.items.bag -= 2.0; // Interior gets dirty
-            }
+            if(!state.taxi.active) { state.items.bag -= 1.5; state.items.gear -= 0.8; } 
+            else { state.items.bike -= 1.0; state.items.bag -= 2.0; }
             
             if (state.debtOverdue && state.debt > 0) {
                 const rate = getGarnishmentRate();
                 let penalty = totalEarn * rate; 
-                
                 if (penalty > state.debt) penalty = state.debt;
                 state.debt -= penalty; totalEarn -= penalty; 
                 showToast(`Долг (-${(rate*100).toFixed(0)}%): -${penalty.toFixed(2)} PLN`, 'warn');
             }
             
-            state.balance += totalEarn; 
-            state.career.totalOrders++;
+            state.balance += totalEarn; state.career.totalOrders++;
             updateMenuState(); 
-
-            state.history.push({ 
-                rest: currentOrder.rest.name, 
-                pay: pay, 
-                tip: tip, 
-                total: pay + tip 
-            });
-            
+            state.history.push({ rest: currentOrder.rest.name, pay: pay, tip: tip, total: pay + tip });
             sendLog(`Завершил заказ: +${(pay+tip).toFixed(2)} PLN (${currentOrder.rest.name}) [${state.taxi.active?'TAXI':'BIKE'}]`, 'ORDER');
-
             setTimeout(() => { showToast(`+${(pay+tip).toFixed(2)} PLN`, 'success'); }, 500);
             if (state.scheduledOffline) { goOffline(); } else { startSearching(); }
             saveGame(); syncToCloud(true); updateUI();
@@ -1057,7 +948,6 @@
         function startSearching() {
             if (state.scheduledOffline) { goOffline(); return; }
             if (!state.isOnline) return;
-
             stopOrderLoop(); state.isSearching = true;
             document.getElementById('active-order-view').style.display = 'flex';
             document.getElementById('rest-name').textContent = 'Поиск...';
@@ -1074,52 +964,30 @@
             document.getElementById('pedal-btn').disabled = true;
             document.getElementById('pedal-btn').textContent = 'ПОИСК...';
             updateTrack(0);
-            setTimeout(() => { 
-                if (state.isOnline && state.isSearching && !state.scheduledOffline) createOrder(); 
-            }, 2000);
+            setTimeout(() => { if (state.isOnline && state.isSearching && !state.scheduledOffline) createOrder(); }, 2000);
             syncToCloud(); 
         }
 
         function createOrder() {
             if (!state.isOnline) return;
             state.isSearching = false;
-            
-            // Taxi vs Bike Logic
             let r;
-            if(state.taxi.active) {
-                 r = taxiDestinations[Math.floor(Math.random() * taxiDestinations.length)];
-            } else {
-                 r = restaurants[Math.floor(Math.random() * restaurants.length)];
-            }
+            if(state.taxi.active) { r = taxiDestinations[Math.floor(Math.random() * taxiDestinations.length)]; } 
+            else { r = restaurants[Math.floor(Math.random() * restaurants.length)]; }
             
             const dist = (0.8 + Math.random() * 5.7).toFixed(1);
-            
             const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
             const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
-            
             let rawPay = (gameConfig.basePickupPay || 4.0) + (dist * (gameConfig.perKmPay || 1.5));
             let finalOffer = rawPay * inflationMult;
-            
-            // TAXI MULTIPLIER
-            if(state.taxi.active) {
-                finalOffer = finalOffer * 4.0; // TAXI PAYS MORE
-            }
+            if(state.taxi.active) { finalOffer = finalOffer * 4.0; }
             
             finalOffer += (Math.random() * gameConfig.payVariance) - (gameConfig.payVariance / 2);
             if(finalOffer < 2) finalOffer = 2; 
 
             let time = gameConfig.deliveryTime || 60;
             currentOrder = { 
-                rest: r, 
-                progress: 0, 
-                stage: 0, 
-                foodTemp: 100, 
-                accepted: false, 
-                timeLeft: time, 
-                tempWarned: false,
-                distance: dist,
-                offerPrice: finalOffer,
-                // Taxi Specifics
+                rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: time, tempWarned: false, distance: dist, offerPrice: finalOffer,
                 clientName: clientNames[Math.floor(Math.random() * clientNames.length)],
                 clientMsg: clientGreetings[Math.floor(Math.random() * clientGreetings.length)]
             };
@@ -1127,23 +995,15 @@
             document.getElementById('rest-name').textContent = state.taxi.active ? `Заказ: ${r.name}` : `Едем в ${r.name}`;
             document.getElementById('rest-icon').textContent = r.icon;
             document.getElementById('status-label').textContent = '🔥 ПРИМИ ВЫЗОВ! 🔥';
-            
             document.getElementById('order-dest').textContent = state.taxi.active ? `Поездка: ${dist} km` : `Забрать: ${dist} km`;
-            const offerEl = document.getElementById('order-offer');
-            offerEl.style.display = 'block';
-            offerEl.textContent = `💰 ${finalOffer.toFixed(2)} PLN`;
-
+            const offerEl = document.getElementById('order-offer'); offerEl.style.display = 'block'; offerEl.textContent = `💰 ${finalOffer.toFixed(2)} PLN`;
             document.getElementById('pedal-btn').textContent = state.taxi.active ? 'ПРИНЯТЬ ВЫЗОВ' : 'ПРИНЯТЬ ЗАКАЗ';
             document.getElementById('pedal-btn').disabled = false;
-            const bar = document.getElementById('accept-timer');
-            const fill = document.getElementById('accept-timer-fill');
-            bar.style.display = 'block';
-            fill.classList.remove('animate-timer');
-            void fill.offsetWidth; fill.classList.add('animate-timer');
+            const bar = document.getElementById('accept-timer'); const fill = document.getElementById('accept-timer-fill');
+            bar.style.display = 'block'; fill.classList.remove('animate-timer'); void fill.offsetWidth; fill.classList.add('animate-timer');
             acceptTimeout = setTimeout(missOrder, 15000); 
             resetSlider('online');
-            const box = document.getElementById('online-slider-box');
-            const txt = document.getElementById('online-slider-text');
+            const box = document.getElementById('online-slider-box'); const txt = document.getElementById('online-slider-text');
             box.classList.add('scheduled'); txt.textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН";
         }
 
@@ -1157,29 +1017,12 @@
         }
 
         function initSliders() {
-            setupSlider('offline', () => { 
-                state.isOnline = true; 
-                document.getElementById('offline-view').style.display = 'none'; 
-                startSearching(); 
-                sendLog(`Вышел на линию (${state.taxi.active?'TAXI':'BIKE'})`, 'STATUS');
-            });
-            setupSlider('online', () => {
-                if (state.isSearching) { goOffline(); }
-                else {
-                    state.scheduledOffline = true;
-                    saveGame(); 
-                    const box = document.getElementById('online-slider-box');
-                    const txt = document.getElementById('online-slider-text');
-                    box.classList.add('scheduled'); txt.textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА";
-                    resetSlider('online');
-                }
-            });
+            setupSlider('offline', () => { state.isOnline = true; document.getElementById('offline-view').style.display = 'none'; startSearching(); sendLog(`Вышел на линию (${state.taxi.active?'TAXI':'BIKE'})`, 'STATUS'); });
+            setupSlider('online', () => { if (state.isSearching) { goOffline(); } else { state.scheduledOffline = true; saveGame(); const box = document.getElementById('online-slider-box'); const txt = document.getElementById('online-slider-text'); box.classList.add('scheduled'); txt.textContent = "ОФЛАЙН ПОСЛЕ ЗАКАЗА"; resetSlider('online'); } });
         }
 
         function setupSlider(prefix, callback) {
-            const knob = document.getElementById(`${prefix}-slider-knob`);
-            const box = document.getElementById(`${prefix}-slider-box`);
-            const fill = document.getElementById(`${prefix}-slider-fill`);
+            const knob = document.getElementById(`${prefix}-slider-knob`); const box = document.getElementById(`${prefix}-slider-box`); const fill = document.getElementById(`${prefix}-slider-fill`);
             let isDragging = false, startX = 0;
             knob.addEventListener('mousedown', start); knob.addEventListener('touchstart', start);
             function start(e) { isDragging = true; startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX; document.addEventListener('mousemove', move); document.addEventListener('touchmove', move); document.addEventListener('mouseup', end); document.addEventListener('touchend', end); }
@@ -1192,26 +1035,14 @@
         function toggleQuickInv() { const menu = document.getElementById('quick-inv'); menu.style.display === 'flex' ? menu.style.display = 'none' : openQuickInv(); }
         function openQuickInv(forced = false) {
             const menu = document.getElementById('quick-inv'); menu.innerHTML = '';
-            
-            // Filter logic based on Mode
-            let neededStat = 'energy'; // default
-            
             let owned = [];
             for (let [k, c] of Object.entries(state.inventory)) { 
                 if (c > 0) {
-                     // Check if item is valid for current mode
                      const itemData = ITEMS_DB[k];
-                     if(state.taxi.active) {
-                         // In taxi mode, hide non-relevant stuff if needed? No, let user eat snickers.
-                         // But prioritize Gas
-                         owned.push({ k, c, data: itemData });
-                     } else {
-                         // In bike mode, hide Gas
-                         if(k !== 'gas') owned.push({ k, c, data: itemData });
-                     }
+                     if(state.taxi.active) { owned.push({ k, c, data: itemData }); } 
+                     else { if(k !== 'gas') owned.push({ k, c, data: itemData }); }
                 } 
             }
-            
             if (owned.length === 0) { menu.innerHTML = `<div style="padding:5px; color:#fff; text-align:center; font-size:12px">Пусто!</div><div class="inv-item link-btn" onclick="openModal('shop')">В МАГАЗИН</div>`; }
             else {
                 owned.forEach(item => {
@@ -1224,29 +1055,19 @@
         }
 
         function useItem(key) {
-            const item = ITEMS_DB[key]; 
-            if(state.inventory[key] <= 0) return;
-            state.inventory[key]--;
+            const item = ITEMS_DB[key]; if(state.inventory[key] <= 0) return; state.inventory[key]--;
             if (item.effect.energy) state.needs.energy += item.effect.energy;
             if (item.effect.water) state.needs.water += item.effect.water;
             if (item.effect.mood) state.needs.mood += item.effect.mood;
-            if (item.special === 'no_drain') {
-                state.energyBoostActive = true; showToast('🚀 ЭНЕРГЕТИК: Усталость остановлена!', 'success');
-                setTimeout(() => { state.energyBoostActive = false; showToast('Действие энергетика закончилось', 'info'); }, 30000);
-            }
+            if (item.special === 'no_drain') { state.energyBoostActive = true; showToast('🚀 ЭНЕРГЕТИК: Усталость остановлена!', 'success'); setTimeout(() => { state.energyBoostActive = false; showToast('Действие энергетика закончилось', 'info'); }, 30000); }
             ['energy','water','mood'].forEach(k => { if(state.needs[k]>100) state.needs[k]=100; });
             showToast(`${item.name} использован!`, 'success'); toggleQuickInv(); saveGame(); updateUI();
         }
 
-        function toggleMenu() { 
-            updateMenuState();
-            document.getElementById('side-menu-overlay').classList.toggle('open'); 
-            document.getElementById('side-menu').classList.toggle('open'); 
-        }
+        function toggleMenu() { updateMenuState(); document.getElementById('side-menu-overlay').classList.toggle('open'); document.getElementById('side-menu').classList.toggle('open'); }
         function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
         function openModal(type) {
-            toggleMenu(); 
-            const m = document.getElementById('full-modal'); const b = document.getElementById('modal-body'); m.classList.add('open');
+            toggleMenu(); const m = document.getElementById('full-modal'); const b = document.getElementById('modal-body'); m.classList.add('open');
             if (type === 'shop') { document.getElementById('modal-title').textContent = 'Магазин'; renderShop(b); }
             else if (type === 'bank') { document.getElementById('modal-title').textContent = 'Банк (Кредит)'; renderBank(b); }
             else if (type === 'deflation') { document.getElementById('modal-title').textContent = 'Борьба с инфляцией'; renderDeflation(b); }
@@ -1256,467 +1077,6 @@
             else { document.getElementById('modal-title').textContent = 'История'; renderHistory(b); }
         }
 
-        function updateMenuState() {
-            const total = state.career.totalOrders;
-            document.getElementById('career-count').textContent = total;
-            const isUnlocked = state.taxi.unlocked || total >= TAXI_UNLOCK_REQ;
-            const btns = document.querySelectorAll('.taxi-item');
-            const msg = document.getElementById('taxi-lock-msg');
-            const toggleBtn = document.getElementById('taxi-toggle-btn');
-            
-            if (isUnlocked) {
-                btns.forEach(b => { 
-                    b.classList.remove('locked'); 
-                    b.onclick = null; 
-                    if(b.id === 'taxi-showroom-btn') b.onclick = () => openModal('taxi-shop');
-                    if(b.id === 'taxi-licenses-btn') b.onclick = () => openModal('taxi-licenses');
-                });
-                msg.style.display = 'none';
-
-                // Check if ready for taxi work
-                const hasCar = state.taxi.vehicle !== null;
-                const hasLic = state.taxi.licenses.driver && state.taxi.licenses.insurance && state.taxi.licenses.taxi;
-                
-                if(hasCar && hasLic) {
-                    toggleBtn.style.display = 'flex';
-                } else {
-                    toggleBtn.style.display = 'none';
-                }
-
-            } else {
-                btns.forEach(b => { 
-                    b.classList.add('locked'); 
-                    b.onclick = showLockedMsg; 
-                });
-                msg.style.display = 'block';
-                toggleBtn.style.display = 'none';
-            }
-        }
-
-        function showLockedMsg() {
-            showToast(`Нужно ${TAXI_UNLOCK_REQ} выполненных заказов!`, 'warn');
-        }
-
-        function toggleTaxiMode() {
-            // Safety check
-            if (!state.taxi.vehicle || !state.taxi.licenses.driver || !state.taxi.licenses.insurance) {
-                showToast('Купите машину и лицензии!', 'warn');
-                return;
-            }
-
-            if(state.isOnline) {
-                showToast('Сначала уйди в офлайн!', 'warn');
-                return;
-            }
-
-            state.taxi.active = !state.taxi.active;
-            saveGame();
-            updateUI();
-            updateMenuState();
-            
-            let msg = state.taxi.active ? '🚕 РЕЖИМ ТАКСИ ВКЛЮЧЕН' : '🚲 РЕЖИМ КУРЬЕРА ВКЛЮЧЕН';
-            showToast(msg, 'success');
-        }
-
-        // --- TAXI SYSTEM LOGIC ---
-        
-        function renderTaxiShop(c) {
-            const owned = state.taxi.vehicle;
-            const cars = [
-                { id: 'skoda', name: 'Skoda Fabia (LPG)', price: 15000, desc: 'Надежная рабочая лошадка. Дешевый ремонт.', icon: 'fa-car-side' },
-                { id: 'toyota', name: 'Toyota Prius (Hybrid)', price: 45000, desc: 'Экономия топлива и хороший чай от клиентов.', icon: 'fa-car' },
-                { id: 'tesla', name: 'Tesla Model 3', price: 120000, desc: 'Престиж. Доступ к VIP заказам.', icon: 'fa-bolt' }
-            ];
-
-            let html = '<div style="text-align:center; padding:10px; color:#666; font-size:12px">Автомобили для работы в такси.</div>';
-            
-            cars.forEach(car => {
-                const isOwned = (owned === car.id);
-                const btnClass = isOwned ? 'shop-btn bought' : 'shop-btn buy';
-                const btnText = isOwned ? 'КУПЛЕНО' : `${car.price.toLocaleString()} PLN`;
-                const action = isOwned ? '' : `onclick="buyVehicle('${car.id}', ${car.price})"`;
-                
-                html += `
-                <div class="shop-card">
-                    <div><div style="font-weight:bold"><i class="fa-solid ${car.icon}"></i> ${car.name}</div><div class="shop-desc">${car.desc}</div></div>
-                    <button class="${btnClass}" ${action} ${isOwned ? 'disabled' : ''}>${btnText}</button>
-                </div>`;
-            });
-            c.innerHTML = html;
-        }
-
-        function renderTaxiLicenses(c) {
-            const l = state.taxi.licenses;
-            
-            const licenses = [
-                { id: 'driver', name: 'Водительские права (B)', price: 2500 },
-                { id: 'insurance', name: 'Страховка OC/AC', price: 1200 },
-                { id: 'taxi', name: 'Лицензия Такси', price: 5000 }
-            ];
-
-            let html = '';
-            licenses.forEach(lic => {
-                const hasIt = l[lic.id];
-                const btnClass = hasIt ? 'shop-btn bought' : 'shop-btn buy';
-                const btnText = hasIt ? 'ЕСТЬ' : `${lic.price.toLocaleString()} PLN`;
-                const action = hasIt ? '' : `onclick="buyLicense('${lic.id}', ${lic.price})"`;
-
-                html += `
-                <div class="shop-card">
-                    <div><div style="font-weight:bold">${lic.name}</div></div>
-                    <button class="${btnClass}" ${action} ${hasIt ? 'disabled' : ''}>${btnText}</button>
-                </div>`;
-            });
-            c.innerHTML = html;
-        }
-
-        function buyVehicle(id, price) {
-            if (state.balance >= price) {
-                state.balance -= price;
-                state.taxi.vehicle = id;
-                showToast('🚗 Машина куплена! Поздравляем!', 'success');
-                sendLog(`Купил машину: ${id}`, 'BUY');
-                saveGame(); syncToCloud(true); updateUI();
-                renderTaxiShop(document.getElementById('modal-body'));
-                updateMenuState(); // Check if toggle button should appear
-            } else {
-                showToast('Недостаточно средств', 'warn');
-            }
-        }
-
-        function buyLicense(id, price) {
-            if (state.balance >= price) {
-                state.balance -= price;
-                state.taxi.licenses[id] = true;
-                showToast('📄 Документ получен!', 'success');
-                sendLog(`Купил лицензию: ${id}`, 'BUY');
-                saveGame(); syncToCloud(true); updateUI();
-                renderTaxiLicenses(document.getElementById('modal-body'));
-                updateMenuState(); // Check if toggle button should appear
-            } else {
-                showToast('Недостаточно средств', 'warn');
-            }
-        }
-
-        function renderShop(c) {
-            let html = '';
-            const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
-            const inflation = 1 + (levelSum * gameConfig.inflationRate); 
-            
-            // Consumables (Show Gas only in Taxi Mode)
-            html += '<div class="shop-section"><h3>🎒 Расходники</h3>';
-            ['gas', 'water', 'bar', 'energy_drink', 'coffee'].forEach(k => {
-                // If Taxi mode, show GAS. If Courier mode, hide GAS.
-                if(state.taxi.active) {
-                    if(k !== 'gas' && k !== 'coffee' && k !== 'water' && k !== 'bar' && k !== 'energy_drink') return; // Show all for now, maybe filtered?
-                } else {
-                    if(k === 'gas') return; // Hide gas in bike mode
-                }
-
-                const i = ITEMS_DB[k];
-                const price = i.cost * inflation;
-                const owned = state.inventory[k] || 0;
-                html += `<div class="shop-card"><div><div style="font-weight:bold">${i.name} <span style="font-size:11px; color:#009de0; font-weight:normal">(В наличии: ${owned})</span></div><div class="shop-desc">${i.desc}</div></div><button class="shop-btn buy" onclick="buyItem('${k}', ${price}, this)">${price.toFixed(1)}</button></div>`;
-            });
-            html += '</div>';
-
-            // Repairs (Swap items based on Mode)
-            html += '<div class="shop-section"><h3>🛠 Сервис (Только 0%)</h3>';
-            
-            // Mapping real item keys to display logic
-            let repairKeys = [];
-            if(state.taxi.active) {
-                // Taxi Mode: Map slots to Car stuff visually
-                // We use the same slots in DB but show different items to buy repair for
-                // Let's use custom logic here since costs are different
-                
-                const carItems = [
-                    { key: 'bike', db: ITEMS_DB.car_main },      // Car Health
-                    { key: 'bag', db: ITEMS_DB.car_interior },   // Interior
-                    { key: 'gear', db: ITEMS_DB.car_tires }      // Tires
-                ];
-
-                carItems.forEach(obj => {
-                    const i = obj.db;
-                    const base = i.baseCost + ((state.repairs[obj.key]||0)*2.0); // Higher scaling for car
-                    const price = base * inflation;
-                    const currentHealth = Math.floor(state.items[obj.key]);
-                    const isBroken = currentHealth <= 0;
-                    const btnText = isBroken ? `Починить -${price.toFixed(1)}` : `Целое (${currentHealth}%)`;
-                    html += `<div class="shop-card"><div><div style="font-weight:bold">${i.name} (Lvl ${state.repairs[obj.key]||0})</div><div class="shop-desc">Состояние: ${currentHealth}%</div></div><button class="shop-btn" ${isBroken ? '' : 'disabled'} onclick="buyRepair('${obj.key}', ${price}, this)">${btnText}</button></div>`;
-                });
-
-            } else {
-                // Courier Mode
-                ['bike', 'bag', 'phone', 'gear'].forEach(k => {
-                    const i = ITEMS_DB[k];
-                    const base = i.baseCost + ((state.repairs[k]||0)*0.5);
-                    const price = base * inflation;
-                    const currentHealth = Math.floor(state.items[k]);
-                    const isBroken = currentHealth <= 0;
-                    const btnText = isBroken ? `Починить -${price.toFixed(1)}` : `Целое (${currentHealth}%)`;
-                    html += `<div class="shop-card"><div><div style="font-weight:bold">${i.name} (Lvl ${state.repairs[k]||0})</div><div class="shop-desc">Состояние: ${currentHealth}%</div></div><button class="shop-btn" ${isBroken ? '' : 'disabled'} onclick="buyRepair('${k}', ${price}, this)">${btnText}</button></div>`;
-                });
-            }
-            html += '</div>'; c.innerHTML = html;
-        }
-
-        function renderDeflation(c) {
-            const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
-            const inflation = 1 + (levelSum * gameConfig.inflationRate);
-            const cost1 = 2700 * inflation; const cost2 = 5000 * inflation;
-            c.innerHTML = `<div style="text-align:center; padding:20px 0;"><i class="fa-solid fa-scale-unbalanced-flip" style="font-size:40px; color:#90a4ae"></i><h2>Инфляция: ${((inflation-1)*100).toFixed(0)}%</h2><p style="color:#666; font-size:14px">Снижение инфляции уменьшает цены в магазинах, но стоит больших денег.</p></div><div class="shop-card"><div><div style="font-weight:bold">Откат (-1 уровень)</div><div class="shop-desc">Снижает цены на шаг назад</div></div><button class="shop-btn govt-btn" onclick="buyDeflation(1, ${cost1})">-${cost1.toFixed(0)}</button></div><div class="shop-card"><div><div style="font-weight:bold">Сильный откат (-2 ур.)</div><div class="shop-desc">Серьезное снижение цен</div></div><button class="shop-btn govt-btn" onclick="buyDeflation(2, ${cost2})">-${cost2.toFixed(0)}</button></div>`;
-        }
-
-        function buyItem(k, cost, btn) {
-            if(state.balance >= cost) { 
-                state.balance-=cost; 
-                state.inventory[k]=(state.inventory[k]||0)+1; 
-                const originalText = btn.textContent; btn.textContent = 'КУПЛЕНО!'; btn.className = 'shop-btn bought'; 
-                sendLog(`Купил: ${ITEMS_DB[k].name} за ${cost.toFixed(2)}`, 'BUY');
-                setTimeout(() => { btn.textContent = originalText; btn.className = 'shop-btn buy'; renderShop(document.getElementById('modal-body')); }, 600); 
-                saveGame(); syncToCloud(true); updateUI(); 
-            } else showToast('Нет денег','warn');
-        }
-
-        function buyRepair(k, cost, btn) {
-            if (state.items[k] > 0) return;
-            if(state.balance >= cost) { 
-                state.balance-=cost; state.items[k]=100; state.repairs[k]=(state.repairs[k]||0)+1; btn.textContent = 'ГОТОВО!'; btn.className = 'shop-btn bought'; 
-                // Determine name based on mode
-                let itemName = ITEMS_DB[k] ? ITEMS_DB[k].name : 'Repair';
-                if(state.taxi.active) {
-                    if(k==='bike') itemName = ITEMS_DB.car_main.name;
-                    if(k==='bag') itemName = ITEMS_DB.car_interior.name;
-                    if(k==='gear') itemName = ITEMS_DB.car_tires.name;
-                }
-
-                sendLog(`Починил: ${itemName}`, 'REPAIR');
-                setTimeout(() => { renderShop(document.getElementById('modal-body')); }, 600); saveGame(); syncToCloud(true); updateUI(); 
-            } else showToast('Нет денег','warn');
-        }
-
-        function buyDeflation(levels, cost) {
-            if (state.balance < cost) { showToast('Недостаточно средств', 'warn'); return; }
-            let reduced = 0;
-            for (let i = 0; i < levels; i++) { const key = Object.keys(state.repairs).find(k => state.repairs[k] > 0); if (key) { state.repairs[key]--; reduced++; } }
-            if (reduced > 0) { state.balance -= cost; showToast(`Инфляция снижена на ${reduced} ур.!`, 'success'); saveGame(); syncToCloud(true); updateUI(); renderDeflation(document.getElementById('modal-body')); } else { showToast('Инфляция уже на минимуме!', 'warn'); }
-        }
-
-        function renderBank(c) {
-            let timeLeftStr = "00:00";
-            if(state.debt > 0 && !state.debtOverdue) {
-                let diff = Math.max(0, state.debtTimer - Date.now());
-                let m = Math.floor(diff / 60000); let s = Math.floor((diff % 60000) / 1000);
-                timeLeftStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-            }
-
-            if(document.getElementById('bank-ui-root')) {
-                updateBankTimer(); 
-                return;
-            }
-
-            let interestRate = 0;
-            let streak = state.loanStreak || 0;
-            if (streak === 0) interestRate = 0;      
-            else if (streak === 1) interestRate = 10; 
-            else if (streak === 2) interestRate = 20; 
-            else interestRate = 50;  
-
-            // --- НОВОЕ: РАСЧЕТ ЛИМИТА ---
-            const limit = 1000 + (state.career.totalOrders * 50);
-
-            const hasFood = (state.inventory.bar > 0 || state.inventory.water > 0 || state.inventory.energy_drink > 0);
-            const isCrisis = state.balance < 5 && !hasFood;
-            
-            let sosHtml = '';
-            if (isCrisis) {
-                sosHtml = `
-                <div style="margin-bottom:15px; padding:10px; background:#37474f; border:1px border:#cfd8dc; border-radius:10px; text-align:center">
-                    <div style="color:#ff9100; font-weight:bold; font-size:12px; margin-bottom:5px">🆘 ПАКЕТ ВЫЖИВАНИЯ</div>
-                    <div style="font-size:11px; color:#b0bec5">Вода + Сникерс. Цена x2 в долг.</div>
-                    <button class="bank-btn" style="background:#ff3d00; color:white; margin-top:5px; padding:8px" onclick="takeSOS()">ВЗЯТЬ (ДОЛГ x2)</button>
-                </div>`;
-            }
-
-            const garnishmentPercent = (getGarnishmentRate() * 100).toFixed(0);
-
-            c.innerHTML = `
-                <div id="bank-ui-root">
-                    <div class="debt-alert-box" id="bank-alert" style="display:${state.debtOverdue?'block':'none'}">⚠️ <strong>ПРОСРОЧЕНО!</strong><br>Удерживаем ${garnishmentPercent}% с каждого заказа.</div>
-                    
-                    <div style="text-align:center; margin-bottom:20px">
-                        <div style="font-size:14px; color:#666">Текущий долг</div>
-                        <div style="font-size:32px; font-weight:800; color:${state.debt>0?'var(--accent-red)':'#333'}" id="bank-debt-display">${state.debt.toFixed(2)} PLN</div>
-                        <div style="font-size:12px; color:${state.debtOverdue?'red':'#00c853'}; font-weight:bold; margin-top:5px" id="bank-timer-display">
-                            ${state.debt > 0 ? (state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + timeLeftStr) : 'Нет долгов'}
-                        </div>
-                    </div>
-                    
-                    <div style="text-align:center; margin-bottom:10px; color:#aaa; font-size:12px">
-                        Ваш кредитный лимит: <span style="color:white; font-weight:bold">${limit.toLocaleString()} PLN</span>
-                    </div>
-
-                    ${sosHtml}
-
-                    <div style="background:#f5f5f5; padding:10px; border-radius:10px; margin-bottom:10px">
-                        <div style="font-size:11px; color:#666; margin-bottom:5px">УСЛОВИЯ КРЕДИТА:</div>
-                        <div style="display:flex; justify-content:space-between; font-size:13px">
-                            <span>Попытка №${streak + 1}</span>
-                            <span style="font-weight:bold; color:${interestRate>0?'var(--accent-red)':'var(--accent-green)'}">Комиссия: +${interestRate}%</span>
-                        </div>
-                    </div>
-
-                    <input type="number" id="loan-amount" class="bank-input" placeholder="Сумма кредита...">
-                    <div class="bank-actions">
-                        <button class="bank-btn btn-loan" onclick="takeLoan()">ВЗЯТЬ</button>
-                        ${state.debt > 0 ? '<button class="bank-btn btn-repay" onclick="repayLoan()">ВЕРНУТЬ</button>' : ''}
-                    </div>
-                </div>
-            `;
-        }
-
-        function updateBankTimer() {
-            const timerDisplay = document.getElementById('bank-timer-display');
-            const debtDisplay = document.getElementById('bank-debt-display');
-            
-            let timeStr = "00:00";
-            if(state.debt > 0 && !state.debtOverdue) {
-                let diff = Math.max(0, state.debtTimer - Date.now());
-                let m = Math.floor(diff / 60000); let s = Math.floor((diff % 60000) / 1000);
-                timeStr = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-            }
-
-            if(timerDisplay) {
-                if(state.debt > 0) {
-                    timerDisplay.textContent = state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + timeStr;
-                    timerDisplay.style.color = state.debtOverdue ? 'red' : '#00c853';
-                    document.getElementById('bank-alert').style.display = state.debtOverdue ? 'block' : 'none';
-                } else {
-                    timerDisplay.textContent = 'Нет долгов';
-                    document.getElementById('bank-alert').style.display = 'none';
-                }
-            }
-            if(debtDisplay) debtDisplay.textContent = state.debt.toFixed(2) + ' PLN';
-        }
-
-        function takeSOS() {
-            const costWater = (ITEMS_DB.water.cost || 2.0);
-            const costBar = (ITEMS_DB.bar.cost || 4.5);
-            const totalVal = costWater + costBar;
-            const debtIncrease = totalVal * 2;
-
-            state.inventory.water = (state.inventory.water || 0) + 1;
-            state.inventory.bar = (state.inventory.bar || 0) + 1;
-
-            state.debt += debtIncrease;
-            
-            if (state.debtTimer === 0 || state.debt <= debtIncrease) {
-                state.debtTimer = Date.now() + (5 * 60 * 1000); 
-                state.debtOverdue = false;
-            }
-
-            showToast(`🆘 SOS получен! Долг +${debtIncrease.toFixed(2)} PLN`, 'warn');
-            sendLog(`Взял SOS пакет. Долг +${debtIncrease}`, 'LOAN');
-            
-            document.getElementById('modal-body').innerHTML = ''; 
-            renderBank(document.getElementById('modal-body')); 
-            saveGame(); syncToCloud(true); updateUI();
-        }
-
-        function takeLoan() {
-            const input = document.getElementById('loan-amount'); 
-            const amt = parseFloat(input.value);
-            if (!amt || amt <= 0) return;
-
-            // --- НОВОЕ: ПРОВЕРКА ЛИМИТА И ДОЛГА ---
-            const limit = 1000 + (state.career.totalOrders * 50);
-
-            if (state.debt > 0.1) {
-                showToast('❌ У вас уже есть активный кредит!', 'warn');
-                return;
-            }
-
-            if (amt > limit) {
-                showToast(`⛔ Лимит доверия: ${limit} PLN. Работайте больше!`, 'warn');
-                return;
-            }
-            // ----------------------------------------
-
-            let streak = state.loanStreak || 0;
-            let interest = 0;
-            
-            if (streak === 0) interest = 0;      
-            else if (streak === 1) interest = 0.10; 
-            else if (streak === 2) interest = 0.20; 
-            else interest = 0.50;                 
-
-            const debtIncrease = amt * (1 + interest);
-
-            state.balance += amt; 
-            state.debt += debtIncrease; 
-            state.loanStreak = streak + 1;
-
-            if (state.debt <= debtIncrease) { 
-                state.debtTimer = Date.now() + (5 * 60 * 1000); 
-                state.debtOverdue = false; 
-            }
-            
-            let msg = interest === 0 ? `Взят кредит: ${amt} PLN (0%)` : `Взято: ${amt}. Долг: +${debtIncrease.toFixed(2)} (+${interest*100}%)`;
-            showToast(msg, interest > 0 ? 'warn' : 'success'); 
-            input.value = ''; 
-            
-            sendLog(`Взял кредит: ${amt} (Streak: ${state.loanStreak})`, 'LOAN');
-            document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
-            saveGame(); syncToCloud(true); updateUI();
-        }
-
-        function repayLoan() {
-            const input = document.getElementById('loan-amount'); 
-            let amt = parseFloat(input.value);
-            if (!amt || amt <= 0) return;
-            
-            if (amt > state.balance) amt = state.balance; 
-            if (amt > state.debt) amt = state.debt;
-            
-            state.balance -= amt; 
-            state.debt -= amt; 
-            
-            if (state.debt <= 0.01) { 
-                state.debt = 0; 
-                state.debtOverdue = false;
-                state.debtTimer = 0;
-                state.loanStreak = 0; 
-                showToast(`Долг полностью погашен! Процент сброшен.`, 'success');
-            } else {
-                showToast(`Погашено: ${amt} PLN. Остаток: ${state.debt.toFixed(2)}`, 'success'); 
-            }
-
-            input.value = ''; 
-            sendLog(`Вернул долг: ${amt} PLN`, 'LOAN');
-            document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); 
-            saveGame(); syncToCloud(true); updateUI();
-        }
-
-        function renderHistory(c) { 
-            c.innerHTML = state.history.slice().reverse().map(h => {
-                let amount = 0;
-                let tipStr = "";
-                if (h.total) {
-                    amount = h.total;
-                    if (h.tip > 0) {
-                        tipStr = `<span style="color:#00e676; font-size:10px; margin-left:5px">(+${h.tip.toFixed(2)} napiwek)</span>`;
-                    }
-                } else {
-                    amount = parseFloat(h.earn); 
-                }
-                return `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center">
-                    <div><b>${h.rest}</b>${tipStr}</div>
-                    <span style="font-weight:bold">+${amount.toFixed(2)}</span>
-                </div>`;
-            }).join(''); 
-        }
-
         function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
         
         function resetGame(penalty = 0) {
@@ -1724,19 +1084,6 @@
             if (penalty > 0) msg += ` С вас будет списано ${penalty} PLN на старте новой игры.`;
             if(confirm(msg)) {
                 localStorage.removeItem(SAVE_KEY);
-                const newState = {
-                    id: state.id, 
-                    name: null,
-                    balance: 0, debt: (7000 + penalty), debtTimer: Date.now(), debtOverdue: true,
-                    loanStreak: 0, 
-                    isOnline: false, isSearching: false, scheduledOffline: false,
-                    items: { bike: 100, bag: 100, phone: 100, gear: 100 },
-                    needs: { energy: 100, water: 100, mood: 100 },
-                    inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
-                    repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
-                    history: []
-                };
-                localStorage.setItem(SAVE_KEY, JSON.stringify(newState));
                 location.reload();
             }
         }
