@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
     <style>
         :root {
             --bg-dark: #1a1a1a;
@@ -20,7 +19,8 @@
             --accent-orange: #ff9100;
             --accent-red: #ff3d00;
             --accent-purple: #d500f9;
-            --wolt-blue: #009de0;
+            /* ИЗМЕНЕНО: Безопасное название и цвет (чуть темнее оригинала) */
+            --brand-blue: #0088cc; 
             --taxi-yellow: #ffcc00;
             --taxi-black: #222;
         }
@@ -52,8 +52,8 @@
 
         .slider-container { position: relative; width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.3s; }
         .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; }
-        .slider-knob { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px; background: var(--wolt-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; }
-        .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 157, 224, 0.2); z-index: 0; }
+        .slider-knob { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px; background: var(--brand-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; }
+        .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 136, 204, 0.2); z-index: 0; }
         
         /* TAXI MODES CSS */
         .slider-container.taxi-mode { background: #fff9c4; border: 1px solid #fbc02d; }
@@ -66,7 +66,7 @@
         .slider-container.scheduled .slider-text { color: var(--accent-red); }
 
         .controls-row { display: flex; gap: 10px; margin-top: 15px; }
-        .pedal-btn { flex: 1; background: var(--wolt-blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 0 #007bb5; transition: all 0.1s; }
+        .pedal-btn { flex: 1; background: var(--brand-blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 0 #006699; transition: all 0.1s; }
         .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
         .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
         .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
@@ -80,8 +80,8 @@
         .quick-inv.open { display: flex; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .inv-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: background 0.2s; }
         .inv-item:active { background: rgba(255,255,255,0.2); }
-        .inv-item.link-btn { background: var(--wolt-blue); justify-content: center; font-weight: bold; }
-        .inv-count { background: var(--wolt-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+        .inv-item.link-btn { background: var(--brand-blue); justify-content: center; font-weight: bold; }
+        .inv-count { background: var(--brand-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
         @keyframes popUp { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
         #side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -106,8 +106,8 @@
         .shop-section { margin-bottom: 25px; }
         .shop-section h3 { margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #888; letter-spacing: 1px; }
         .shop-card { background: white; padding: 15px; border-radius: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
-        .shop-btn { padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; border: 1px solid var(--wolt-blue); color: var(--wolt-blue); background: white; min-width: 80px; transition: all 0.2s; }
-        .shop-btn.buy { background: var(--wolt-blue); color: white; }
+        .shop-btn { padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; border: 1px solid var(--brand-blue); color: var(--brand-blue); background: white; min-width: 80px; transition: all 0.2s; }
+        .shop-btn.buy { background: var(--brand-blue); color: white; }
         .shop-btn.bought { background: var(--accent-green); border-color: var(--accent-green); color: white; transform: scale(1.05); }
         .shop-btn:disabled { background: #eee; color: #aaa; border-color: #eee; cursor: not-allowed; }
 
@@ -155,10 +155,10 @@
     <div id="side-menu-overlay" onclick="toggleMenu()">
         <div id="side-menu" onclick="event.stopPropagation()">
             <h2 style="margin-bottom: 5px">Профиль</h2>
-            <div id="player-name-display" style="font-size:18px; color:var(--wolt-blue); font-weight:bold; margin-bottom:5px"></div>
+            <div id="player-name-display" style="font-size:18px; color:var(--brand-blue); font-weight:bold; margin-bottom:5px"></div>
             <div id="player-id-display" style="font-size:10px; color:#666; display:block; margin-bottom:20px">Loading ID...</div>
             
-            <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--wolt-blue)"></i> Магазин / Инвентарь</div>
+            <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--brand-blue)"></i> Магазин / Инвентарь</div>
             <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
             <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
             <div class="menu-item" onclick="openModal('stats')"><i class="fa-solid fa-clock-rotate-left"></i> История</div>
@@ -224,8 +224,8 @@
 
             <div style="position:relative; height:30px; margin:5px 0">
                 <div style="position:absolute; top:50%; left:0; right:0; height:4px; background:#eee; transform:translateY(-50%)"></div>
-                <div style="position:absolute; top:50%; left:0; height:4px; background:var(--wolt-blue); transform:translateY(-50%); width:0%" id="track-fill"></div>
-                <div style="position:absolute; top:50%; left:0; transform:translate(-50%, -50%); width:28px; height:28px; background:white; border:2px solid var(--wolt-blue); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--wolt-blue); font-size:12px; transition:left 0.2s" id="track-icon"><i class="fa-solid fa-bicycle"></i></div>
+                <div style="position:absolute; top:50%; left:0; height:4px; background:var(--brand-blue); transform:translateY(-50%); width:0%" id="track-fill"></div>
+                <div style="position:absolute; top:50%; left:0; transform:translate(-50%, -50%); width:28px; height:28px; background:white; border:2px solid var(--brand-blue); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--brand-blue); font-size:12px; transition:left 0.2s" id="track-icon"><i class="fa-solid fa-bicycle"></i></div>
             </div>
 
             <div style="display:flex; justify-content:space-between; font-size:12px; color:#666">
@@ -1512,3 +1512,4 @@
     </script>
 </body>
 </html>
+
