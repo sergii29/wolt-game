@@ -302,6 +302,13 @@
             list.innerHTML = '';
 
             const filtered = allPlayers.filter(p => (p.name && p.name.toLowerCase().includes(term)) || p.id.includes(term));
+            
+            // Если игроков нет вообще
+            if (filtered.length === 0) {
+                list.innerHTML = '<div style="text-align:center; color:#555; padding:20px;">Нет данных</div>';
+                return;
+            }
+
             filtered.sort((a,b) => {
                 const aOn = (Date.now() - (a.lastSeen||0) < 15000);
                 const bOn = (Date.now() - (b.lastSeen||0) < 15000);
