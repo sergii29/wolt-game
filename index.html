@@ -184,8 +184,8 @@
             </div>
 
             <div class="menu-divider"></div>
-            <div class="menu-item" onclick="openModal('auth')" style="color:#fff; background:#2c3e50; border-radius:10px; padding:10px; justify-content:center; font-weight:bold; margin-bottom:10px">
-                <i class="fa-solid fa-user-shield"></i> 🔐 СОЗДАТЬ АККАУНТ
+            <div class="menu-item" id="btn-auth-menu" onclick="openModal('auth')" style="color:#fff; background:#2c3e50; border-radius:10px; padding:10px; justify-content:center; font-weight:bold; margin-bottom:10px">
+                <i class="fa-solid fa-user-shield"></i> 🔐 АККАУНТ / ВХОД
             </div>
 
             <div class="menu-item" onclick="resetGame()" style="color:var(--accent-red); margin-top:auto; display:flex; flex-direction:column; align-items:flex-start; gap:0">
@@ -463,6 +463,9 @@
                         <button class="bank-btn btn-loan" onclick="doRegister()">СОЗДАТЬ</button>
                         <button class="bank-btn" style="background:var(--brand-blue); color:white" onclick="doLogin()">ВОЙТИ</button>
                     </div>
+                    <div style="margin-top:15px; font-size:11px; color:#999; text-align:center">
+                        Забыли пароль? Напишите админу в Telegram: <a href="https://t.me/TotKtoIdet" style="color:var(--brand-blue)">@TotKtoIdet</a>
+                    </div>
                 </div>
                 `;
             }
@@ -488,6 +491,7 @@
                         saveGame();
                         alert('✅ Аккаунт успешно создан! Теперь вы можете войти с любого устройства.');
                         renderAuth(document.getElementById('modal-body'));
+                        updateMenuState();
                     });
                 }
             });
@@ -523,6 +527,7 @@
                 state.linkedUser = null;
                 saveGame();
                 renderAuth(document.getElementById('modal-body'));
+                updateMenuState();
             }
         }
         // --- AUTH SYSTEM END ---
@@ -756,6 +761,20 @@
 
             // 3. Update Toggle Button Text
             const btn = document.getElementById('taxi-toggle-btn');
+            // DYNAMIC AUTH BUTTON UPDATE IN MENU
+            const authBtn = document.getElementById('btn-auth-menu');
+            if(authBtn) {
+                if(state.linkedUser) {
+                    authBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> 👤 Вы: ${state.linkedUser}`;
+                    authBtn.style.background = 'var(--accent-green)';
+                    authBtn.style.color = '#004d40';
+                } else {
+                    authBtn.innerHTML = `<i class="fa-solid fa-user-shield"></i> 🔐 АККАУНТ / ВХОД`;
+                    authBtn.style.background = '#2c3e50';
+                    authBtn.style.color = '#fff';
+                }
+            }
+
             if(isTaxi) {
                 btn.classList.add('active');
                 btn.innerHTML = '<i class="fa-solid fa-briefcase"></i> <span>ВЕРНУТЬСЯ К КУРЬЕРСТВУ</span>';
