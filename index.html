@@ -19,7 +19,6 @@
             --accent-orange: #ff9100;
             --accent-red: #ff3d00;
             --accent-purple: #d500f9;
-            /* ИЗМЕНЕНО: Безопасное название и цвет (чуть темнее оригинала) */
             --brand-blue: #0088cc; 
             --taxi-yellow: #ffcc00;
             --taxi-black: #222;
@@ -55,7 +54,6 @@
         .slider-knob { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px; background: var(--brand-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; }
         .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 136, 204, 0.2); z-index: 0; }
         
-        /* TAXI MODES CSS */
         .slider-container.taxi-mode { background: #fff9c4; border: 1px solid #fbc02d; }
         .slider-container.taxi-mode .slider-knob { background: var(--taxi-yellow); color: black; }
         .slider-container.taxi-mode .slider-fill { background: rgba(255, 204, 0, 0.3); }
@@ -125,6 +123,17 @@
         .animate-timer { animation: shrinkTimer 15s linear forwards; }
         .delivery-timer { font-size: 11px; color: #666; margin-top: 2px; font-weight: bold; }
 
+        /* AUTH STYLES */
+        .auth-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 4000; display: none; justify-content: center; align-items: center; }
+        .auth-box { background: #1e1e1e; padding: 25px; border-radius: 16px; width: 80%; max-width: 320px; border: 1px solid #333; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+        .auth-title { text-align: center; color: white; font-size: 18px; margin-bottom: 20px; text-transform: uppercase; font-weight: bold; }
+        .auth-input { width: 100%; padding: 12px; background: #2c2c2c; border: 1px solid #444; border-radius: 8px; color: white; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
+        .auth-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px; font-size: 14px; text-transform: uppercase; }
+        .btn-login { background: var(--brand-blue); color: white; }
+        .btn-register { background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); margin-top: 10px; }
+        .auth-footer { text-align: center; font-size: 10px; color: #666; margin-top: 15px; line-height: 1.4; }
+        .close-auth { position: absolute; top: 10px; right: 10px; color: #666; font-size: 20px; cursor: pointer; }
+
     </style>
 </head>
 <body>
@@ -151,6 +160,22 @@
     </div>
 
     <div id="toast" class="game-toast"><i class="fa-solid fa-circle-info"></i> <span>Msg</span></div>
+
+    <div id="auth-modal" class="auth-modal">
+        <div class="auth-box">
+            <div style="text-align:right; margin-bottom:10px;"><i class="fa-solid fa-xmark" onclick="closeAuthModal()" style="color:#888; font-size:20px; cursor:pointer"></i></div>
+            <div class="auth-title"><i class="fa-solid fa-lock"></i> Вход в систему</div>
+            <input type="text" id="auth-login" class="auth-input" placeholder="Логин">
+            <input type="password" id="auth-pass" class="auth-input" placeholder="Пароль">
+            <button class="auth-btn btn-login" onclick="performLogin()">Войти</button>
+            <button class="auth-btn btn-register" onclick="performRegister()">Регистрация</button>
+            <div class="auth-footer">
+                Регистрация сохранит ваш ID в облаке.<br>
+                Забыли пароль? Напишите админу:<br>
+                <span style="color:var(--brand-blue); font-weight:bold">@TotKtoIdet</span>
+            </div>
+        </div>
+    </div>
 
     <div id="side-menu-overlay" onclick="toggleMenu()">
         <div id="side-menu" onclick="event.stopPropagation()">
@@ -180,9 +205,15 @@
                 <i class="fa-solid fa-lock"></i> Требуется 50 доставок (У вас: <span id="career-count">0</span>)
             </div>
 
-            <div class="menu-item" onclick="resetGame()" style="color:var(--accent-red); margin-top:auto; display:flex; flex-direction:column; align-items:flex-start; gap:0">
-                <div style="display:flex; gap:15px; align-items:center"><i class="fa-solid fa-trash"></i> Сброс прогресса</div>
-                <div style="font-size:10px; opacity:0.7; margin-left:35px">Начать заново. Цена: 7000 PLN (Долг)</div>
+            <div style="margin-top:auto">
+                <div class="menu-item" id="auth-menu-item" onclick="openAuthModal()" style="display:none; color:var(--accent-green)">
+                    <i class="fa-solid fa-key"></i> 🔐 Вход / Регистрация
+                </div>
+
+                <div class="menu-item" onclick="resetGame()" style="color:var(--accent-red); display:flex; flex-direction:column; align-items:flex-start; gap:0">
+                    <div style="display:flex; gap:15px; align-items:center"><i class="fa-solid fa-trash"></i> Сброс прогресса</div>
+                    <div style="font-size:10px; opacity:0.7; margin-left:35px">Начать заново. Цена: 7000 PLN (Долг)</div>
+                </div>
             </div>
         </div>
     </div>
@@ -356,19 +387,26 @@
             
             const tg = window.Telegram.WebApp;
             tg.ready();
+            tg.expand();
             
             loadGame();
 
+            // TELEGRAM VS ANDROID DETECTION
             if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                // TELEGRAM MODE
                 state.id = tg.initDataUnsafe.user.id.toString();
                 state.name = tg.initDataUnsafe.user.first_name;
                 if(tg.initDataUnsafe.user.username) {
                     state.name += ` (@${tg.initDataUnsafe.user.username})`;
                 }
                 saveGame();
-            } else if (!state.name) {
-                state.name = "Guest Courier";
-                saveGame();
+                document.getElementById('auth-menu-item').style.display = 'none'; // Hide auth in TG
+            } else {
+                // ANDROID / WEB MODE
+                if (!state.name) {
+                    state.name = "Guest Courier";
+                }
+                document.getElementById('auth-menu-item').style.display = 'flex'; // Show auth in Android
             }
 
             document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
@@ -379,6 +417,86 @@
             listenToCloud(); syncToCloud(true);
             updateMenuState();
             updateUI(); // force initial UI
+        }
+
+        // AUTH FUNCTIONS
+        function openAuthModal() {
+            toggleMenu();
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').style.display = 'none';
+        }
+
+        function performRegister() {
+            const login = document.getElementById('auth-login').value.trim();
+            const pass = document.getElementById('auth-pass').value.trim();
+
+            if(login.length < 3 || pass.length < 3) {
+                showToast('Логин и пароль мин. 3 символа', 'warn');
+                return;
+            }
+
+            db.ref('users_lookup/' + login).once('value', snap => {
+                if(snap.exists()) {
+                    showToast('Такой логин уже занят!', 'warn');
+                } else {
+                    // Register Logic: Link current ID or New ID?
+                    // Better: Create new Entry with current ID (saving current progress)
+                    
+                    const userData = {
+                        pass: pass,
+                        playerId: state.id,
+                        login: login
+                    };
+
+                    db.ref('users_lookup/' + login).set(userData)
+                      .then(() => {
+                          state.name = login; // Update name to login
+                          saveGame();
+                          syncToCloud(true);
+                          updateUI();
+                          closeAuthModal();
+                          showToast('✅ Регистрация успешна!', 'success');
+                          document.getElementById('player-name-display').textContent = state.name;
+                      });
+                }
+            });
+        }
+
+        function performLogin() {
+            const login = document.getElementById('auth-login').value.trim();
+            const pass = document.getElementById('auth-pass').value.trim();
+
+            db.ref('users_lookup/' + login).once('value', snap => {
+                if(!snap.exists()) {
+                    showToast('Пользователь не найден', 'warn');
+                    return;
+                }
+                
+                const data = snap.val();
+                if(data.pass !== pass) {
+                    showToast('Неверный пароль', 'warn');
+                    return;
+                }
+
+                // LOGIN SUCCESS
+                const targetId = data.playerId;
+                
+                // Fetch data for this ID
+                db.ref('players/' + targetId).once('value', playerSnap => {
+                    const playerData = playerSnap.val();
+                    if(playerData) {
+                        state = { ...state, ...playerData };
+                        state.id = targetId; // ensure ID is correct
+                        saveGame(); // Overwrite local storage
+                        location.reload(); // Reload to apply changes cleanly
+                    } else {
+                        showToast('Ошибка загрузки данных', 'warn');
+                    }
+                });
+            });
         }
 
         function sendLog(msg, type='INFO') {
@@ -1533,4 +1651,3 @@
     </script>
 </body>
 </html>
-
