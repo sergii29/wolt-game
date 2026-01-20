@@ -520,13 +520,29 @@
                     const data = snap.val();
                     if(data.pass == pass) {
                         if(confirm('Нашел аккаунт! Загрузить прогресс?')) {
-                            // CRITICAL FIX: FORCE ID SWAP AND RELOAD
-                            state.id = data.playerId;
-                            state.linkedUser = login;
-                            // Forced save to localStorage before reload
-                            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
-                            alert("Вход выполнен! Перезагрузка...");
-                            location.reload(); 
+                            
+                            // *** КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ ***
+                            // Сначала загружаем данные из базы, потом сохраняем в локалку
+                            
+                            db.ref('players/' + data.playerId).once('value', (playerSnap) => {
+                                const playerData = playerSnap.val();
+                                if(playerData) {
+                                    // Объединяем данные из облака с текущим состоянием
+                                    state = { ...state, ...playerData };
+                                    
+                                    // Принудительно ставим ID и Логин
+                                    state.id = data.playerId;
+                                    state.linkedUser = login;
+                                    
+                                    // Сохраняем ПОЛНЫЕ данные в память телефона
+                                    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+                                    
+                                    alert("Данные загружены! Перезагрузка...");
+                                    location.reload();
+                                } else {
+                                    alert("Ошибка: Пустой аккаунт в базе!");
+                                }
+                            });
                         }
                     } else {
                         alert('Неверный пароль!');
@@ -1688,4 +1704,5 @@
     </script>
 </body>
 </html>
+}
 
