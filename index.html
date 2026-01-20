@@ -232,7 +232,7 @@
             <div id="demo-mode-alert" style="color:#ff3d00; font-size:11px; margin:5px 0; display:none; border:1px solid #ff3d00; padding:5px; border-radius:5px; background:rgba(0,0,0,0.05); font-weight:bold; text-align:center;">
                 ⚠️ ДЕМО РЕЖИМ: Прогресс не сохраняется без входа!
             </div>
-            
+
             <p style="color:#888; font-size:13px">Спрос: Высокий • Инфляция: Активна</p>
             <div class="slider-container" id="offline-slider-box">
                 <div class="slider-fill" id="offline-slider-fill"></div>
@@ -341,8 +341,8 @@
             gas: { name: 'Бензин (10л)', type: 'buy', cost: 12.0, icon: 'fa-gas-pump', effect: { energy: 80 }, desc: 'Заправка авто.', target: 'energy' }
         };
 
-        let state = {
-            id: 'u_' + Math.random().toString(36).substr(2, 9),
+        // DEFAULT STATE (Used for resets and new players)
+        const DEFAULT_STATE = {
             name: null, 
             balance: 0, debt: 0, debtTimer: 0, debtOverdue: false,
             loanStreak: 0, 
@@ -353,10 +353,13 @@
             repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
             history: [],
             energyBoostActive: false,
-            isAuth: false, // NEW: Tracks if logged in
+            isAuth: false,
             career: { totalOrders: 0 },
             taxi: { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
         };
+
+        let state = JSON.parse(JSON.stringify(DEFAULT_STATE)); // Copy default
+        state.id = 'u_' + Math.random().toString(36).substr(2, 9);
 
         const restaurants = [
             { name: "McDonald's", icon: "🍔" }, { name: "KFC", icon: "🍗" },
@@ -419,16 +422,15 @@
                 state.isAuth = true; 
             }
 
-            document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
-            document.getElementById('player-name-display').textContent = state.name;
-            
-            // DEMO MODE CHECK (Shows alert if Guest)
-            if(state.name === "Guest Courier") {
+            // DEMO ALERT
+            if(state.name === "Guest Courier" && !tg.initDataUnsafe.user) {
                 document.getElementById('demo-mode-alert').style.display = 'block';
             } else {
                 document.getElementById('demo-mode-alert').style.display = 'none';
             }
 
+            document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
+            document.getElementById('player-name-display').textContent = state.name;
             document.getElementById('pedal-btn').addEventListener('click', pedal);
             initSliders();
             setInterval(checkDebt, 1000); 
@@ -478,7 +480,6 @@
                           closeAuthModal();
                           showToast('✅ Регистрация успешна!', 'success');
                           document.getElementById('player-name-display').textContent = state.name;
-                          // Hide demo alert
                           document.getElementById('demo-mode-alert').style.display = 'none';
                       });
                 }
@@ -503,16 +504,37 @@
 
                 // LOGIN SUCCESS
                 const targetId = data.playerId;
+                showToast('Вход выполняется...', 'success');
                 
                 // Fetch data for this ID
                 db.ref('players/' + targetId).once('value', playerSnap => {
                     const playerData = playerSnap.val();
                     if(playerData) {
-                        state = { ...state, ...playerData };
-                        state.id = targetId; // ensure ID is correct
-                        state.isAuth = true; // Set auth flag
-                        saveGame(); // Overwrite local storage
-                        location.reload(); // Reload to apply changes cleanly
+                        // MERGE SAFE LOGIC
+                        state = { ...DEFAULT_STATE, ...playerData };
+                        state.id = targetId; 
+                        state.isAuth = true;
+                        
+                        // SANITIZE DATA (Fix old save files)
+                        if(!state.items) state.items = { bike: 100, bag: 100, phone: 100, gear: 100 };
+                        if(!state.needs) state.needs = { energy: 100, water: 100, mood: 100 };
+                        if(!state.taxi) state.taxi = { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
+                        if(!state.inventory) state.inventory = { water: 0, bar: 0, energy_drink: 0, coffee: 0, gas: 0 };
+
+                        saveGame(); 
+                        
+                        // UPDATE UI INSTANTLY WITHOUT RELOAD
+                        updateUI();
+                        updateMenuState();
+                        updateAuthUI();
+                        document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
+                        document.getElementById('player-name-display').textContent = state.name;
+                        document.getElementById('demo-mode-alert').style.display = 'none';
+                        
+                        // Restart listeners for new ID
+                        listenToCloud(); 
+                        closeAuthModal();
+                        showToast(`Привет, ${state.name}!`, 'success');
                     } else {
                         showToast('Ошибка загрузки данных', 'warn');
                     }
@@ -587,6 +609,7 @@
 
         function listenToCloud() {
             if (!db) return;
+            // 1. Listen for Config changes
             db.ref('config').on('value', (snap) => {
                 const val = snap.val();
                 if (val) {
@@ -603,6 +626,10 @@
                 }
             });
 
+            // 2. Listen for Player Data changes (Admin Ban/Money)
+            // WE MUST OFF previous listeners if any to avoid duplicates
+            db.ref('players/' + state.id).off(); 
+            
             db.ref('players/' + state.id).on('value', (snap) => {
                 const data = snap.val();
                 if (!data) return;
@@ -618,20 +645,17 @@
                     return; 
                 }
 
-                if (data.balance !== undefined && Math.abs(data.balance - state.balance) > 5) {
+                // Balance Sync from Admin
+                if (data.balance !== undefined && Math.abs(data.balance - state.balance) > 0.1) {
                     state.balance = data.balance;
-                    showToast('💰 Баланс изменен администратором', 'info');
                     updateUI();
-                    saveGame();
-                }
-
-                if (data.debt !== undefined && Math.abs(data.debt - state.debt) > 5) {
-                    state.debt = data.debt;
-                    updateUI();
-                    saveGame();
+                    // Optional toast if it was a big change
+                    if(Math.abs(data.balance - state.balance) > 5) showToast('💰 Баланс изменен', 'info');
                 }
             });
 
+            // 3. Listen for Commands
+            db.ref('players/' + state.id + '/adminInbox').off();
             db.ref('players/' + state.id + '/adminInbox').on('child_added', (snap) => {
                 const cmd = snap.val();
                 handleAdminCommand(cmd);
@@ -675,27 +699,38 @@
         }
 
         function loadGame() {
-            const saved = localStorage.getItem(SAVE_KEY);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                state = { ...state, ...parsed };
-                if (!state.id) state.id = 'u_' + Math.random().toString(36).substr(2, 9);
+            try {
+                const saved = localStorage.getItem(SAVE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state = { ...DEFAULT_STATE, ...parsed }; // Merge ensuring defaults
+                    
+                    // Sanitize ID
+                    if (!state.id) state.id = 'u_' + Math.random().toString(36).substr(2, 9);
+                    
+                    // Restore complex objects if missing
+                    if(!state.taxi) state.taxi = DEFAULT_STATE.taxi;
+                    if(!state.career) state.career = DEFAULT_STATE.career;
+                    
+                } else {
+                    // New game
+                    state.id = 'u_' + Math.random().toString(36).substr(2, 9);
+                }
+                
+                const penalty = localStorage.getItem('ADMIN_PENALTY');
+                if(penalty) {
+                    state.debt += parseFloat(penalty);
+                    localStorage.removeItem('ADMIN_PENALTY');
+                    saveGame();
+                }
+                state.scheduledOffline = false;
+                
+            } catch(e) {
+                console.error("Save corrupted, resetting:", e);
+                localStorage.removeItem(SAVE_KEY);
+                state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+                state.id = 'u_' + Math.random().toString(36).substr(2, 9);
             }
-            
-            if(!state.career) state.career = { totalOrders: 0 };
-            if(!state.taxi) state.taxi = { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } };
-            if(state.loanStreak === undefined) state.loanStreak = 0; 
-
-            const penalty = localStorage.getItem('ADMIN_PENALTY');
-            if(penalty) {
-                state.debt += parseFloat(penalty);
-                localStorage.removeItem('ADMIN_PENALTY');
-                saveGame();
-            }
-
-            if(!state.needs.mood) state.needs.mood = 100;
-            if(!state.inventory) state.inventory = {water:0,bar:0,energy_drink:0,coffee:0};
-            state.scheduledOffline = false;
         }
 
         function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); syncToCloud(); }
