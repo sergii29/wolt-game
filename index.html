@@ -366,18 +366,30 @@
             const tg = window.Telegram.WebApp;
             tg.ready();
             
-            loadGame();
+            // PRIORITY LOADING LOGIC
+            const saved = localStorage.getItem(SAVE_KEY);
+            let localState = null;
+            if (saved) localState = JSON.parse(saved);
 
-            if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            if (localState && localState.id && localState.linkedUser) {
+                // Priority 1: User explicitly logged in on this device before
+                loadGame(); 
+            } 
+            else if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                // Priority 2: Telegram User (Auto-login)
                 state.id = tg.initDataUnsafe.user.id.toString();
                 state.name = tg.initDataUnsafe.user.first_name;
                 if(tg.initDataUnsafe.user.username) {
                     state.name += ` (@${tg.initDataUnsafe.user.username})`;
                 }
                 saveGame();
-            } else if (!state.name) {
-                state.name = "Guest Courier";
-                saveGame();
+            } else {
+                // Priority 3: Guest / Browser (Load or Random)
+                loadGame();
+                if (!state.name) {
+                    state.name = "Guest Courier";
+                    saveGame();
+                }
             }
 
             document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
@@ -508,10 +520,13 @@
                     const data = snap.val();
                     if(data.pass == pass) {
                         if(confirm('Нашел аккаунт! Загрузить прогресс?')) {
+                            // CRITICAL FIX: FORCE ID SWAP AND RELOAD
                             state.id = data.playerId;
                             state.linkedUser = login;
-                            saveGame();
-                            location.reload();
+                            // Forced save to localStorage before reload
+                            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+                            alert("Вход выполнен! Перезагрузка...");
+                            location.reload(); 
                         }
                     } else {
                         alert('Неверный пароль!');
@@ -1673,3 +1688,4 @@
     </script>
 </body>
 </html>
+
