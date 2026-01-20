@@ -1309,7 +1309,10 @@
             if (streak === 0) interestRate = 0;      
             else if (streak === 1) interestRate = 10; 
             else if (streak === 2) interestRate = 20; 
-            else interestRate = 50;                  
+            else interestRate = 50;  
+
+            // --- НОВОЕ: РАСЧЕТ ЛИМИТА ---
+            const limit = 1000 + (state.career.totalOrders * 50);
 
             const hasFood = (state.inventory.bar > 0 || state.inventory.water > 0 || state.inventory.energy_drink > 0);
             const isCrisis = state.balance < 5 && !hasFood;
@@ -1336,6 +1339,10 @@
                         <div style="font-size:12px; color:${state.debtOverdue?'red':'#00c853'}; font-weight:bold; margin-top:5px" id="bank-timer-display">
                             ${state.debt > 0 ? (state.debtOverdue ? 'ВЗЫСКАНИЕ АКТИВНО' : 'Осталось времени: ' + timeLeftStr) : 'Нет долгов'}
                         </div>
+                    </div>
+                    
+                    <div style="text-align:center; margin-bottom:10px; color:#aaa; font-size:12px">
+                        Ваш кредитный лимит: <span style="color:white; font-weight:bold">${limit.toLocaleString()} PLN</span>
                     </div>
 
                     ${sosHtml}
@@ -1409,6 +1416,20 @@
             const input = document.getElementById('loan-amount'); 
             const amt = parseFloat(input.value);
             if (!amt || amt <= 0) return;
+
+            // --- НОВОЕ: ПРОВЕРКА ЛИМИТА И ДОЛГА ---
+            const limit = 1000 + (state.career.totalOrders * 50);
+
+            if (state.debt > 0.1) {
+                showToast('❌ У вас уже есть активный кредит!', 'warn');
+                return;
+            }
+
+            if (amt > limit) {
+                showToast(`⛔ Лимит доверия: ${limit} PLN. Работайте больше!`, 'warn');
+                return;
+            }
+            // ----------------------------------------
 
             let streak = state.loanStreak || 0;
             let interest = 0;
