@@ -349,6 +349,7 @@
             repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
             history: [],
             energyBoostActive: false,
+            isAuth: false, // NEW: Tracks if logged in
             career: { totalOrders: 0 },
             taxi: { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
         };
@@ -400,13 +401,18 @@
                     state.name += ` (@${tg.initDataUnsafe.user.username})`;
                 }
                 saveGame();
-                document.getElementById('auth-menu-item').style.display = 'none'; // Hide auth in TG
+                // Auth button is hidden by updateAuthUI()
             } else {
                 // ANDROID / WEB MODE
                 if (!state.name) {
                     state.name = "Guest Courier";
                 }
-                document.getElementById('auth-menu-item').style.display = 'flex'; // Show auth in Android
+            }
+            
+            // CHECK AUTH STATE for existing users
+            if(state.name !== "Guest Courier" && !state.isAuth) {
+                // Assume they are logged in if they have a name in Android mode
+                state.isAuth = true; 
             }
 
             document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
@@ -416,6 +422,7 @@
             setInterval(checkDebt, 1000); 
             listenToCloud(); syncToCloud(true);
             updateMenuState();
+            updateAuthUI(); // NEW: Update button state
             updateUI(); // force initial UI
         }
 
@@ -442,9 +449,6 @@
                 if(snap.exists()) {
                     showToast('Такой логин уже занят!', 'warn');
                 } else {
-                    // Register Logic: Link current ID or New ID?
-                    // Better: Create new Entry with current ID (saving current progress)
-                    
                     const userData = {
                         pass: pass,
                         playerId: state.id,
@@ -454,9 +458,11 @@
                     db.ref('users_lookup/' + login).set(userData)
                       .then(() => {
                           state.name = login; // Update name to login
+                          state.isAuth = true; // Set auth flag
                           saveGame();
                           syncToCloud(true);
                           updateUI();
+                          updateAuthUI(); // Update button to Logout
                           closeAuthModal();
                           showToast('✅ Регистрация успешна!', 'success');
                           document.getElementById('player-name-display').textContent = state.name;
@@ -490,6 +496,7 @@
                     if(playerData) {
                         state = { ...state, ...playerData };
                         state.id = targetId; // ensure ID is correct
+                        state.isAuth = true; // Set auth flag
                         saveGame(); // Overwrite local storage
                         location.reload(); // Reload to apply changes cleanly
                     } else {
@@ -497,6 +504,43 @@
                     }
                 });
             });
+        }
+
+        function performLogout() {
+            if(confirm("Вы действительно хотите выйти? Прогресс останется в облаке, но на этом устройстве будет сброшен.")) {
+                localStorage.removeItem(SAVE_KEY);
+                location.reload();
+            }
+        }
+
+        function updateAuthUI() {
+            const btn = document.getElementById('auth-menu-item');
+            if(!btn) return;
+
+            // Hide for Telegram
+            const tg = window.Telegram.WebApp;
+            if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                btn.style.display = 'none';
+                return;
+            }
+
+            // Android Logic
+            btn.style.display = 'flex';
+            
+            // Check if logged in (by flag or by name check for legacy compatibility)
+            const isLoggedIn = state.isAuth || (state.name && state.name !== "Guest Courier");
+
+            if (isLoggedIn) {
+                // SHOW LOGOUT
+                btn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 🚪 Выход';
+                btn.style.color = 'var(--accent-red)';
+                btn.onclick = performLogout;
+            } else {
+                // SHOW LOGIN
+                btn.innerHTML = '<i class="fa-solid fa-key"></i> 🔐 Вход / Регистрация';
+                btn.style.color = 'var(--accent-green)';
+                btn.onclick = openAuthModal;
+            }
         }
 
         function sendLog(msg, type='INFO') {
@@ -521,6 +565,7 @@
                     stats: state.needs, inventory: state.inventory, debt: state.debt, items: state.items,
                     career: state.career,
                     taxi: state.taxi,
+                    isAuth: state.isAuth || false
                 });
                 lastSync = now;
             }
@@ -1651,3 +1696,4 @@
     </script>
 </body>
 </html>
+
