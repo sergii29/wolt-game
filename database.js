@@ -12,4 +12,4 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 window.db = db;
-console.log("Firebase initialized for Wolt");
+console.log("Firebase initialized for Warsaw Courier");
