@@ -153,14 +153,14 @@
 
     <div id="android-login-overlay">
         <div class="welcome-logo"><i class="fa-solid fa-bicycle"></i></div>
-        <div class="welcome-title">Привет, Друг! 👋</div>
+        <div class="welcome-title">Привет, мой Друг! 👋</div>
         <div class="welcome-text">
-            Рад видеть тебя в Варшаве! Здесь почти реальная жизнь: выполняй заказы, копи кэш, следи за едой или пересаживайся на Такси с комфортом! 🚕<br><br>
-            Чтобы твои миллионы не потерялись, давай быстро оформим тебе пропуск.
+            Рад тебя видеть тут. У нас тут почти реальная жизнь курьера. Можешь и ты стать нашей частью команды. <br><br>
+            Собирай деньги выполняя заказы, пополняй запасы и доставляй заказы или развози людей в такси с комфортом! 🚕
         </div>
         
         <div class="input-group">
-            <input type="text" id="start-login" class="bank-input" placeholder="Придумай Логин">
+            <input type="text" id="start-login" class="bank-input" placeholder="Логин">
             <input type="password" id="start-pass" class="bank-input" placeholder="Пароль">
         </div>
         
@@ -170,7 +170,7 @@
         </div>
         
         <div style="margin-top:25px; font-size:11px; color:#555; opacity: 0.7">
-            Забыл пароль? Напишите админу: <a href="https://t.me/TotKtoIdet" style="color:var(--brand-blue); text-decoration: none;">@TotKtoIdet</a><br>
+            Забыл пароль? Напиши админу в телеграмм: <a href="https://t.me/TotKtoIdet" style="color:var(--brand-blue); text-decoration: none;">@TotKtoIdet</a><br>
             Лёгкой смены и позитива! ✌️
         </div>
     </div>
@@ -227,8 +227,8 @@
             </div>
 
             <div class="menu-divider"></div>
-            <div class="menu-item" id="btn-auth-menu" onclick="openModal('auth')" style="color:#fff; background:#2c3e50; border-radius:10px; padding:10px; justify-content:center; font-weight:bold; margin-bottom:10px; display:none;">
-                <i class="fa-solid fa-user-shield"></i> 🔐 АККАУНТ / ВХОД
+            <div class="menu-item" id="btn-auth-menu" style="color:#fff; background:#2c3e50; border-radius:10px; padding:10px; justify-content:center; font-weight:bold; margin-bottom:10px; display:none;">
+                 🔐 АККАУНТ
             </div>
 
             <div class="menu-item" onclick="resetGame()" style="color:var(--accent-red); margin-top:auto; display:flex; flex-direction:column; align-items:flex-start; gap:0">
@@ -549,26 +549,7 @@
         }
 
         // --- AUTH SYSTEM (ANDROID ONLY) ---
-        function renderAuth(c) {
-            const isLinked = state.linkedUser !== null && state.linkedUser !== undefined;
-            let html = `<div style="text-align:center; padding-bottom:15px"><h2>Аккаунт (Android)</h2>`;
-            
-            if(isLinked) {
-                html += `
-                <div class="auth-status">
-                    <i class="fa-solid fa-lock"></i> 
-                    <div>
-                        <strong>Вы вошли как: ${state.linkedUser}</strong><br>
-                        Ваш прогресс сохранен в облаке.
-                    </div>
-                </div>
-                <button class="bank-btn btn-repay" onclick="doLogout()">ВЫЙТИ</button>
-                `;
-            } 
-            html += `</div>`;
-            c.innerHTML = html;
-        }
-
+        
         function doStartLogin() {
             const login = document.getElementById('start-login').value.trim().toLowerCase();
             const pass = document.getElementById('start-pass').value.trim();
@@ -765,9 +746,8 @@
                         authBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> 👤 Вы: ${state.linkedUser}`;
                         authBtn.style.background = 'var(--accent-green)';
                         authBtn.style.color = '#004d40';
-                        authBtn.onclick = () => openModal('auth');
+                        authBtn.onclick = () => doLogout();
                     } else {
-                        // Should be unreachable due to login block, but safe fallback
                         authBtn.innerHTML = `<i class="fa-solid fa-user-shield"></i> ВХОД`;
                     }
                 }
@@ -1073,7 +1053,6 @@
             else if (type === 'deflation') { document.getElementById('modal-title').textContent = 'Борьба с инфляцией'; renderDeflation(b); }
             else if (type === 'taxi-shop') { document.getElementById('modal-title').textContent = 'Автосалон'; renderTaxiShop(b); }
             else if (type === 'taxi-licenses') { document.getElementById('modal-title').textContent = 'Лицензии и Документы'; renderTaxiLicenses(b); }
-            else if (type === 'auth') { document.getElementById('modal-title').textContent = 'Аккаунт'; renderAuth(b); }
             else { document.getElementById('modal-title').textContent = 'История'; renderHistory(b); }
         }
 
@@ -1092,4 +1071,3 @@
     </script>
 </body>
 </html>
-
