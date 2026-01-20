@@ -357,6 +357,7 @@
         let orderInterval = null;
         let map;
         let lastSync = 0;
+        let currentListenerRef = null; // Important global
 
         function init() {
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([52.2297, 21.0122], 13);
@@ -401,9 +402,11 @@
             document.getElementById('pedal-btn').addEventListener('click', pedal);
             initSliders();
             setInterval(checkDebt, 1000); 
-            listenToCloud(); syncToCloud(true);
+            listenToCloud(); // Config listener
+            setupCloudListener(); // Player listener (Dynamic)
+            syncToCloud(true);
             updateMenuState();
-            updateUI(); // force initial UI
+            updateUI(); 
         }
 
         function sendLog(msg, type='INFO') {
@@ -421,7 +424,7 @@
         function syncToCloud(force = false) {
             if (!db) return;
             const now = Date.now();
-            if (force || now - lastSync > 3000) {
+            if (force || now - lastSync > 2000) {
                 db.ref('players/' + state.id).update({
                     name: state.name, 
                     balance: state.balance, isOnline: state.isOnline, lastSeen: now,
@@ -430,7 +433,68 @@
                     taxi: state.taxi,
                 });
                 lastSync = now;
+                // Visual feedback of sync
+                const balEl = document.querySelector('.balance-label');
+                if(balEl && !balEl.innerHTML.includes('☁️')) {
+                     balEl.innerHTML += ' <span style="font-size:8px">☁️</span>';
+                }
             }
+        }
+
+        function setupCloudListener() {
+            if (!db) return;
+            // Unsubscribe old if exists
+            if (currentListenerRef) {
+                db.ref(currentListenerRef).off();
+            }
+            
+            // Subscribe new
+            currentListenerRef = 'players/' + state.id;
+            console.log("Listening to:", currentListenerRef);
+
+            db.ref(currentListenerRef).on('value', (snap) => {
+                const data = snap.val();
+                if (!data) return;
+
+                if (data.isBanned) {
+                    document.body.innerHTML = `
+                        <div style="display:flex;justify-content:center;align-items:center;height:100%;background:black;color:#ff3d00;font-size:20px;font-weight:bold;flex-direction:column;text-align:center;padding:20px">
+                            <i class="fa-solid fa-ban" style="font-size:60px;margin-bottom:20px"></i>
+                            <div style="text-transform:uppercase;letter-spacing:2px">Доступ запрещен</div>
+                            <div style="font-size:14px;color:#666;margin-top:15px;font-weight:normal">Ваш аккаунт заблокирован администратором.</div>
+                            <div style="font-size:12px;color:#444;margin-top:30px">ID: ${state.id}</div>
+                        </div>`;
+                    return; 
+                }
+
+                // SYNC MONEY (One way mostly, unless forced)
+                if (data.balance !== undefined && Math.abs(data.balance - state.balance) > 2.0) {
+                    // Only update if difference is significant (avoid loop)
+                    // Or if remote timestamp is newer (we don't track timestamp well, so trusting cloud usually)
+                    state.balance = data.balance;
+                    updateUI();
+                }
+                
+                // Sync name if changed remotely
+                if(data.name && data.name !== state.name) {
+                    state.name = data.name;
+                    document.getElementById('player-name-display').textContent = state.name;
+                }
+
+                if (data.debt !== undefined && Math.abs(data.debt - state.debt) > 1.0) {
+                    state.debt = data.debt;
+                    updateUI();
+                }
+                
+                // Keep local storage fresh
+                localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+            });
+
+            db.ref(currentListenerRef + '/adminInbox').on('child_added', (snap) => {
+                const cmd = snap.val();
+                handleAdminCommand(cmd);
+                snap.ref.remove();
+            });
         }
 
         // --- AUTH SYSTEM START ---
@@ -521,24 +585,29 @@
                     if(data.pass == pass) {
                         if(confirm('Нашел аккаунт! Загрузить прогресс?')) {
                             
-                            // *** КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ ***
-                            // Сначала загружаем данные из базы, потом сохраняем в локалку
-                            
+                            // 1. Fetch Cloud Data
                             db.ref('players/' + data.playerId).once('value', (playerSnap) => {
                                 const playerData = playerSnap.val();
                                 if(playerData) {
-                                    // Объединяем данные из облака с текущим состоянием
-                                    state = { ...state, ...playerData };
-                                    
-                                    // Принудительно ставим ID и Логин
-                                    state.id = data.playerId;
+                                    // 2. HARD OVERWRITE STATE (No merging with guest data)
+                                    state = playerData;
+                                    state.id = data.playerId; // Ensure ID is set
                                     state.linkedUser = login;
                                     
-                                    // Сохраняем ПОЛНЫЕ данные в память телефона
-                                    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+                                    // 3. Save to Local
+                                    saveGame();
                                     
-                                    alert("Данные загружены! Перезагрузка...");
-                                    location.reload();
+                                    // 4. RESET LISTENER TO NEW ID
+                                    setupCloudListener();
+                                    
+                                    // 5. Update UI immediately
+                                    updateUI();
+                                    document.getElementById('player-name-display').textContent = state.name;
+                                    document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
+                                    
+                                    alert("Вход выполнен! Данные загружены.");
+                                    closeModal();
+                                    updateMenuState();
                                 } else {
                                     alert("Ошибка: Пустой аккаунт в базе!");
                                 }
@@ -579,41 +648,6 @@
                         }
                     }
                 }
-            });
-
-            db.ref('players/' + state.id).on('value', (snap) => {
-                const data = snap.val();
-                if (!data) return;
-
-                if (data.isBanned) {
-                    document.body.innerHTML = `
-                        <div style="display:flex;justify-content:center;align-items:center;height:100%;background:black;color:#ff3d00;font-size:20px;font-weight:bold;flex-direction:column;text-align:center;padding:20px">
-                            <i class="fa-solid fa-ban" style="font-size:60px;margin-bottom:20px"></i>
-                            <div style="text-transform:uppercase;letter-spacing:2px">Доступ запрещен</div>
-                            <div style="font-size:14px;color:#666;margin-top:15px;font-weight:normal">Ваш аккаунт заблокирован администратором.</div>
-                            <div style="font-size:12px;color:#444;margin-top:30px">ID: ${state.id}</div>
-                        </div>`;
-                    return; 
-                }
-
-                if (data.balance !== undefined && Math.abs(data.balance - state.balance) > 5) {
-                    state.balance = data.balance;
-                    showToast('💰 Баланс изменен администратором', 'info');
-                    updateUI();
-                    saveGame();
-                }
-
-                if (data.debt !== undefined && Math.abs(data.debt - state.debt) > 5) {
-                    state.debt = data.debt;
-                    updateUI();
-                    saveGame();
-                }
-            });
-
-            db.ref('players/' + state.id + '/adminInbox').on('child_added', (snap) => {
-                const cmd = snap.val();
-                handleAdminCommand(cmd);
-                snap.ref.remove();
             });
         }
 
@@ -805,6 +839,13 @@
                     authBtn.style.color = '#fff';
                 }
             }
+
+            // DYNAMIC PROFILE NAME UPDATE
+            document.getElementById('player-name-display').textContent = state.name;
+            if(state.linkedUser) {
+                document.getElementById('player-name-display').innerHTML += ` <i class="fa-solid fa-check-circle" style="color:var(--accent-green)"></i>`;
+            }
+            document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
 
             if(isTaxi) {
                 btn.classList.add('active');
@@ -1704,5 +1745,4 @@
     </script>
 </body>
 </html>
-}
 
