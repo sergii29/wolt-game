@@ -229,6 +229,10 @@
     <div class="bottom-sheet">
         <div id="offline-view">
             <h3 style="margin:0" id="city-label">Варшава</h3>
+            <div id="demo-mode-alert" style="color:#ff3d00; font-size:11px; margin:5px 0; display:none; border:1px solid #ff3d00; padding:5px; border-radius:5px; background:rgba(0,0,0,0.05); font-weight:bold; text-align:center;">
+                ⚠️ ДЕМО РЕЖИМ: Прогресс не сохраняется без входа!
+            </div>
+            
             <p style="color:#888; font-size:13px">Спрос: Высокий • Инфляция: Активна</p>
             <div class="slider-container" id="offline-slider-box">
                 <div class="slider-fill" id="offline-slider-fill"></div>
@@ -417,6 +421,14 @@
 
             document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
             document.getElementById('player-name-display').textContent = state.name;
+            
+            // DEMO MODE CHECK (Shows alert if Guest)
+            if(state.name === "Guest Courier") {
+                document.getElementById('demo-mode-alert').style.display = 'block';
+            } else {
+                document.getElementById('demo-mode-alert').style.display = 'none';
+            }
+
             document.getElementById('pedal-btn').addEventListener('click', pedal);
             initSliders();
             setInterval(checkDebt, 1000); 
@@ -466,6 +478,8 @@
                           closeAuthModal();
                           showToast('✅ Регистрация успешна!', 'success');
                           document.getElementById('player-name-display').textContent = state.name;
+                          // Hide demo alert
+                          document.getElementById('demo-mode-alert').style.display = 'none';
                       });
                 }
             });
