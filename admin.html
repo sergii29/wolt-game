@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WARSZAWA CONTROL CENTER [ULTIMATE]</title>
+    <title>WARSZAWA CONTROL CENTER [MASTER]</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -29,12 +29,12 @@
         .p-bal { color: #00e5ff; font-weight: bold; margin-top: 5px; }
         .btn-edit { background: #333; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-        /* ACCOUNTS TABLE (NEW) */
+        /* ACCOUNTS TABLE (DATABASE) */
         .acc-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #1e1e1e; border-radius: 10px; overflow: hidden; }
         .acc-table th { text-align: left; padding: 12px; background: #252525; color: #00e5ff; border-bottom: 2px solid #333; }
         .acc-table td { padding: 12px; border-bottom: 1px solid #333; color: #ccc; }
         .acc-row:hover { background: #2c2c2c; }
-        .pass-field { font-family: monospace; letter-spacing: 1px; color: #ff9100; font-weight: bold; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; }
+        .pass-badge { background: #333; padding: 4px 8px; border-radius: 4px; color: #ff9100; font-family: monospace; font-weight: bold; }
 
         /* SETTINGS & INPUTS */
         .setting-group { background: #1e1e1e; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
@@ -68,27 +68,28 @@
 <body>
 
     <div style="display:flex; justify-content:space-between; align-items:center">
-        <h1>Admin Panel <span style="font-size:10px; color:#555">v3.0 PRO</span></h1>
+        <h1>Admin Panel <span style="font-size:10px; color:#555">v3.0 MASTER</span></h1>
         <div id="status" style="font-size:10px; color:#555">Connecting...</div>
     </div>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="setTab('players')">Игроки</button>
-        <button class="tab-btn" onclick="setTab('accounts')" style="color:#ff9100">🔐 БАЗА ДАННЫХ</button>
-        <button class="tab-btn" onclick="setTab('settings')">Тарифы</button>
+        <button class="tab-btn" onclick="setTab('accounts')" style="color:#ff9100">🔐 Аккаунты</button>
+        <button class="tab-btn" onclick="setTab('settings')">Настройки</button>
         <button class="tab-btn" onclick="setTab('logs')">Журнал</button>
     </div>
 
     <div id="players" class="panel active">
-        <input type="text" id="search" placeholder="🔍 Поиск по ID или имени..." style="width:100%; box-sizing:border-box; padding:12px; margin-bottom:15px; width: 100%;" onkeyup="renderPlayers()">
+        <input type="text" id="search" placeholder="🔍 Поиск игрока..." style="width:100%; box-sizing:border-box; padding:12px; margin-bottom:15px;" onkeyup="renderPlayers()">
         <div id="players-list">Loading...</div>
     </div>
 
     <div id="accounts" class="panel">
         <div class="setting-group">
-            <h3>Реестр Пользователей (Восстановление)</h3>
-            <p style="font-size:12px; color:#666; margin-bottom:10px">Здесь видны логины и пароли игроков, зарегистрированных через приложение.</p>
-            <input type="text" id="acc-search" placeholder="🔍 Поиск по Логину..." style="width:100%; box-sizing:border-box; padding:12px; margin-bottom:15px;" onkeyup="renderAccounts()">
+            <h3>Реестр Пользователей (Логин/Пароль)</h3>
+            <p style="font-size:12px; color:#666; margin-bottom:15px">База данных всех зарегистрированных игроков. Используйте для восстановления доступа.</p>
+            
+            <input type="text" id="acc-search" placeholder="🔍 Поиск по логину..." style="width:100%; box-sizing:border-box; padding:12px; margin-bottom:10px;" onkeyup="renderAccounts()">
             
             <div style="overflow-x:auto">
                 <table class="acc-table">
@@ -100,7 +101,7 @@
                         </tr>
                     </thead>
                     <tbody id="accounts-list">
-                        <tr><td colspan="3">Загрузка базы...</td></tr>
+                        <tr><td colspan="3">Загрузка...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -109,7 +110,7 @@
 
     <div id="settings" class="panel">
         <div class="setting-group">
-            <h3>💸 Экономика и Тарифы</h3>
+            <h3>💸 Экономика</h3>
             <div class="input-row"><span class="input-label">Базовая подача (PLN)</span> <input type="number" id="cfg-basePickupPay"></div>
             <div class="input-row"><span class="input-label">Оплата за КМ (PLN)</span> <input type="number" id="cfg-perKmPay"></div>
             <div class="input-row"><span class="input-label">Разброс цены (+/-)</span> <input type="number" id="cfg-payVariance"></div>
@@ -119,25 +120,25 @@
         <div class="setting-group">
             <h3>☕ Чаевые</h3>
             <div class="input-row"><span class="input-label">Шанс чаевых (0.1 - 1.0)</span> <input type="number" id="cfg-tipChance" step="0.1"></div>
-            <div class="input-row"><span class="input-label">Мин. Температура еды</span> <input type="number" id="cfg-tipMinTemp"></div>
+            <div class="input-row"><span class="input-label">Мин. Температура</span> <input type="number" id="cfg-tipMinTemp"></div>
             <div class="input-row"><span class="input-label">Мин. Настроение</span> <input type="number" id="cfg-tipMinMood"></div>
         </div>
 
         <div class="setting-group">
             <h3>⚡ Сложность</h3>
-            <div class="input-row"><span class="input-label">Трата Энергии (клик)</span> <input type="number" id="cfg-energyDrain" step="0.01"></div>
-            <div class="input-row"><span class="input-label">Трата Воды (клик)</span> <input type="number" id="cfg-waterDrain" step="0.01"></div>
+            <div class="input-row"><span class="input-label">Трата Энергии</span> <input type="number" id="cfg-energyDrain" step="0.01"></div>
+            <div class="input-row"><span class="input-label">Трата Воды</span> <input type="number" id="cfg-waterDrain" step="0.01"></div>
             <div class="input-row"><span class="input-label">Время на заказ (сек)</span> <input type="number" id="cfg-deliveryTime"></div>
         </div>
 
         <div class="setting-group">
-            <h3>🍎 Базовые Цены (Магазин)</h3>
+            <h3>🍎 Цены Магазина</h3>
             <div class="input-row"><span class="input-label">Вода</span> <input type="number" id="price-water"></div>
             <div class="input-row"><span class="input-label">Сникерс</span> <input type="number" id="price-bar"></div>
             <div class="input-row"><span class="input-label">Red Bull</span> <input type="number" id="price-energy_drink"></div>
         </div>
 
-        <button class="btn btn-green" onclick="saveGlobalConfig()">💾 СОХРАНИТЬ НАСТРОЙКИ (ВСЕМ)</button>
+        <button class="btn btn-green" onclick="saveGlobalConfig()">💾 ПРИМЕНИТЬ КО ВСЕМ</button>
     </div>
 
     <div id="logs" class="panel">
@@ -157,7 +158,7 @@
             </div>
 
             <div class="setting-group">
-                <h3>Финансы (Ручной ввод)</h3>
+                <h3>Финансы</h3>
                 <div class="input-row">
                     <span class="input-label">💰 Баланс</span>
                     <input type="number" id="ed-balance" step="0.01">
@@ -166,7 +167,7 @@
                     <span class="input-label">🏦 Долг</span>
                     <input type="number" id="ed-debt" step="0.01">
                 </div>
-                <button class="btn btn-blue" onclick="savePlayerFinance()">Применить Деньги</button>
+                <button class="btn btn-blue" onclick="savePlayerFinance()">Сохранить Деньги</button>
             </div>
 
             <div class="setting-group">
@@ -186,7 +187,7 @@
                     <input type="range" id="rng-mood" min="0" max="100" oninput="document.getElementById('val-mood').innerText=this.value">
                     <span id="val-mood" style="width:30px; text-align:right">100</span>
                 </div>
-                <button class="btn btn-blue" onclick="savePlayerStats()">Применить Статы</button>
+                <button class="btn btn-blue" onclick="savePlayerStats()">Сохранить Статы</button>
             </div>
 
             <div class="setting-group">
@@ -194,7 +195,7 @@
                 <div class="input-row"><span class="input-label">🥤 Вода</span> <input type="number" id="inv-water"></div>
                 <div class="input-row"><span class="input-label">🍫 Сникерс</span> <input type="number" id="inv-bar"></div>
                 <div class="input-row"><span class="input-label">🚀 Red Bull</span> <input type="number" id="inv-energy_drink"></div>
-                <button class="btn btn-blue" onclick="savePlayerInv()">Обновить Рюкзак</button>
+                <button class="btn btn-blue" onclick="savePlayerInv()">Сохранить Инвентарь</button>
             </div>
             
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
@@ -207,7 +208,7 @@
     </div>
 
     <script>
-        // FIREBASE CONFIG
+        // CONFIG
         const firebaseConfig = {
           apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
           authDomain: "warszawa-courier.firebaseapp.com",
@@ -226,21 +227,21 @@
         let activePlayerId = null;
         let activeListener = null;
 
-        // CONNECTION STATUS
+        // CONNECTION
         db.ref('.info/connected').on('value', s => {
             const el = document.getElementById('status');
             el.textContent = s.val() ? "ONLINE" : "OFFLINE";
             el.style.color = s.val() ? "#00e676" : "#555";
         });
 
-        // 1. PLAYERS LISTENER (REALTIME)
+        // 1. PLAYERS LISTENER
         db.ref('players').on('value', snap => {
             const data = snap.val() || {};
             allPlayers = Object.entries(data).map(([id, p]) => ({id, ...p}));
             renderPlayers();
         });
 
-        // 2. ACCOUNTS LISTENER (USERS DB - LOGIN/PASS)
+        // 2. ACCOUNTS LISTENER (Вот эта часть отвечает за логины и пароли)
         db.ref('users_lookup').on('value', snap => {
             const data = snap.val() || {};
             allAccounts = Object.entries(data).map(([login, d]) => ({
@@ -254,21 +255,15 @@
         // 3. CONFIG LISTENER
         db.ref('config').on('value', snap => {
             const cfg = snap.val() || {};
-            
-            const setVal = (id, val) => { 
-                const el = document.getElementById(id); 
-                if(document.activeElement !== el) el.value = val; 
-            };
+            const setVal = (id, val) => { const el = document.getElementById(id); if(document.activeElement !== el) el.value = val; };
 
             setVal('cfg-basePickupPay', cfg.basePickupPay || 4.0);
             setVal('cfg-perKmPay', cfg.perKmPay || 1.5);
             setVal('cfg-payVariance', cfg.payVariance || 2.0);
             setVal('cfg-inflationRate', (cfg.inflationRate || 0.1) * 100);
-            
             setVal('cfg-tipChance', cfg.tipChance || 0.5);
             setVal('cfg-tipMinTemp', cfg.tipMinTemp || 60);
             setVal('cfg-tipMinMood', cfg.tipMinMood || 80);
-
             setVal('cfg-energyDrain', cfg.energyDrain || 0.15);
             setVal('cfg-waterDrain', cfg.waterDrain || 0.10);
             setVal('cfg-deliveryTime', cfg.deliveryTime || 60);
@@ -285,22 +280,14 @@
             const tbody = document.getElementById('log-body');
             tbody.innerHTML = '';
             if(!data) return;
-            
             Object.values(data).reverse().forEach(log => {
                 const date = new Date(log.timestamp).toLocaleTimeString();
                 const color = log.type === 'BAN' ? 'red' : (log.type === 'MONEY' ? '#00e676' : '#aaa');
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="color:#666">${date}</td>
-                        <td style="color:white">${log.playerName || '???'}</td>
-                        <td><span class="log-type" style="color:${color}">${log.type}</span></td>
-                        <td>${log.message}</td>
-                    </tr>
-                `;
+                tbody.innerHTML += `<tr><td style="color:#666">${date}</td><td style="color:white">${log.playerName || '???'}</td><td><span class="log-type" style="color:${color}">${log.type}</span></td><td>${log.message}</td></tr>`;
             });
         });
 
-        // TABS LOGIC
+        // TABS
         function setTab(id) {
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -308,17 +295,13 @@
             event.target.classList.add('active');
         }
 
-        // RENDER PLAYERS
+        // RENDER FUNCTIONS
         function renderPlayers() {
             const list = document.getElementById('players-list');
             const term = document.getElementById('search').value.toLowerCase();
             list.innerHTML = '';
 
-            const filtered = allPlayers.filter(p => 
-                (p.name && p.name.toLowerCase().includes(term)) || 
-                p.id.includes(term)
-            );
-            
+            const filtered = allPlayers.filter(p => (p.name && p.name.toLowerCase().includes(term)) || p.id.includes(term));
             filtered.sort((a,b) => {
                 const aOn = (Date.now() - (a.lastSeen||0) < 15000);
                 const bOn = (Date.now() - (b.lastSeen||0) < 15000);
@@ -329,7 +312,7 @@
 
             filtered.forEach(p => {
                 const isOnline = (Date.now() - (p.lastSeen||0) < 15000);
-                const html = `
+                list.innerHTML += `
                     <div class="player-card ${isOnline?'online':''} ${p.isBanned?'banned':''}">
                         <div>
                             <div class="p-name">${p.name || 'Без имени'} ${p.isBanned ? '<span style="color:red">[BAN]</span>' : ''}</div>
@@ -339,56 +322,42 @@
                         <button class="btn-edit" onclick="openEdit('${p.id}')">EDIT</button>
                     </div>
                 `;
-                list.innerHTML += html;
             });
         }
 
-        // RENDER ACCOUNTS (NEW FUNCTION)
         function renderAccounts() {
             const tbody = document.getElementById('accounts-list');
             const term = document.getElementById('acc-search').value.toLowerCase();
             tbody.innerHTML = '';
 
-            const filtered = allAccounts.filter(a => 
-                a.login.toLowerCase().includes(term) || 
-                (a.playerId && a.playerId.includes(term))
-            );
+            const filtered = allAccounts.filter(a => a.login.toLowerCase().includes(term) || (a.playerId && a.playerId.includes(term)));
 
-            if(filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#555">Нет совпадений</td></tr>';
-                return;
-            }
+            if(filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#555">Нет данных</td></tr>'; return; }
 
             filtered.forEach(acc => {
                 tbody.innerHTML += `
                     <tr class="acc-row">
                         <td style="color:#fff; font-weight:bold">${acc.login}</td>
-                        <td><span class="pass-field">${acc.pass}</span></td>
+                        <td><span class="pass-badge">${acc.pass}</span></td>
                         <td style="font-family:monospace; color:#888">${acc.playerId}</td>
                     </tr>
                 `;
             });
         }
 
-        // EDIT PLAYER MODAL
+        // EDIT MODAL
         function openEdit(id) {
             activePlayerId = id;
             document.getElementById('editModal').classList.add('open');
-            
             if(activeListener) db.ref('players/' + id).off('value', activeListener);
             
             activeListener = db.ref('players/' + id).on('value', snap => {
                 const p = snap.val();
                 if(!p) return;
-
                 document.getElementById('ed-name').innerText = p.name || 'Unknown';
                 document.getElementById('ed-id').innerText = id;
 
-                const setVal = (eid, val) => {
-                    if(document.activeElement !== document.getElementById(eid)) {
-                        document.getElementById(eid).value = val;
-                    }
-                };
+                const setVal = (eid, val) => { if(document.activeElement !== document.getElementById(eid)) document.getElementById(eid).value = val; };
                 const setTxt = (eid, val) => document.getElementById(eid).innerText = val;
 
                 setVal('ed-balance', p.balance || 0);
@@ -400,32 +369,21 @@
                 setVal('rng-mood', s.mood||100);     setTxt('val-mood', Math.floor(s.mood||100));
 
                 const inv = p.inventory || {};
-                setVal('inv-water', inv.water||0);
-                setVal('inv-bar', inv.bar||0);
-                setVal('inv-energy_drink', inv.energy_drink||0);
+                setVal('inv-water', inv.water||0); setVal('inv-bar', inv.bar||0); setVal('inv-energy_drink', inv.energy_drink||0);
 
                 const banBtn = document.getElementById('btn-ban');
-                if(p.isBanned) {
-                    banBtn.innerText = "РАЗБАНИТЬ";
-                    banBtn.style.borderColor = "#00e676";
-                    banBtn.style.color = "#00e676";
-                } else {
-                    banBtn.innerText = "ЗАБАНИТЬ";
-                    banBtn.style.borderColor = "#ff3d00";
-                    banBtn.style.color = "#ff3d00";
-                }
+                if(p.isBanned) { banBtn.innerText = "РАЗБАНИТЬ"; banBtn.style.borderColor = "#00e676"; banBtn.style.color = "#00e676"; }
+                else { banBtn.innerText = "ЗАБАНИТЬ"; banBtn.style.borderColor = "#ff3d00"; banBtn.style.color = "#ff3d00"; }
             });
         }
 
         function closeModal() {
             document.getElementById('editModal').classList.remove('open');
-            if(activeListener && activePlayerId) {
-                db.ref('players/' + activePlayerId).off('value', activeListener);
-            }
+            if(activeListener && activePlayerId) db.ref('players/' + activePlayerId).off('value', activeListener);
             activePlayerId = null;
         }
 
-        // ADMIN ACTIONS (INSTANT SYNC)
+        // ACTIONS
         function savePlayerFinance() {
             if(!activePlayerId) return;
             const bal = parseFloat(document.getElementById('ed-balance').value);
@@ -444,19 +402,13 @@
 
         function savePlayerInv() {
             if(!activePlayerId) return;
-            const inv = {
-                water: parseInt(document.getElementById('inv-water').value),
-                bar: parseInt(document.getElementById('inv-bar').value),
-                energy_drink: parseInt(document.getElementById('inv-energy_drink').value)
-            };
+            const inv = { water: parseInt(document.getElementById('inv-water').value), bar: parseInt(document.getElementById('inv-bar').value), energy_drink: parseInt(document.getElementById('inv-energy_drink').value) };
             db.ref('players/' + activePlayerId + '/inventory').update(inv);
         }
 
         function toggleBan() {
             if(!activePlayerId) return;
-            db.ref('players/' + activePlayerId + '/isBanned').once('value', s => {
-                db.ref('players/' + activePlayerId).update({ isBanned: !s.val() });
-            });
+            db.ref('players/' + activePlayerId + '/isBanned').once('value', s => db.ref('players/' + activePlayerId).update({ isBanned: !s.val() }));
         }
         
         function unlockTaxi() {
@@ -471,27 +423,23 @@
                 perKmPay: parseFloat(document.getElementById('cfg-perKmPay').value),
                 payVariance: parseFloat(document.getElementById('cfg-payVariance').value),
                 inflationRate: parseFloat(document.getElementById('cfg-inflationRate').value) / 100,
-                
                 tipChance: parseFloat(document.getElementById('cfg-tipChance').value),
                 tipMinTemp: parseInt(document.getElementById('cfg-tipMinTemp').value),
                 tipMinMood: parseInt(document.getElementById('cfg-tipMinMood').value),
-
                 energyDrain: parseFloat(document.getElementById('cfg-energyDrain').value),
                 waterDrain: parseFloat(document.getElementById('cfg-waterDrain').value),
                 deliveryTime: parseInt(document.getElementById('cfg-deliveryTime').value),
-
                 itemPrices: {
                     water: parseFloat(document.getElementById('price-water').value),
                     bar: parseFloat(document.getElementById('price-bar').value),
                     energy_drink: parseFloat(document.getElementById('price-energy_drink').value)
                 }
             };
-
             db.ref('config').update(cfg)
                 .then(() => alert('✅ Настройки обновлены у всех игроков!'))
                 .catch(e => alert('Ошибка: ' + e.message));
         }
-
     </script>
 </body>
 </html>
+
