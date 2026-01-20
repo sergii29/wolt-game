@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Warsaw Courier Sim 1.2</title>
+    <title>Warsaw Courier Simulator</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* --- STYLES (WARSZAWA THEME) --- */
+        /* --- WOLT / WARSAW STYLE --- */
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212;
-            color: #e0e0e0;
+            background-color: #121212; /* Dark theme */
+            color: #fff;
             margin: 0;
             padding: 0;
             display: flex;
@@ -24,585 +25,392 @@
             width: 100%;
             max-width: 400px;
             height: 100vh;
-            background: linear-gradient(180deg, #1e1e2f 0%, #121212 100%);
+            background: #121212;
             display: flex;
             flex-direction: column;
             position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
 
-        /* --- LOGIN / REGISTRATION SCREEN --- */
-        #login-screen {
+        /* --- ANDROID LOGIN SCREEN --- */
+        #android-auth {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0f0f13;
-            z-index: 1000;
-            display: flex;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #009de0; /* Wolt Blue vibe */
+            z-index: 5000;
+            display: none; /* JS включит если это Android */
             flex-direction: column;
             justify-content: center;
             align-items: center;
             padding: 20px;
             box-sizing: border-box;
-            text-align: center;
         }
-        .login-logo {
-            font-size: 3rem;
-            margin-bottom: 10px;
-        }
-        .login-title {
-            font-size: 1.5rem;
-            color: #ffd700;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-        .login-subtitle {
-            color: #888;
-            margin-bottom: 30px;
-            font-size: 0.9rem;
-        }
-        .login-btn {
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .btn-primary { background: #ffd700; color: #000; }
-        .btn-secondary { background: #333; color: #fff; border: 1px solid #555; }
-        .login-btn:active { transform: scale(0.98); }
+        .auth-logo { font-size: 4rem; margin-bottom: 20px; }
+        .auth-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 30px; }
         
-        #reg-form, #login-form { display: none; width: 100%; }
-        
-        .input-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
-        .input-label {
-            font-size: 0.8rem;
-            color: #aaa;
-            margin-bottom: 5px;
-            display: block;
+        .input-box {
+            width: 100%; margin-bottom: 15px;
         }
         .input-field {
-            width: 100%;
-            padding: 12px;
-            background: #222;
-            border: 1px solid #444;
-            color: #fff;
-            border-radius: 5px;
-            box-sizing: border-box;
-            font-size: 1rem;
+            width: 100%; padding: 15px; border-radius: 8px; border: none;
+            font-size: 1rem; outline: none; box-sizing: border-box;
         }
-        .input-field:focus {
-            border-color: #ffd700;
-            outline: none;
+        .btn-auth {
+            width: 100%; padding: 15px; border-radius: 8px; border: none;
+            font-weight: bold; font-size: 1rem; cursor: pointer; margin-bottom: 10px;
+            background: #fff; color: #009de0;
         }
-
-        .forgot-link {
-            color: #00bcd4;
-            text-decoration: underline;
-            font-size: 0.8rem;
-            cursor: pointer;
-            margin-top: 10px;
-            display: block;
+        .btn-link {
+            background: none; color: white; text-decoration: underline; cursor: pointer; border: none;
         }
 
         /* --- GAME UI --- */
         header {
-            background: #252535;
+            background: #202125;
             padding: 15px;
-            text-align: center;
-            border-bottom: 2px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #333;
         }
-        .location { font-size: 0.8rem; color: #888; }
-        .stats-bar {
+        .header-title { font-weight: 900; color: #009de0; letter-spacing: 1px; }
+        .tg-link { 
+            background: #2aabee; color: white; padding: 5px 12px; 
+            border-radius: 20px; text-decoration: none; font-size: 0.8rem; font-weight: bold; 
+        }
+
+        /* Stats Grid */
+        .stats-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
-            padding: 10px;
-            background: #1a1a25;
+            padding: 15px;
+            background: #1a1a1d;
         }
-        .stat-box {
-            background: #2a2a35;
-            padding: 8px;
-            border-radius: 8px;
-            text-align: center;
+        .stat-card {
+            background: #2c2c30; padding: 10px; border-radius: 8px; text-align: center;
         }
-        .stat-label { font-size: 0.7rem; color: #aaa; }
-        .stat-value { font-size: 1rem; font-weight: bold; color: #fff; }
-        .stat-value.money { color: #4caf50; }
-        .stat-value.energy { color: #2196f3; }
-        .stat-value.water { color: #00bcd4; }
-        
-        .main-area {
+        .stat-label { font-size: 0.7rem; color: #aaa; text-transform: uppercase; }
+        .stat-val { font-size: 1.1rem; font-weight: bold; }
+        .money { color: #4caf50; }
+
+        /* Main Work Area */
+        .work-area {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            position: relative;
+            align-items: center;
             background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Warsaw_Skyline_at_Sunset.jpg/640px-Warsaw_Skyline_at_Sunset.jpg');
             background-size: cover;
             background-position: center;
-            background-blend-mode: multiply;
-            background-color: rgba(0,0,0,0.7);
+            position: relative;
+        }
+        .work-overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.7);
         }
 
-        .click-area {
-            width: 200px;
-            height: 200px;
-            background: rgba(255, 215, 0, 0.1);
-            border: 4px solid #ffd700;
+        .delivery-btn {
+            position: relative;
+            width: 220px; height: 220px;
+            background: #009de0;
             border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            border: 5px solid #fff;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            box-shadow: 0 0 30px rgba(0, 157, 224, 0.4);
             cursor: pointer;
-            transition: all 0.1s;
-            position: relative;
-            backdrop-filter: blur(5px);
+            transition: transform 0.1s;
+            z-index: 2;
         }
-        .click-area:active { transform: scale(0.95); background: rgba(255, 215, 0, 0.3); }
-        .click-text { font-size: 1.5rem; font-weight: bold; text-transform: uppercase; color: #ffd700; pointer-events: none; }
+        .delivery-btn:active { transform: scale(0.95); }
+        .btn-text { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; }
+        .btn-sub { font-size: 0.8rem; opacity: 0.8; }
 
+        /* Controls Footer */
         .controls {
-            padding: 15px;
-            background: #1e1e2f;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
+            padding: 15px; background: #202125;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
         }
-        .btn-action {
-            flex: 1 1 40%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            font-size: 0.9rem;
-            position: relative;
-            overflow: hidden;
+        .control-btn {
+            padding: 12px; border: none; border-radius: 8px;
+            font-weight: bold; color: white; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center;
         }
-        .btn-water { background: linear-gradient(45deg, #00bcd4, #008ba3); }
-        .btn-energy { background: linear-gradient(45deg, #ff9800, #f57c00); }
-        .btn-auto { background: linear-gradient(45deg, #9c27b0, #7b1fa2); }
-        .btn-logout { background: #d32f2f; color: #fff; width: 100%; margin-top: 5px; }
+        .btn-eat { background: #ff9800; }
+        .btn-drink { background: #00bcd4; }
+        .btn-auto { background: #9c27b0; grid-column: span 2; }
+        .btn-logout { background: #d32f2f; grid-column: span 2; margin-top: 5px; display: none; }
         
-        .boost-desc {
-            font-size: 0.7rem;
-            display: block;
-            opacity: 0.8;
-            margin-top: 2px;
-            font-weight: normal;
-        }
-
-        .blur-mode .stat-value, .blur-mode .click-text {
-            filter: blur(8px);
-            user-select: none;
-        }
-        
-        .tg-btn {
-            background: #0088cc;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
+        .cost { font-size: 0.7rem; opacity: 0.8; margin-top: 2px; }
 
     </style>
 </head>
 <body>
 
     <div class="app-container">
-        <div id="login-screen">
-            <div class="login-logo">🎒</div>
-            <h1 class="login-title">Warsaw Courier</h1>
-            <p class="login-subtitle">Заработай свой первый миллион</p>
+        
+        <div id="android-auth">
+            <div class="auth-logo">🎒</div>
+            <div class="auth-title">WARSAW COURIER</div>
             
-            <div id="auth-main">
-                <button class="login-btn btn-primary" onclick="showReg()">📝 Регистрация</button>
-                <button class="login-btn btn-secondary" onclick="showLogin()">🔐 Войти</button>
+            <div id="form-login" style="width:100%;">
+                <div class="input-box"><input id="l-user" class="input-field" type="text" placeholder="Логин"></div>
+                <div class="input-box"><input id="l-pass" class="input-field" type="password" placeholder="Пароль"></div>
+                <button class="btn-auth" onclick="login()">ВОЙТИ</button>
+                <button class="btn-link" onclick="toggleForms()">Нет аккаунта? Регистрация</button>
             </div>
 
-            <div id="reg-form">
-                <h3>Новый Курьер</h3>
-                <div class="input-group">
-                    <label class="input-label">Придумай Логин</label>
-                    <input type="text" id="reg-login" class="input-field" placeholder="User123">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">Придумай Пароль</label>
-                    <input type="password" id="reg-pass" class="input-field" placeholder="*****">
-                </div>
-                <button class="login-btn btn-primary" onclick="doRegister()">Зарегистрироваться</button>
-                <button class="login-btn btn-secondary" onclick="backToAuth()">Назад</button>
-            </div>
-
-            <div id="login-form">
-                <h3>Вход в систему</h3>
-                <div class="input-group">
-                    <label class="input-label">Твой Логин</label>
-                    <input type="text" id="login-user" class="input-field" placeholder="User123">
-                </div>
-                <div class="input-group">
-                    <label class="input-label">Пароль</label>
-                    <input type="password" id="login-pass" class="input-field" placeholder="*****">
-                </div>
-                <button class="login-btn btn-primary" onclick="doLogin()">Войти и Играть</button>
-                <span class="forgot-link" onclick="forgotPassword()">Забыл пароль?</span>
-                <button class="login-btn btn-secondary" style="margin-top:20px;" onclick="backToAuth()">Назад</button>
+            <div id="form-reg" style="width:100%; display:none;">
+                <div class="input-box"><input id="r-user" class="input-field" type="text" placeholder="Придумай Логин"></div>
+                <div class="input-box"><input id="r-pass" class="input-field" type="password" placeholder="Придумай Пароль"></div>
+                <button class="btn-auth" onclick="register()">СОЗДАТЬ АККАУНТ</button>
+                <button class="btn-link" onclick="toggleForms()">Назад ко входу</button>
             </div>
         </div>
 
         <header>
-            <div style="text-align: left;">
-                <div style="font-weight:bold; color:#ffd700;">WARSZAWA</div>
-                <div class="location">Masovian Voivodeship</div>
-            </div>
-            <div>
-                <a href="https://t.me/placeholder" target="_blank" class="tg-btn">TELEGRAM</a>
-            </div>
+            <div class="header-title">COURIER APP</div>
+            <a href="https://t.me/placeholder" class="tg-link">NEWS</a>
         </header>
 
-        <div class="stats-bar">
-            <div class="stat-box">
-                <div class="stat-label">БАЛАНС (PLN)</div>
-                <div class="stat-value money" id="balance-display">0.00</div>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Баланс (PLN)</div>
+                <div class="stat-val money" id="ui-bal">0.00</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-label">РЕЙТИНГ</div>
-                <div class="stat-value" id="rating-display">5.00</div>
+            <div class="stat-card">
+                <div class="stat-label">Рейтинг</div>
+                <div class="stat-val" id="ui-rat">5.00</div>
             </div>
-            <div class="stat-box">
-                <div class="stat-label">LVL</div>
-                <div class="stat-value" id="lvl-display">1</div>
+            <div class="stat-card">
+                <div class="stat-label">Энергия ⚡</div>
+                <div class="stat-val" id="ui-en">100%</div>
             </div>
-        </div>
-        
-        <div class="stats-bar" style="grid-template-columns: 1fr 1fr; margin-top: -10px;">
-             <div class="stat-box">
-                <div class="stat-label">ЭНЕРГИЯ ⚡</div>
-                <div class="stat-value energy" id="energy-display">100%</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">ВОДА 💧</div>
-                <div class="stat-value water" id="water-display">100%</div>
+            <div class="stat-card">
+                <div class="stat-label">Вода 💧</div>
+                <div class="stat-val" id="ui-wa">100%</div>
             </div>
         </div>
 
-        <div class="main-area">
-            <div class="click-area" id="work-btn" onclick="work()">
-                <div class="click-text">РАБОТАТЬ</div>
-            </div>
-            <div id="blind-timer" style="position:absolute; bottom:10px; color:#ff4444; font-weight:bold; display:none;">
-                BLIND MODE: <span id="blind-countdown">00:00</span>
+        <div class="work-area">
+            <div class="work-overlay"></div>
+            <div class="delivery-btn" onclick="deliver()">
+                <span class="btn-text">ПРИНЯТЬ ЗАКАЗ</span>
+                <span class="btn-sub" id="ui-lvl">Уровень 1</span>
             </div>
         </div>
 
         <div class="controls">
-            <button class="btn-action btn-water" onclick="drinkWater()">
-                💧 ВОДА (-10 PLN)
-                <span class="boost-desc">+30% Воды</span>
+            <button class="control-btn btn-drink" onclick="buyWater()">
+                <span>КУПИТЬ ВОДУ</span>
+                <span class="cost">-10 PLN | +30%</span>
             </button>
-            <button class="btn-action btn-energy" onclick="drinkEnergy()">
-                ⚡ ЭНЕРГЕТИК (-25 PLN)
-                <span class="boost-desc">Стоп Энергия (Вода тратится!)</span>
+            <button class="control-btn btn-eat" onclick="buyFood()">
+                <span>ПОЕСТЬ</span>
+                <span class="cost">-25 PLN | +20% En</span>
             </button>
-            <button class="btn-action btn-auto" onclick="toggleAuto()">
-                🤖 АВТО-КУРЬЕР
-                <span class="boost-desc" id="auto-status">Выкл</span>
+            <button class="control-btn btn-auto" id="btn-auto" onclick="toggleAuto()">
+                <span>АВТО-ПРИЕМ ЗАКАЗОВ</span>
+                <span class="cost" id="auto-state">ВЫКЛ</span>
             </button>
-             <button class="btn-action btn-logout" onclick="logout()">
-                🚪 ВЫЙТИ ИЗ АККАУНТА
+            <button class="control-btn btn-logout" id="btn-out" onclick="logout()">
+                ВЫЙТИ ИЗ АККАУНТА
             </button>
         </div>
+
     </div>
 
     <script>
-        // --- GAME VARIABLES ---
-        let balance = 0;
-        let rating = 5.00;
-        let level = 1;
-        let energy = 100;
-        let water = 100;
-        let clickValue = 1.5; 
-        
-        let isEnergyBoosted = false;
-        let isAutoWorking = false;
-        let isBlindMode = false;
-        let autoInterval = null;
-        let saveInterval = null;
-        
-        // CURRENT USER
-        let currentUser = null;
+        // --- DATA ---
+        let user = {
+            id: 'local',
+            bal: 0,
+            rat: 5.0,
+            lvl: 1,
+            en: 100,
+            wa: 100,
+            pass: null // Only for Android users
+        };
 
-        // --- AUTH SYSTEM (LOGIN/PASS) ---
+        // --- CONFIG ---
+        const ANDROID_PREFIX = "wolt_andro_";
+        const TG_PREFIX = "wolt_tg_";
+        let storageKey = ""; 
+        let isAuto = false;
+        let autoInt = null;
 
-        function showReg() {
-            document.getElementById('auth-main').style.display = 'none';
-            document.getElementById('reg-form').style.display = 'block';
-        }
-
-        function showLogin() {
-            document.getElementById('auth-main').style.display = 'none';
-            document.getElementById('login-form').style.display = 'block';
-        }
-
-        function backToAuth() {
-            document.getElementById('reg-form').style.display = 'none';
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('auth-main').style.display = 'block';
-        }
-
-        function doRegister() {
-            const login = document.getElementById('reg-login').value.trim();
-            const pass = document.getElementById('reg-pass').value.trim();
-
-            if(!login || !pass) return alert("Введите логин и пароль!");
-
-            // Check if user exists
-            if(localStorage.getItem('warsaw_user_' + login)) {
-                return alert("Такой пользователь уже есть! Придумай другой логин.");
-            }
-
-            // Create user
-            const userData = {
-                pass: pass,
-                bal: 0,
-                rat: 5.0,
-                lvl: 1,
-                en: 100,
-                wa: 100
-            };
-
-            localStorage.setItem('warsaw_user_' + login, JSON.stringify(userData));
-            alert("Регистрация успешна! Теперь войди.");
-            backToAuth();
-        }
-
-        function doLogin() {
-            const login = document.getElementById('login-user').value.trim();
-            const pass = document.getElementById('login-pass').value.trim();
-
-            if(!login || !pass) return alert("Введите данные!");
-
-            const storedData = localStorage.getItem('warsaw_user_' + login);
+        // --- INIT ---
+        window.onload = () => {
+            const tg = window.Telegram.WebApp;
             
-            if(!storedData) {
-                return alert("Пользователь не найден. Зарегистрируйся.");
+            if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                // TELEGRAM MODE
+                tg.expand();
+                let uid = tg.initDataUnsafe.user.id;
+                storageKey = TG_PREFIX + uid;
+                loadData();
+                startGame();
+            } else {
+                // ANDROID MODE
+                // Проверяем, был ли вход
+                let lastLogin = localStorage.getItem("wolt_last_login");
+                if(lastLogin) {
+                    storageKey = ANDROID_PREFIX + lastLogin;
+                    loadData(); // Загружаем, чтобы проверить пароль (формально)
+                    startGame();
+                    document.getElementById('btn-out').style.display = 'block'; // Показать кнопку выхода
+                } else {
+                    document.getElementById('android-auth').style.display = 'flex';
+                }
             }
+        }
 
-            const userData = JSON.parse(storedData);
+        // --- AUTH LOGIC (ANDROID) ---
+        function toggleForms() {
+            let log = document.getElementById('form-login');
+            let reg = document.getElementById('form-reg');
+            if(log.style.display === 'none') {
+                log.style.display = 'block'; reg.style.display = 'none';
+            } else {
+                log.style.display = 'none'; reg.style.display = 'block';
+            }
+        }
 
-            if(userData.pass === pass) {
-                // SUCCESS LOGIN
-                currentUser = login;
-                loadGameData(userData);
+        function register() {
+            let u = document.getElementById('r-user').value.trim();
+            let p = document.getElementById('r-pass').value.trim();
+            if(!u || !p) return alert("Введите данные!");
+            
+            let key = ANDROID_PREFIX + u;
+            if(localStorage.getItem(key)) return alert("Логин занят!");
+
+            // Create new user
+            let newUser = { ...user, id: u, pass: p };
+            localStorage.setItem(key, JSON.stringify(newUser));
+            alert("Аккаунт создан! Теперь войдите.");
+            toggleForms();
+        }
+
+        function login() {
+            let u = document.getElementById('l-user').value.trim();
+            let p = document.getElementById('l-pass').value.trim();
+            if(!u || !p) return alert("Введите данные!");
+
+            let key = ANDROID_PREFIX + u;
+            let data = localStorage.getItem(key);
+            
+            if(!data) return alert("Нет такого курьера.");
+            
+            let parsed = JSON.parse(data);
+            if(parsed.pass === p) {
+                storageKey = key;
+                localStorage.setItem("wolt_last_login", u);
+                user = parsed;
+                document.getElementById('android-auth').style.display = 'none';
+                document.getElementById('btn-out').style.display = 'block';
                 startGame();
             } else {
                 alert("Неверный пароль!");
             }
         }
-        
-        function forgotPassword() {
-            // Placeholder for admin contact
-            alert("Забыл пароль?\n\nНапиши Администратору в Telegram: @YOUR_TG_LINK\nУкажи свой логин, и тебе восстановят доступ.");
-        }
 
         function logout() {
-            saveLocal(); // Save before exit
-            location.reload(); // Reload to show login screen
-        }
-
-        function startGame() {
-            document.getElementById('login-screen').style.display = 'none';
-            startLoops();
-            
-            // Welcome msg
-            const hour = new Date().getHours();
-            let greeting = "Доброй ночи.";
-            if(hour >= 6 && hour < 12) greeting = "Доброе утро!";
-            if(hour >= 12 && hour < 18) greeting = "Добрый день!";
-            if(hour >= 18 && hour < 23) greeting = "Добрый вечер!";
-            
-            alert(`${greeting} Курьер ${currentUser}!\nРабота началась. Данные сохраняются автоматически.`);
-        }
-
-        function loadGameData(data) {
-            balance = data.bal || 0;
-            rating = data.rat || 5.0;
-            level = data.lvl || 1;
-            energy = data.en !== undefined ? data.en : 100;
-            water = data.wa !== undefined ? data.wa : 100;
-            updateUI();
+            saveData();
+            localStorage.removeItem("wolt_last_login");
+            location.reload();
         }
 
         // --- GAMEPLAY ---
+        function startGame() {
+            updateUI();
+            setInterval(saveData, 5000); // Save every 5s
+            setInterval(() => { // Passive Drain
+                 if(!isAuto) {
+                     // Можно добавить пассивный расход, если хочешь, пока отключил для простоты
+                 }
+            }, 10000);
+        }
 
-        function work() {
-            if(energy <= 0 || water <= 0) {
-                alert("Вы истощены! Пей воду или энергетик.");
-                stopAuto();
-                return;
+        function deliver() {
+            if(user.en <= 0 || user.wa <= 0) {
+                if(isAuto) toggleAuto();
+                return alert("Вы устали! Нужна еда или вода.");
             }
 
-            let earned = clickValue * (rating / 2);
-            balance += earned;
+            // Calculation
+            let basePay = 1.5 + (user.lvl * 0.5);
+            let earn = basePay * (user.rat / 2);
             
-            if(!isEnergyBoosted) energy -= 0.5;
-            water -= 0.8; 
-
-            checkLevelUp();
+            user.bal += earn;
+            user.en -= 0.5;
+            user.wa -= 0.8;
+            
+            checkLvl();
             updateUI();
         }
 
+        function buyWater() {
+            if(user.bal >= 10) {
+                user.bal -= 10;
+                user.wa = Math.min(100, user.wa + 30);
+                updateUI();
+            } else alert("Мало денег!");
+        }
+
+        function buyFood() {
+            if(user.bal >= 25) {
+                user.bal -= 25;
+                user.en = Math.min(100, user.en + 20);
+                updateUI();
+            } else alert("Мало денег!");
+        }
+
         function toggleAuto() {
-            if(isAutoWorking) {
-                stopAuto();
+            if(isAuto) {
+                isAuto = false;
+                clearInterval(autoInt);
+                document.getElementById('auto-state').innerText = "ВЫКЛ";
+                document.getElementById('btn-auto').style.border = "none";
             } else {
-                isAutoWorking = true;
-                document.getElementById('auto-status').innerText = "ВКЛ";
-                document.querySelector('.btn-auto').style.border = "2px solid #fff";
-                
-                autoInterval = setInterval(() => {
-                    if(energy > 0 && water > 0) {
-                        work();
-                    } else {
-                        stopAuto();
-                    }
+                isAuto = true;
+                document.getElementById('auto-state').innerText = "АКТИВНО";
+                document.getElementById('btn-auto').style.border = "2px solid #fff";
+                autoInt = setInterval(() => {
+                    if(user.en > 0 && user.wa > 0) deliver();
+                    else toggleAuto();
                 }, 1000);
             }
         }
 
-        function stopAuto() {
-            isAutoWorking = false;
-            clearInterval(autoInterval);
-            document.getElementById('auto-status').innerText = "Выкл";
-            document.querySelector('.btn-auto').style.border = "none";
-        }
-
-        function drinkWater() {
-            if(balance >= 10) {
-                balance -= 10;
-                water = Math.min(100, water + 30);
-                updateUI();
-            } else {
-                alert("Нет денег на воду!");
-            }
-        }
-
-        function drinkEnergy() {
-            if(balance >= 25) {
-                if(isEnergyBoosted) return alert("Уже активно!");
-                balance -= 25;
-                isEnergyBoosted = true;
-                energy = Math.min(100, energy + 20);
-                
-                const btn = document.querySelector('.btn-energy');
-                btn.style.filter = "brightness(1.5)";
-                btn.innerHTML = "⚡ АКТИВНО (ВОДА ТРАТИТСЯ!)";
-
-                setTimeout(() => {
-                    isEnergyBoosted = false;
-                    btn.style.filter = "none";
-                    btn.innerHTML = "⚡ ЭНЕРГЕТИК (-25 PLN)<span class='boost-desc'>Стоп Энергия (Вода тратится!)</span>";
-                    alert("Энергетик все!");
-                }, 30000); // 30 sec
-                
-                updateUI();
-            } else {
-                alert("Нет денег!");
-            }
-        }
-
-        function startLoops() {
-            // Save every 5 sec
-            saveInterval = setInterval(() => {
-                saveLocal();
-            }, 5000);
-
-            // Blind Event Check
-            setInterval(() => {
-                if(Math.random() < 0.05 && !isBlindMode) { 
-                    triggerBlindMode();
-                }
-            }, 60000);
-        }
-
-        function saveLocal() {
-            if(!currentUser) return;
-            
-            // Get existing data to keep password safe
-            const oldDataStr = localStorage.getItem('warsaw_user_' + currentUser);
-            let pass = "123"; // fallback
-            if(oldDataStr) {
-                const oldData = JSON.parse(oldDataStr);
-                pass = oldData.pass;
-            }
-
-            const newData = {
-                pass: pass,
-                bal: balance,
-                rat: rating,
-                lvl: level,
-                en: energy,
-                wa: water
-            };
-            
-            localStorage.setItem('warsaw_user_' + currentUser, JSON.stringify(newData));
-        }
-        
-        function triggerBlindMode() {
-            alert("БОНУС: FREE LVL! Интерфейс скрыт на 10 мин. Ставки x2 или -50%. Рискни!");
-            isBlindMode = true;
-            document.body.classList.add('blur-mode');
-            document.getElementById('blind-timer').style.display = 'block';
-            
-            let timeLeft = 600;
-            const tInt = setInterval(() => {
-                timeLeft--;
-                let m = Math.floor(timeLeft / 60);
-                let s = timeLeft % 60;
-                document.getElementById('blind-countdown').innerText = `${m}:${s < 10 ? '0'+s : s}`;
-                if(timeLeft <= 0) {
-                    clearInterval(tInt);
-                    isBlindMode = false;
-                    document.body.classList.remove('blur-mode');
-                    document.getElementById('blind-timer').style.display = 'none';
-                    alert("Бонус закончен.");
-                }
-            }, 1000);
-        }
-
-        function checkLevelUp() {
-            if(balance > level * 500) {
-                level++;
-                clickValue += 0.5;
+        function checkLvl() {
+            if(user.bal > user.lvl * 500) {
+                user.lvl++;
             }
         }
 
         function updateUI() {
-            if(isBlindMode) return;
-            document.getElementById('balance-display').innerText = balance.toFixed(2);
-            document.getElementById('rating-display').innerText = rating.toFixed(2);
-            document.getElementById('lvl-display').innerText = level;
-            document.getElementById('energy-display').innerText = Math.floor(energy) + '%';
-            document.getElementById('water-display').innerText = Math.floor(water) + '%';
+            document.getElementById('ui-bal').innerText = user.bal.toFixed(2);
+            document.getElementById('ui-rat').innerText = user.rat.toFixed(2);
+            document.getElementById('ui-lvl').innerText = "Уровень " + user.lvl;
+            document.getElementById('ui-en').innerText = Math.floor(user.en) + "%";
+            document.getElementById('ui-wa').innerText = Math.floor(user.wa) + "%";
+        }
+
+        function loadData() {
+            let d = localStorage.getItem(storageKey);
+            if(d) {
+                let p = JSON.parse(d);
+                user.bal = p.bal || 0;
+                user.rat = p.rat || 5.0;
+                user.lvl = p.lvl || 1;
+                user.en = p.en !== undefined ? p.en : 100;
+                user.wa = p.wa !== undefined ? p.wa : 100;
+                user.pass = p.pass; // Keep pass safe
+            }
+        }
+
+        function saveData() {
+            if(!storageKey) return;
+            localStorage.setItem(storageKey, JSON.stringify(user));
         }
 
     </script>
