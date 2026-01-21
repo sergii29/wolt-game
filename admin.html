@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Админка • GOD MODE</title>
+<title>Админка • GOD MODE (Warsaw Courier)</title>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="database.js"></script>
 
 <style>
@@ -20,7 +20,7 @@ button{background:#2a7cff;font-weight:bold}
 .row>div{flex:1}
 .online{color:#3ddc84}
 .offline{color:#ff5c5c}
-.small{font-size:12px;color:#9aa4b2}
+pre{background:#0f1420;padding:10px;border-radius:10px;max-height:200px;overflow:auto}
 </style>
 </head>
 
@@ -29,7 +29,6 @@ button{background:#2a7cff;font-weight:bold}
 <!-- ИГРОКИ -->
 <div class="section">
 <h2>👤 Игроки</h2>
-
 <select id="playerSelect"></select>
 <div id="playerStatus"></div>
 
@@ -45,7 +44,7 @@ button{background:#2a7cff;font-weight:bold}
 <button onclick="savePlayer()">Сохранить игрока</button>
 </div>
 
-<!-- КОРЗИНА / ИНВЕНТАРЬ -->
+<!-- ИНВЕНТАРЬ -->
 <div class="section">
 <h2>🎒 Инвентарь игрока</h2>
 
@@ -58,40 +57,30 @@ button{background:#2a7cff;font-weight:bold}
 <pre id="invView"></pre>
 </div>
 
-<!-- МАГАЗИН -->
+<!-- ЭКОНОМИКА / CONFIG -->
 <div class="section">
-<h2>🛒 Магазин (цены и товары)</h2>
+<h2>🌍 Экономика (реальная)</h2>
 
-<select id="shopItem"></select>
+<label>Базовая оплата доставки</label>
+<input id="basePickupPay" type="number" step="0.1">
 
-<label>Название</label>
-<input id="shopName">
+<label>Оплата за км</label>
+<input id="perKmPay" type="number" step="0.1">
 
-<label>Цена</label>
-<input id="shopPrice" type="number">
+<label>Инфляционный коэффициент</label>
+<input id="inflationRate" type="number" step="0.01">
 
-<label>Энергия</label>
-<input id="shopEnergy" type="number">
-
-<button onclick="saveShop()">Сохранить товар</button>
-
-<hr>
-
-<label>Новый товар (ID)</label>
-<input id="newItemId">
-<button onclick="createItem()">➕ Создать товар</button>
+<button onclick="saveConfig()">Сохранить экономику</button>
 </div>
 
-<!-- ЦЕЛИ -->
+<!-- ЦЕНЫ ТОВАРОВ -->
 <div class="section">
-<h2>🎯 Цели (любой бред, который хочешь)</h2>
+<h2>🛒 Магазин (реальные цены)</h2>
 
-<input id="goalMin" type="number" placeholder="Минуты">
-<input id="goalSec" type="number" placeholder="Секунды">
-<input id="goalCount" type="number" placeholder="Доставки">
-<input id="goalBonus" type="number" placeholder="Бонус PLN">
+<select id="itemKey"></select>
+<input id="itemPrice" type="number" step="0.1">
 
-<button onclick="saveGoal()">Сохранить цель</button>
+<button onclick="saveItemPrice()">Сохранить цену</button>
 </div>
 
 <script>
@@ -115,8 +104,8 @@ function loadPlayer(){
   db.ref("players/"+currentPlayer).once("value").then(s=>{
     const d=s.val()||{};
     pBalance.value=d.balance||0;
-    pEnergy.value=d.energy||0;
-    pMood.value=d.mood||0;
+    pEnergy.value=d.stats?.energy ?? d.energy ?? 0;
+    pMood.value=d.stats?.mood ?? d.mood ?? 0;
     playerStatus.innerHTML=d.online
       ? "<span class='online'>онлайн</span>"
       : "<span class='offline'>оффлайн</span>";
@@ -126,8 +115,8 @@ function loadPlayer(){
 function savePlayer(){
   db.ref("players/"+currentPlayer).update({
     balance:+pBalance.value,
-    energy:+pEnergy.value,
-    mood:+pMood.value
+    "stats/energy":+pEnergy.value,
+    "stats/mood":+pMood.value
   });
 }
 
@@ -138,55 +127,49 @@ function loadInventory(){
   });
 }
 function addItem(){
-  db.ref("players/"+currentPlayer+"/inventory/"+invItem.value).transaction(q=>(q||0)+(+invQty.value));
+  db.ref("players/"+currentPlayer+"/inventory/"+invItem.value)
+    .transaction(q=>(q||0)+(+invQty.value));
 }
 function removeItem(){
-  db.ref("players/"+currentPlayer+"/inventory/"+invItem.value).transaction(q=>Math.max(0,(q||0)-(+invQty.value)));
+  db.ref("players/"+currentPlayer+"/inventory/"+invItem.value)
+    .transaction(q=>Math.max(0,(q||0)-(+invQty.value)));
 }
 
-/* === МАГАЗИН === */
-db.ref("shop/products").on("value",s=>{
-  shopItem.innerHTML="";
-  invItem.innerHTML="";
-  s.forEach(p=>{
-    const o=document.createElement("option");
-    o.value=p.key;o.textContent=p.key;
-    shopItem.appendChild(o);
-    invItem.appendChild(o.cloneNode(true));
-  });
+/* === CONFIG === */
+db.ref("config").on("value",s=>{
+  const c=s.val()||{};
+  basePickupPay.value=c.basePickupPay ?? 4;
+  perKmPay.value=c.perKmPay ?? 1.5;
+  inflationRate.value=c.inflationRate ?? 0.1;
+
+  if(c.itemPrices){
+    itemKey.innerHTML="";
+    Object.keys(c.itemPrices).forEach(k=>{
+      const o=document.createElement("option");
+      o.value=k;o.textContent=k;
+      itemKey.appendChild(o);
+    });
+    currentItem=itemKey.value;
+    itemPrice.value=c.itemPrices[currentItem];
+  }
 });
-shopItem.onchange=()=>{
-  currentItem=shopItem.value;
-  db.ref("shop/products/"+currentItem).once("value").then(s=>{
-    const d=s.val()||{};
-    shopName.value=d.name||"";
-    shopPrice.value=d.price||0;
-    shopEnergy.value=d.energy||0;
-  });
+
+itemKey.onchange=()=>{
+  currentItem=itemKey.value;
+  db.ref("config/itemPrices/"+currentItem).once("value")
+    .then(s=>itemPrice.value=s.val());
 };
-function saveShop(){
-  db.ref("shop/products/"+currentItem).update({
-    name:shopName.value,
-    price:+shopPrice.value,
-    energy:+shopEnergy.value
-  });
-}
-function createItem(){
-  db.ref("shop/products/"+newItemId.value).set({
-    name:newItemId.value,
-    price:0,
-    energy:0
+
+function saveConfig(){
+  db.ref("config").update({
+    basePickupPay:+basePickupPay.value,
+    perKmPay:+perKmPay.value,
+    inflationRate:+inflationRate.value
   });
 }
 
-/* === ЦЕЛИ === */
-function saveGoal(){
-  const sec=(+goalMin.value*60)+(+goalSec.value);
-  db.ref("goals/daily").set({
-    timeSeconds:sec,
-    deliveries:+goalCount.value,
-    bonus:+goalBonus.value
-  });
+function saveItemPrice(){
+  db.ref("config/itemPrices/"+currentItem).set(+itemPrice.value);
 }
 </script>
 
