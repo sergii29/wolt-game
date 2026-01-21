@@ -1,14 +1,15 @@
 // ============================================================
-// --- PATCH v32: REWARD SYNC FIX (PRIORITY BALANCE) ---
+// --- PATCH v33: ULTIMATE QUEST PERSISTENCE ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v32 Loaded: REWARD SYSTEM FIXED");
+    console.log(">>> Patch v33 Loaded: QUESTS & CACHE FIX");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
-    window.isClaimingReward = false; // Флаг защиты от перезаписи баланса
+    window.isClaimingReward = false; 
+    window.isQuestDataSynced = false; // Флаг: загрузились ли якоря из базы?
     
     // 0. ПОДКЛЮЧЕНИЕ К БД
     let patchDB = null;
@@ -104,7 +105,7 @@
         });
     }
 
-    // --- MEGA SYNC FUNCTION (FIXED: LOGIC PRIORITY) ---
+    // --- MEGA SYNC FUNCTION (FIXED: ANCHOR PROTECTION) ---
     window.listenToCloud = function() {
         if (!window.db || !state.id) return;
         
@@ -124,6 +125,10 @@
             const data = snap.val();
             if (!data) return;
 
+            // --- МАРКЕР: ДАННЫЕ СИНХРОНИЗИРОВАНЫ ---
+            window.isQuestDataSynced = true; 
+            // ----------------------------------------
+
             syncDot.classList.add('syncing');
             setTimeout(() => syncDot.classList.remove('syncing'), 500);
 
@@ -134,22 +139,18 @@
 
             let uiNeedsUpdate = false;
 
-            // --- БАЛАНС (УМНАЯ ЛОГИКА) ---
+            // --- БАЛАНС ---
             if (data.balance !== undefined) {
                 const serverBal = parseFloat(data.balance);
                 const localBal = parseFloat(state.balance);
                 
-                // 1. Если Админ начислил деньги (Сервер > Локал) -> Принимаем всегда
                 if (serverBal > localBal) {
                     state.balance = serverBal;
                     uiNeedsUpdate = true;
                 }
-                // 2. Если мы только что забрали награду (Локал > Сервер) -> ИГНОРИРУЕМ СТАРЫЙ БАЛАНС ИЗ ОБЛАКА
                 else if (window.isClaimingReward) {
-                    // Не трогаем локальный баланс, он правильнее.
-                    // Ждем пока сервер обновится через наш syncToCloud
+                    // Игнорируем старый баланс пока идет начисление награды
                 }
-                // 3. Обычная синхронизация (если разница есть и мы не в процессе награды)
                 else if (Math.abs(serverBal - localBal) > 0.01) {
                     state.balance = serverBal;
                     uiNeedsUpdate = true;
@@ -162,7 +163,7 @@
                 uiNeedsUpdate = true;
             }
 
-            // ИНВЕНТАРЬ
+            // ИНВЕНТАРЬ/ПРЕДМЕТЫ
             if(data.inventory && JSON.stringify(data.inventory) !== JSON.stringify(state.inventory)) {
                 state.inventory = data.inventory; uiNeedsUpdate = true;
             }
@@ -178,20 +179,19 @@
                 uiNeedsUpdate = true;
             }
 
-            // ЯКОРЯ КВЕСТОВ
+            // ЯКОРЯ КВЕСТОВ (Safe Merge)
             if(data.questAnchors) {
                 if(!state.questAnchors) state.questAnchors = {};
-                if(JSON.stringify(data.questAnchors) !== JSON.stringify(state.questAnchors)) {
-                    state.questAnchors = data.questAnchors;
-                    uiNeedsUpdate = true;
-                }
+                // Мы верим серверу больше, чем локальному "нулю"
+                state.questAnchors = { ...state.questAnchors, ...data.questAnchors };
+                uiNeedsUpdate = true;
             }
 
-            // CLAIMED QUESTS
+            // CLAIMED QUESTS (Safe Merge)
             if(data.claimedQuests) {
                 if(!state.claimedQuests) state.claimedQuests = {};
-                // Мы мержим, чтобы не потерять локальные клаймы
                 state.claimedQuests = { ...state.claimedQuests, ...data.claimedQuests };
+                uiNeedsUpdate = true;
             }
 
             if(uiNeedsUpdate) {
@@ -201,6 +201,7 @@
             }
         });
 
+        // INBOX
         window.db.ref('players/' + state.id + '/adminInbox').off();
         window.db.ref('players/' + state.id + '/adminInbox').on('child_added', (snap) => {
             const cmd = snap.val();
@@ -213,6 +214,7 @@
         const oldSync = window.syncToCloud;
         window.syncToCloud = function(force) {
             if(window.db && state.id) {
+                // Всегда отправляем квесты, чтобы не потерялись
                 window.db.ref('players/' + state.id + '/claimedQuests').set(state.claimedQuests || {});
                 window.db.ref('players/' + state.id + '/questAnchors').set(state.questAnchors || {});
             }
@@ -313,46 +315,62 @@
         if (active.length === 0) {
             html += `<div style="text-align:center; padding:20px; color:#aaa; font-size:12px; background:#eee; border-radius:10px; margin-bottom:20px">Нет активных заданий</div>`;
         } else {
-            active.forEach(b => {
-                if(!state.questAnchors) state.questAnchors = {};
-                
-                if(typeof state.questAnchors[b.id] === 'undefined') {
-                    const currentTotal = state.career.totalOrders || 0;
-                    state.questAnchors[b.id] = currentTotal;
-                    if(patchDB && state.id) {
-                        patchDB.ref('players/' + state.id + '/questAnchors/' + b.id).set(currentTotal);
+            // Если данные не синхронизированы, показываем лоадер, чтобы не создать кривой якорь
+            if(!window.isQuestDataSynced && state.id) {
+                 html += `<div style="text-align:center; padding:20px; color:#009de0;"><i class="fa-solid fa-spinner fa-spin"></i> Синхронизация прогресса...</div>`;
+            } else {
+                active.forEach(b => {
+                    const isClaimed = state.claimedQuests && state.claimedQuests[b.id];
+                    
+                    let progress = 0;
+                    const target = parseInt(b.target);
+
+                    // --- ЛОГИКА ОТОБРАЖЕНИЯ (Fix v33) ---
+                    if (isClaimed) {
+                        // Если награда получена - ВСЕГДА показываем 100%, плевать на якоря
+                        progress = target; 
+                    } else {
+                        // Если не получена - считаем математику
+                        if(!state.questAnchors) state.questAnchors = {};
+                        
+                        // Создаем якорь, только если его нет
+                        if(typeof state.questAnchors[b.id] === 'undefined') {
+                            const currentTotal = state.career.totalOrders || 0;
+                            state.questAnchors[b.id] = currentTotal;
+                            // Сразу пишем в базу
+                            if(patchDB && state.id) {
+                                patchDB.ref('players/' + state.id + '/questAnchors/' + b.id).set(currentTotal);
+                            }
+                        }
+
+                        const startCount = state.questAnchors[b.id];
+                        const currentTotal = (state.career.totalOrders || 0);
+                        progress = currentTotal - startCount;
+                        if(progress < 0) progress = 0;
                     }
-                }
 
-                const startCount = state.questAnchors[b.id];
-                const currentTotal = (state.career.totalOrders || 0);
-                
-                let progress = currentTotal - startCount;
-                if(progress < 0) progress = 0;
-                
-                const target = parseInt(b.target);
-                const current = Math.min(progress, target);
-                const pct = (current / target) * 100;
-                
-                const diff = b.endTime - now;
-                const h = Math.floor(diff/3600000);
-                const m = Math.floor((diff%3600000)/60000);
-                
-                const isClaimed = state.claimedQuests && state.claimedQuests[b.id];
-                const btnText = isClaimed ? '✅ ГОТОВО' : `+${b.reward} PLN`;
-                const btnColor = isClaimed ? '#ccc' : '#00c853';
-                const btnBg = isClaimed ? '#eee' : '#e8f5e9';
+                    const current = Math.min(progress, target);
+                    const pct = (current / target) * 100;
+                    
+                    const diff = b.endTime - now;
+                    const h = Math.floor(diff/3600000);
+                    const m = Math.floor((diff%3600000)/60000);
+                    
+                    const btnText = isClaimed ? '✅ ГОТОВО' : `+${b.reward} PLN`;
+                    const btnColor = isClaimed ? '#ccc' : '#00c853';
+                    const btnBg = isClaimed ? '#eee' : '#e8f5e9';
 
-                html += `
-                <div class="b-card active">
-                    <div style="font-weight:bold; font-size:15px">${b.title} <span style="float:right; color:${btnColor}; background:${btnBg}; padding:2px 6px; border-radius:4px; font-size:11px">${btnText}</span></div>
-                    <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
-                    <div style="font-size:11px; color:#666; margin-top:5px; display:flex; justify-content:space-between">
-                        <span>Осталось: ${h}ч ${m}м</span>
-                        <span>${current} / ${target}</span>
-                    </div>
-                </div>`;
-            });
+                    html += `
+                    <div class="b-card active">
+                        <div style="font-weight:bold; font-size:15px">${b.title} <span style="float:right; color:${btnColor}; background:${btnBg}; padding:2px 6px; border-radius:4px; font-size:11px">${btnText}</span></div>
+                        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+                        <div style="font-size:11px; color:#666; margin-top:5px; display:flex; justify-content:space-between">
+                            <span>Осталось: ${h}ч ${m}м</span>
+                            <span>${current} / ${target}</span>
+                        </div>
+                    </div>`;
+                });
+            }
         }
 
         html += `<div class="section-label" style="font-weight:bold; color:#555; margin-bottom:10px; margin-top:20px">⏳ Скоро (Анонсы)</div>`;
@@ -478,12 +496,15 @@
             }
         }
 
-        // --- NEW: AUTO-CLAIM QUEST REWARDS (PATCH v32: SAFE MODE) ---
+        // --- NEW: AUTO-CLAIM QUEST REWARDS (PATCH v33) ---
         if(window.bonusData && window.bonusData.length > 0 && state && state.career) {
             const now = Date.now();
             const active = window.bonusData.filter(b => now >= b.startTime && now <= b.endTime);
             
             active.forEach(b => {
+                // Если данные не загружены, не пытаемся клеймить
+                if(!window.isQuestDataSynced) return; 
+
                 if(!state.questAnchors || typeof state.questAnchors[b.id] === 'undefined') return;
 
                 const startCount = state.questAnchors[b.id];
@@ -491,30 +512,23 @@
                 const progress = currentTotal - startCount;
                 const target = parseInt(b.target);
 
+                // Если цель достигнута И еще не выплачено
                 if (progress >= target) {
                     if(!state.claimedQuests) state.claimedQuests = {};
                     
                     if(!state.claimedQuests[b.id]) {
-                        // 1. ВКЛЮЧАЕМ ЗАЩИТУ ОТ ПЕРЕЗАПИСИ
                         window.isClaimingReward = true; 
                         
-                        // 2. НАЧИСЛЕНИЕ
                         const reward = parseFloat(b.reward);
                         state.balance = parseFloat(state.balance) + reward;
                         state.claimedQuests[b.id] = true; 
                         
-                        // 3. МГНОВЕННОЕ ОБНОВЛЕНИЕ UI (чтобы не ждать пинга)
                         if(document.getElementById('balance-val')) {
                              document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN';
                         }
                         
-                        // 4. ПРИНУДИТЕЛЬНАЯ ОТПРАВКА
                         if(window.syncToCloud) window.syncToCloud(true);
-                        
-                        // 5. СНИМАЕМ ЗАЩИТУ ЧЕРЕЗ 3 СЕКУНДЫ (когда сервер уже точно обновился)
                         setTimeout(() => { window.isClaimingReward = false; }, 3000);
-                        
-                        // 6. УВЕДОМЛЕНИЕ
                         if(window.showToast) window.showToast(`🎯 Квест выполнен! +${reward} PLN`, 'success');
                     }
                 }
