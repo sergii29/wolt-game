@@ -1,92 +1,185 @@
-<!-- ИГРОКИ -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<!-- Your database config -->
+<script src="database.js"></script>
+
+<style>
+body {
+  background:#0f0f0f;
+  color:#eaeaea;
+  font-family:Arial, sans-serif;
+  padding:10px;
+}
+.card {
+  border:1px solid #333;
+  border-radius:6px;
+  padding:10px;
+  margin-bottom:12px;
+}
+h3 {
+  margin:4px 0 8px;
+}
+input, select, button {
+  width:100%;
+  margin:4px 0;
+  padding:6px;
+  background:#1c1c1c;
+  color:#fff;
+  border:1px solid #444;
+  border-radius:4px;
+}
+button {
+  background:#2d2d2d;
+}
+button:active {
+  background:#444;
+}
+pre {
+  background:#000;
+  padding:6px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- PLAYERS -->
 <div class="card">
-  <h2>Игроки</h2>
+  <h3>Players</h3>
   <select id="playerSelect"></select>
-  <button onclick="loadPlayer()">Загрузить</button>
+  <button onclick="loadPlayer()">Load player</button>
 
   <div id="playerEditor" style="display:none">
-    Баланс: <input id="pBalance" type="number"><br>
-    Энергия: <input id="pEnergy" type="number"><br>
-    Настроение: <input id="pMood" type="number"><br>
-    <button onclick="savePlayer()">Сохранить</button>
+    <input id="pBalance" type="number" placeholder="Balance">
+    <input id="pEnergy" type="number" placeholder="Energy">
+    <input id="pMood" type="number" placeholder="Mood">
+    <button onclick="savePlayer()">Save</button>
   </div>
+</div>
+
+<!-- DELIVERY -->
+<div class="card">
+  <h3>Delivery тариф</h3>
+  <input id="delBase" placeholder="Base price">
+  <input id="delKm" placeholder="Price per km">
+  <button onclick="saveDelivery()">Save</button>
+</div>
+
+<!-- GOALS -->
+<div class="card">
+  <h3>Courier goal</h3>
+  <input id="gTime" placeholder="Minutes">
+  <input id="gCount" placeholder="Deliveries">
+  <input id="gBonus" placeholder="Bonus">
+  <button onclick="saveGoal()">Save</button>
+</div>
+
+<!-- ECONOMY -->
+<div class="card">
+  <h3>Economy</h3>
+  <input id="infl" placeholder="Inflation">
+  <input id="trust" placeholder="Bank trust">
+  <button onclick="saveEco()">Save</button>
+</div>
+
+<!-- SHOP -->
+<div class="card">
+  <h3>Shop</h3>
+  <select id="shopItem"></select>
+  <input id="shopPrice" placeholder="Price">
+  <input id="shopEnergy" placeholder="Energy">
+  <button onclick="saveShop()">Save</button>
+</div>
+
+<!-- TAXI -->
+<div class="card">
+  <h3>Taxi</h3>
+  <input id="taxiBase" placeholder="Base price">
+  <input id="taxiChance" placeholder="Chance">
+  <input id="taxiTimer" placeholder="Timer">
+  <button onclick="saveTaxi()">Save</button>
+</div>
+
+<!-- EVENTS -->
+<div class="card">
+  <h3>Events</h3>
+  <select id="eventType">
+    <option value="crisis">Crisis</option>
+    <option value="boom">Boom</option>
+    <option value="taxi">Taxi strike</option>
+  </select>
+  <button onclick="runEvent()">Run event</button>
+</div>
+
+<!-- LOGS -->
+<div class="card">
+  <h3>Admin logs</h3>
+  <button onclick="loadLogs()">Refresh</button>
+  <pre id="logBox"></pre>
 </div>
 
 <script>
 let currentPlayer = null;
+let currentItem = null;
 
-db.ref("players").on("value", snap => {
-  const select = document.getElementById("playerSelect");
-  select.innerHTML = "";
-  snap.forEach(child => {
-    const o = document.createElement("option");
-    o.value = child.key;
-    o.textContent = child.key;
-    select.appendChild(o);
+/* PLAYERS */
+db.ref("players").on("value", s => {
+  playerSelect.innerHTML = "";
+  s.forEach(c => {
+    let o = document.createElement("option");
+    o.value = c.key;
+    o.textContent = c.key;
+    playerSelect.appendChild(o);
   });
 });
 
 function loadPlayer(){
-  const id = playerSelect.value;
-  currentPlayer = id;
-  db.ref("players/"+id).once("value").then(s=>{
-    const d = s.val() || {};
-    pBalance.value = d.balance ?? 0;
-    pEnergy.value = d.energy ?? 0;
-    pMood.value = d.mood ?? 0;
+  currentPlayer = playerSelect.value;
+  db.ref("players/"+currentPlayer).once("value").then(s=>{
+    let d = s.val() || {};
+    pBalance.value = d.balance || 0;
+    pEnergy.value = d.energy || 0;
+    pMood.value = d.mood || 0;
     playerEditor.style.display = "block";
   });
 }
 
 function savePlayer(){
-  if(!currentPlayer) return;
   db.ref("players/"+currentPlayer).once("value").then(old=>{
-    const before = old.val() || {};
-    const after = {
+    let before = old.val() || {};
+    let after = {
       balance:+pBalance.value,
       energy:+pEnergy.value,
       mood:+pMood.value
     };
     db.ref("players/"+currentPlayer).update(after);
-    addLog("Игрок "+currentPlayer, before, after);
-    alert("Сохранено");
+    addLog("player_update", before, after);
   });
 }
-</script>
 
-<!-- ДОСТАВКА -->
-<div class="card">
-  <h2>Тарифы доставки</h2>
-  База: <input id="delBase"><br>
-  За км: <input id="delKm"><br>
-  <button onclick="saveDelivery()">Сохранить</button>
-</div>
-
-<script>
+/* DELIVERY */
 db.ref("delivery").once("value").then(s=>{
-  const d = s.val() || {};
-  delBase.value = d.basePrice ?? 0;
-  delKm.value = d.pricePerKm ?? 0;
+  let d = s.val() || {};
+  delBase.value = d.basePrice || 0;
+  delKm.value = d.pricePerKm || 0;
 });
-
 function saveDelivery(){
   db.ref("delivery").update({
     basePrice:+delBase.value,
     pricePerKm:+delKm.value
   });
 }
-</script>
 
-<!-- ЦЕЛИ -->
-<div class="card">
-  <h2>Цель курьера</h2>
-  Минуты: <input id="gTime"><br>
-  Доставки: <input id="gCount"><br>
-  Бонус: <input id="gBonus"><br>
-  <button onclick="saveGoal()">Сохранить</button>
-</div>
-
-<script>
+/* GOALS */
 function saveGoal(){
   db.ref("goals/daily").set({
     time:+gTime.value,
@@ -94,89 +187,53 @@ function saveGoal(){
     bonus:+gBonus.value
   });
 }
-</script>
 
-<!-- ЭКОНОМИКА -->
-<div class="card">
-  <h2>Экономика</h2>
-  Инфляция: <input id="infl"><br>
-  Доверие банка: <input id="trust"><br>
-  <button onclick="saveEco()">Сохранить</button>
-</div>
-
-<script>
+/* ECONOMY */
 db.ref("economy").once("value").then(s=>{
-  const d = s.val() || {};
-  infl.value = d.inflation ?? 0;
-  trust.value = d.bankTrust ?? 0;
+  let d = s.val() || {};
+  infl.value = d.inflation || 0;
+  trust.value = d.bankTrust || 0;
 });
-
 function saveEco(){
   db.ref("economy").update({
     inflation:+infl.value,
     bankTrust:+trust.value
   });
 }
-</script>
 
-<!-- МАГАЗИН -->
-<div class="card">
-  <h2>Магазин</h2>
-  <select id="shopItem"></select><br>
-  Цена: <input id="shopPrice"><br>
-  Энергия: <input id="shopEnergy"><br>
-  <button onclick="saveShop()">Сохранить</button>
-</div>
-
-<script>
-let currentItem = null;
-
-db.ref("shop/products").on("value", snap=>{
+/* SHOP */
+db.ref("shop/products").on("value", s=>{
   shopItem.innerHTML="";
-  snap.forEach(p=>{
-    const o=document.createElement("option");
+  s.forEach(p=>{
+    let o=document.createElement("option");
     o.value=p.key;
     o.textContent=p.key;
     shopItem.appendChild(o);
   });
   shopItem.dispatchEvent(new Event("change"));
 });
-
 shopItem.onchange=()=>{
-  currentItem=shopItem.value;
+  currentItem = shopItem.value;
   db.ref("shop/products/"+currentItem).once("value").then(s=>{
-    const d=s.val()||{};
-    shopPrice.value=d.price??0;
-    shopEnergy.value=d.energy??0;
+    let d=s.val()||{};
+    shopPrice.value=d.price||0;
+    shopEnergy.value=d.energy||0;
   });
 };
-
 function saveShop(){
-  if(!currentItem) return;
   db.ref("shop/products/"+currentItem).update({
     price:+shopPrice.value,
     energy:+shopEnergy.value
   });
 }
-</script>
 
-<!-- ТАКСИ -->
-<div class="card">
-  <h2>Такси</h2>
-  База: <input id="taxiBase"><br>
-  Шанс: <input id="taxiChance"><br>
-  Таймер: <input id="taxiTimer"><br>
-  <button onclick="saveTaxi()">Сохранить</button>
-</div>
-
-<script>
+/* TAXI */
 db.ref("taxi").once("value").then(s=>{
-  const d=s.val()||{};
-  taxiBase.value=d.basePrice??0;
-  taxiChance.value=d.chance??0;
-  taxiTimer.value=d.timer??0;
+  let d=s.val()||{};
+  taxiBase.value=d.basePrice||0;
+  taxiChance.value=d.chance||0;
+  taxiTimer.value=d.timer||0;
 });
-
 function saveTaxi(){
   db.ref("taxi").update({
     basePrice:+taxiBase.value,
@@ -184,78 +241,52 @@ function saveTaxi(){
     timer:+taxiTimer.value
   });
 }
-</script>
 
-<!-- ЛОГИ -->
-<div class="card">
-  <h2>Логи</h2>
-  <button onclick="loadLogs()">Обновить</button>
-  <pre id="logBox" style="max-height:300px;overflow:auto"></pre>
-</div>
+/* EVENTS */
+function runEvent(){
+  if(eventType.value==="crisis"){
+    db.ref("economy").once("value").then(s=>{
+      let b=s.val();
+      let a={inflation:b.inflation+10,bankTrust:b.bankTrust-15};
+      db.ref("economy").update(a);
+      addLog("crisis",b,a);
+    });
+  }
+  if(eventType.value==="boom"){
+    db.ref("economy").once("value").then(s=>{
+      let b=s.val();
+      let a={inflation:Math.max(0,b.inflation-5),bankTrust:b.bankTrust+10};
+      db.ref("economy").update(a);
+      addLog("boom",b,a);
+    });
+  }
+  if(eventType.value==="taxi"){
+    db.ref("taxi").once("value").then(s=>{
+      let b=s.val();
+      let a={...b,chance:Math.max(1,b.chance-50),basePrice:b.basePrice*2};
+      db.ref("taxi").update(a);
+      addLog("taxi_strike",b,a);
+    });
+  }
+}
 
-<script>
+/* LOGS */
 function addLog(action,before,after){
   db.ref("adminLogs").push({
     time:new Date().toLocaleString(),
     action,before,after
   });
 }
-
 function loadLogs(){
   db.ref("adminLogs").limitToLast(30).once("value").then(s=>{
     logBox.textContent="";
     s.forEach(l=>{
-      logBox.textContent+=
-      `[${l.val().time}] ${l.val().action}\n`+
-      `Было: ${JSON.stringify(l.val().before)}\n`+
-      `Стало: ${JSON.stringify(l.val().after)}\n\n`;
+      logBox.textContent +=
+        l.val().time+" | "+l.val().action+"\n";
     });
   });
 }
 </script>
 
-<!-- СОБЫТИЯ -->
-<div class="card">
-  <h2>События</h2>
-  <select id="eventType">
-    <option value="crisis">Кризис</option>
-    <option value="boom">Рост</option>
-    <option value="taxi">Забастовка такси</option>
-  </select>
-  <button onclick="runEvent()">Запустить</button>
-</div>
-
-<script>
-function runEvent(){
-  const t=eventType.value;
-
-  if(t==="crisis"){
-    db.ref("economy").once("value").then(s=>{
-      const b=s.val();
-      const a={inflation:b.inflation+10,bankTrust:b.bankTrust-15};
-      db.ref("economy").update(a);
-      addLog("Кризис",b,a);
-    });
-  }
-
-  if(t==="boom"){
-    db.ref("economy").once("value").then(s=>{
-      const b=s.val();
-      const a={inflation:Math.max(0,b.inflation-5),bankTrust:b.bankTrust+10};
-      db.ref("economy").update(a);
-      addLog("Рост",b,a);
-    });
-  }
-
-  if(t==="taxi"){
-    db.ref("taxi").once("value").then(s=>{
-      const b=s.val();
-      const a={...b,chance:Math.max(1,b.chance-50),basePrice:b.basePrice*2};
-      db.ref("taxi").update(a);
-      addLog("Забастовка такси",b,a);
-    });
-  }
-
-  alert("Событие применено");
-}
-</script>
+</body>
+</html>
