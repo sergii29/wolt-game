@@ -3,254 +3,247 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Админка — Режим Бога</title>
+<title>Админка • Режим Бога</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<!-- Твоя база -->
 <script src="database.js"></script>
 
 <style>
-body {
-  background:#0e0e0e;
-  color:#fff;
-  font-family:Arial, sans-serif;
-  padding:10px;
+:root{
+  --bg:#0b0e13;
+  --card:#141922;
+  --border:#1f2633;
+  --accent:#4da3ff;
+  --ok:#3ddc84;
+  --bad:#ff5c5c;
+  --text:#e8ecf1;
+  --muted:#9aa4b2;
 }
-.card {
-  border:1px solid #333;
-  border-radius:8px;
+*{box-sizing:border-box}
+body{
+  margin:0;
   padding:12px;
-  margin-bottom:14px;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
 }
-h2 {
-  margin:0 0 10px;
+.section{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:16px;
+}
+.section h2{
+  margin:0 0 12px;
   font-size:18px;
 }
-input, select, button {
+label{
+  font-size:13px;
+  color:var(--muted);
+}
+input,select,button{
   width:100%;
-  padding:8px;
-  margin:4px 0;
-  background:#1c1c1c;
-  color:#fff;
-  border:1px solid #444;
-  border-radius:4px;
+  padding:10px;
+  margin-top:6px;
+  margin-bottom:10px;
+  background:#0f1420;
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:10px;
+  font-size:15px;
 }
-button {
-  background:#2b2b2b;
-  font-weight:bold;
+button{
+  background:linear-gradient(180deg,#2a7cff,#1f5fcc);
+  border:none;
+  font-weight:600;
 }
-.status-online { color:#4caf50; }
-.status-offline { color:#f44336; }
-pre {
-  background:#000;
-  padding:6px;
-  max-height:200px;
-  overflow:auto;
+button.secondary{
+  background:#20283a;
 }
+.row{display:flex;gap:10px}
+.row>div{flex:1}
+.status{font-size:14px;margin-bottom:10px}
+.online{color:var(--ok)}
+.offline{color:var(--bad)}
+.readonly{
+  background:#0c111c;
+  color:var(--muted);
+}
+small{color:var(--muted)}
 </style>
 </head>
 
 <body>
 
 <!-- ИГРОКИ -->
-<div class="card">
-  <h2>👤 Игроки (баланс, энергия, настроение)</h2>
+<div class="section">
+<h2>👤 Игроки</h2>
 
-  <select id="playerSelect"></select>
-  <div id="playerStatus"></div>
+<label>Игрок</label>
+<select id="playerSelect"></select>
 
-  <input id="pBalance" type="number" placeholder="Баланс (PLN)">
-  <input id="pEnergy" type="number" placeholder="Энергия">
-  <input id="pMood" type="number" placeholder="Настроение">
+<div id="playerStatus" class="status"></div>
 
-  <button onclick="savePlayer()">💾 Сохранить игрока</button>
+<label>Баланс (PLN)</label>
+<input id="pBalance" type="number">
+
+<label>Энергия</label>
+<input id="pEnergy" type="number">
+
+<label>Настроение</label>
+<input id="pMood" type="number">
+
+<button onclick="savePlayer()">💾 Сохранить игрока</button>
 </div>
 
 <!-- ЭКОНОМИКА -->
-<div class="card">
-  <h2>🌍 Экономика (режим бога)</h2>
+<div class="section">
+<h2>🌍 Экономика (авто-инфляция)</h2>
 
-  <input id="inflation" type="number" placeholder="Инфляция (%)" value="5">
-  <input id="bankTrust" type="number" placeholder="Доверие банка" value="100">
+<label>Текущая инфляция (%)</label>
+<input id="currentInflation" class="readonly" disabled>
 
-  <button onclick="saveEconomy()">💾 Сохранить экономику</button>
+<label>Индекс экономики</label>
+<input id="economyIndex" class="readonly" disabled>
+
+<label>Базовая инфляция (%)</label>
+<input id="baseInflation" type="number">
+
+<label>Множитель индекса</label>
+<input id="indexMultiplier" type="number" step="0.01">
+
+<label>Максимальная инфляция (%)</label>
+<input id="maxInflation" type="number">
+
+<label>
+  <input type="checkbox" id="autoInflation">
+  Автоматическая инфляция включена
+</label>
+
+<button onclick="saveEconomy()">💾 Сохранить экономику</button>
 </div>
 
 <!-- ДОСТАВКА -->
-<div class="card">
-  <h2>🚴 Тарифы доставки</h2>
+<div class="section">
+<h2>🚴 Тарифы доставки</h2>
 
-  <input id="delBase" type="number" placeholder="Базовая цена доставки" value="6">
-  <input id="delKm" type="number" placeholder="Цена за км" value="2">
+<label>Базовая цена</label>
+<input id="delBase" type="number">
 
-  <button onclick="saveDelivery()">💾 Сохранить тарифы</button>
+<label>Цена за километр</label>
+<input id="delKm" type="number">
+
+<button onclick="saveDelivery()">💾 Сохранить тарифы</button>
 </div>
 
 <!-- ЦЕЛИ -->
-<div class="card">
-  <h2>🎯 Зарабатывай дополнительно (цели)</h2>
+<div class="section">
+<h2>🎯 Зарабатывай дополнительно</h2>
 
-  <input id="goalTime" type="number" placeholder="Время (минуты)" value="35">
-  <input id="goalCount" type="number" placeholder="Кол-во доставок" value="12">
-  <input id="goalBonus" type="number" placeholder="Бонус (PLN)" value="50">
-
-  <button onclick="saveGoal()">💾 Сохранить цель</button>
+<div class="row">
+  <div>
+    <label>Минуты</label>
+    <input id="goalMin" type="number">
+  </div>
+  <div>
+    <label>Секунды</label>
+    <input id="goalSec" type="number">
+  </div>
 </div>
 
-<!-- МАГАЗИН -->
-<div class="card">
-  <h2>🛒 Магазин</h2>
+<label>Количество доставок</label>
+<input id="goalCount" type="number">
 
-  <select id="shopItem"></select>
-  <input id="shopPrice" type="number" placeholder="Цена товара">
-  <input id="shopEnergy" type="number" placeholder="Энергия от товара">
+<label>Бонус (PLN)</label>
+<input id="goalBonus" type="number">
 
-  <button onclick="saveShop()">💾 Сохранить товар</button>
-</div>
+<small>Пример: 100 доставок за 1:05 → минуты 65, секунды 0</small>
 
-<!-- ЛОГИ -->
-<div class="card">
-  <h2>📜 Логи (кто что менял)</h2>
-  <button onclick="loadLogs()">🔄 Обновить</button>
-  <pre id="logBox"></pre>
+<button onclick="saveGoal()">💾 Сохранить цель</button>
 </div>
 
 <script>
-let currentPlayer = null;
-let currentItem = null;
+let currentPlayer=null;
 
-/* ИГРОКИ */
-db.ref("players").on("value", snap => {
-  playerSelect.innerHTML = "";
-  snap.forEach(p => {
-    const o = document.createElement("option");
-    o.value = p.key;
-    o.textContent = p.key;
+/* === ИГРОКИ === */
+db.ref("players").on("value",snap=>{
+  playerSelect.innerHTML="";
+  snap.forEach(p=>{
+    const o=document.createElement("option");
+    o.value=p.key;o.textContent=p.key;
     playerSelect.appendChild(o);
   });
-  if (playerSelect.value) loadPlayer();
+  if(playerSelect.value) loadPlayer();
 });
-
-playerSelect.onchange = loadPlayer;
+playerSelect.onchange=loadPlayer;
 
 function loadPlayer(){
-  currentPlayer = playerSelect.value;
+  currentPlayer=playerSelect.value;
   db.ref("players/"+currentPlayer).once("value").then(s=>{
-    const d = s.val() || {};
-    pBalance.value = d.balance ?? 0;
-    pEnergy.value = d.energy ?? 0;
-    pMood.value = d.mood ?? 0;
-
-    if (d.online) {
-      playerStatus.innerHTML = "Статус: <span class='status-online'>онлайн</span>";
-    } else {
-      playerStatus.innerHTML = "Статус: <span class='status-offline'>оффлайн</span>";
-    }
+    const d=s.val()||{};
+    pBalance.value=d.balance||0;
+    pEnergy.value=d.energy||0;
+    pMood.value=d.mood||0;
+    playerStatus.innerHTML=d.online
+      ? "Статус: <span class='online'>онлайн</span>"
+      : "Статус: <span class='offline'>оффлайн</span>";
   });
 }
-
 function savePlayer(){
-  if (!currentPlayer) return;
-  const after = {
+  db.ref("players/"+currentPlayer).update({
     balance:+pBalance.value,
     energy:+pEnergy.value,
     mood:+pMood.value
-  };
-  db.ref("players/"+currentPlayer).update(after);
-  addLog("Изменён игрок "+currentPlayer, after);
+  });
 }
 
-/* ЭКОНОМИКА */
-db.ref("economy").once("value").then(s=>{
-  const d = s.val() || {};
-  inflation.value = d.inflation ?? 5;
-  bankTrust.value = d.bankTrust ?? 100;
+/* === ЭКОНОМИКА === */
+db.ref("economy").on("value",s=>{
+  const d=s.val()||{};
+  currentInflation.value=d.currentInflation ?? 0;
+  economyIndex.value=d.economyIndex ?? 0;
+  baseInflation.value=d.baseInflation ?? 0;
+  indexMultiplier.value=d.indexMultiplier ?? 0;
+  maxInflation.value=d.maxInflation ?? 0;
+  autoInflation.checked=!!d.autoInflation;
 });
-
 function saveEconomy(){
-  const data = {
-    inflation:+inflation.value,
-    bankTrust:+bankTrust.value
-  };
-  db.ref("economy").update(data);
-  addLog("Экономика изменена", data);
+  db.ref("economy").update({
+    baseInflation:+baseInflation.value,
+    indexMultiplier:+indexMultiplier.value,
+    maxInflation:+maxInflation.value,
+    autoInflation:autoInflation.checked
+  });
 }
 
-/* ДОСТАВКА */
+/* === ДОСТАВКА === */
 db.ref("delivery").once("value").then(s=>{
-  const d = s.val() || {};
-  delBase.value = d.basePrice ?? 6;
-  delKm.value = d.pricePerKm ?? 2;
+  delBase.value=s.val()?.basePrice ?? 0;
+  delKm.value=s.val()?.pricePerKm ?? 0;
 });
-
 function saveDelivery(){
-  const data = {
+  db.ref("delivery").update({
     basePrice:+delBase.value,
     pricePerKm:+delKm.value
-  };
-  db.ref("delivery").update(data);
-  addLog("Тарифы доставки изменены", data);
+  });
 }
 
-/* ЦЕЛИ */
+/* === ЦЕЛИ === */
+db.ref("goals/daily").once("value").then(s=>{
+  if(!s.val()) return;
+  goalMin.value=Math.floor(s.val().timeSeconds/60);
+  goalSec.value=s.val().timeSeconds%60;
+  goalCount.value=s.val().deliveries;
+  goalBonus.value=s.val().bonus;
+});
 function saveGoal(){
-  const data = {
-    time:+goalTime.value,
+  const seconds=(+goalMin.value*60)+(+goalSec.value);
+  db.ref("goals/daily").set({
+    timeSeconds:seconds,
     deliveries:+goalCount.value,
     bonus:+goalBonus.value
-  };
-  db.ref("goals/daily").set(data);
-  addLog("Цель изменена", data);
-}
-
-/* МАГАЗИН */
-db.ref("shop/products").on("value", snap=>{
-  shopItem.innerHTML="";
-  snap.forEach(p=>{
-    const o=document.createElement("option");
-    o.value=p.key;
-    o.textContent=p.key;
-    shopItem.appendChild(o);
-  });
-});
-
-shopItem.onchange=()=>{
-  currentItem=shopItem.value;
-  db.ref("shop/products/"+currentItem).once("value").then(s=>{
-    const d=s.val()||{};
-    shopPrice.value=d.price??0;
-    shopEnergy.value=d.energy??0;
-  });
-};
-
-function saveShop(){
-  const data = {
-    price:+shopPrice.value,
-    energy:+shopEnergy.value
-  };
-  db.ref("shop/products/"+currentItem).update(data);
-  addLog("Товар изменён "+currentItem, data);
-}
-
-/* ЛОГИ */
-function addLog(action, data){
-  db.ref("adminLogs").push({
-    time:new Date().toLocaleString(),
-    action,
-    data
-  });
-}
-
-function loadLogs(){
-  db.ref("adminLogs").limitToLast(30).once("value").then(s=>{
-    logBox.textContent="";
-    s.forEach(l=>{
-      logBox.textContent +=
-        l.val().time+" — "+l.val().action+"\n";
-    });
   });
 }
 </script>
