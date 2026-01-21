@@ -1,15 +1,15 @@
 // ============================================================
-// --- PATCH v25: LOGIN FIX & AUTO-AUTH ---
+// --- PATCH v27: ROCKET DATABASE PERSISTENCE ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v25 Loaded: Auth System Fixed");
+    console.log(">>> Patch v27 Loaded: DB Quest Anchors");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
     
-    // 0. ПОДКЛЮЧЕНИЕ К БД (Fix для Ракетки)
+    // 0. ПОДКЛЮЧЕНИЕ К БД
     let patchDB = null;
     try {
         if(window.db) {
@@ -20,7 +20,7 @@
         }
     } catch(e) { console.error("Patch DB Error:", e); }
 
-    // 1. СТИЛИ (БЕЛАЯ ТЕМА WOLT)
+    // 1. СТИЛИ (Дизайн Wolt)
     const styles = `
         /* MENU & UI */
         #side-menu { background: #ffffff !important; border-right: 1px solid #eee !important; color: #333 !important; }
@@ -68,14 +68,16 @@
     const styleSheet = document.createElement("style"); styleSheet.innerText = styles; document.head.appendChild(styleSheet);
 
 
-    // 2. СИНХРОНИЗАЦИЯ
+    // 2. СИНХРОНИЗАЦИЯ С БД
     if(patchDB) {
+        // Загрузка списка бонусов
         patchDB.ref('bonuses/list').on('value', snap => {
             const data = snap.val() || {};
             window.bonusData = Object.entries(data).map(([key, val]) => ({id: key, ...val}));
             if(document.getElementById('bonus-modal')) window.renderBonusModal();
         });
         
+        // Загрузка конфига
         patchDB.ref('config').on('value', snap => {
             const cfg = snap.val();
             if(cfg) {
@@ -88,7 +90,6 @@
                     if(window.ITEMS_DB.energy_drink) window.ITEMS_DB.energy_drink.cost = p.energy_drink;
                     if(window.ITEMS_DB.coffee) window.ITEMS_DB.coffee.cost = p.coffee;
                     if(window.ITEMS_DB.gas) window.ITEMS_DB.gas.cost = p.gas;
-                    
                     window.DYNAMIC_PRICES = {
                         cars: { skoda: p.car_skoda, toyota: p.car_toyota, tesla: p.car_tesla },
                         lic: { driver: p.lic_driver, insurance: p.lic_insurance, taxi: p.lic_taxi }
@@ -96,61 +97,17 @@
                 }
             }
         });
+
+        // --- NEW: ЗАГРУЗКА ЯКОРЕЙ (ТОЧЕК СТАРТА КВЕСТОВ) ИЗ БД ---
+        if(typeof state !== 'undefined' && state.id) {
+             patchDB.ref('players/' + state.id + '/questAnchors').on('value', snap => {
+                 if(!state.questAnchors) state.questAnchors = {};
+                 const remoteAnchors = snap.val() || {};
+                 state.questAnchors = { ...state.questAnchors, ...remoteAnchors };
+                 if(document.getElementById('bonus-modal')) window.renderBonusModal();
+             });
+        }
     }
-
-    if(typeof window.startSessionOrders === 'undefined') window.startSessionOrders = (state.career.totalOrders || 0);
-
-    // ============================================================
-    // --- AUTH FIX (ПЕРЕОПРЕДЕЛЕНИЕ ЛОГИНА) ---
-    // ============================================================
-    window.performLogin = function() {
-        const login = document.getElementById('auth-login').value.trim();
-        const pass = document.getElementById('auth-pass').value.trim();
-        
-        if(!login || !pass) { alert("Введите логин и пароль!"); return; }
-
-        if(!window.db) window.db = firebase.database();
-
-        window.db.ref('users_lookup/' + login).once('value', snap => {
-            if(!snap.exists()) {
-                // Если юзера нет - это ошибка, мы не регистрируем при входе
-                alert('Пользователь не найден. Сначала нажмите Регистрация.');
-                return;
-            }
-            
-            const data = snap.val();
-            if(data.pass !== pass) {
-                alert('Неверный пароль!');
-                return;
-            }
-
-            // УСПЕШНЫЙ ВХОД
-            const targetId = data.playerId;
-            alert('Вход выполнен! Перезагрузка профиля...');
-            
-            // Загружаем данные игрока, чтобы сохранить их в LocalStorage
-            window.db.ref('players/' + targetId).once('value', playerSnap => {
-                let playerData = playerSnap.val();
-                if (!playerData) {
-                    playerData = { name: login, id: targetId, balance: 0 };
-                }
-                
-                // ВАЖНО: Обновляем локальное состояние
-                state = { ...state, ...playerData };
-                state.id = targetId;
-                state.name = login;
-                state.isAuth = true;
-
-                // СОХРАНЯЕМ В ПАМЯТЬ БРАУЗЕРА (Ключ: WARSZAWA_FOREVER)
-                localStorage.setItem('WARSZAWA_FOREVER', JSON.stringify(state));
-                
-                // ПЕРЕЗАГРУЖАЕМ СТРАНИЦУ, чтобы применились все изменения и ID
-                location.reload();
-            });
-        });
-    };
-    // ============================================================
-
 
     // 3. ОТРИСОВКА ОКОН
     window.renderCustomModal = function(type) {
@@ -169,20 +126,17 @@
             const limit = (window.gameConfig && window.gameConfig.bankLimitBase) ? (window.gameConfig.bankLimitBase + (state.career.totalOrders * window.gameConfig.bankLimitMulti)) : (1000 + (state.career.totalOrders * 50));
             const streak = state.loanStreak || 0;
             const comission = streak === 0 ? 0 : (streak === 1 ? 10 : 20);
-            
             const comColor = comission > 0 ? '#ff3d00' : '#00c853';
 
             content = `
                 <div class="close-btn" onclick="document.getElementById('active-custom-modal').remove()">✕</div>
                 <h2 style="text-align:center; margin-top:0">Банк (Кредит)</h2>
-                
                 <div class="bank-card">
                     <div style="font-size:12px; color:#666">Текущий долг</div>
                     <div class="bank-val">${debt.toFixed(2)} PLN</div>
                     <div class="bank-sub">${debt > 0 ? 'Есть задолженность' : 'Нет долгов'}</div>
                     <div class="bank-limit">Ваш кредитный лимит: ${limit} PLN</div>
                 </div>
-
                 <div style="margin-bottom:20px; padding:0 10px">
                     <div class="bank-info-row"><span>УСЛОВИЯ КРЕДИТА:</span></div>
                     <div class="bank-info-row">
@@ -190,9 +144,7 @@
                         <span style="color:${comColor}; font-weight:bold">Комиссия: +${comission}%</span>
                     </div>
                 </div>
-
                 <input id="custom-loan-input" type="number" placeholder="Сумма кредита..." style="width:100%; padding:15px; border-radius:12px; border:1px solid #ddd; font-size:18px; margin-bottom:10px; box-sizing:border-box;">
-                
                 <button class="action-btn btn-green" onclick="wrapBankAction('loan')">ВЗЯТЬ</button>
                 ${debt > 0 ? `<button class="action-btn btn-dark" onclick="wrapBankAction('repay')">ВЕРНУТЬ</button>` : ''}
             `;
@@ -238,7 +190,7 @@
         document.body.appendChild(overlay);
     };
 
-    // 4. ОКНО РАКЕТЫ
+    // 4. ОКНО РАКЕТЫ (FIXED DB LOGIC)
     window.renderBonusModal = function() {
         const old = document.getElementById('bonus-modal'); if(old) old.remove();
         
@@ -256,10 +208,33 @@
         if (active.length === 0) {
             html += `<div style="text-align:center; padding:20px; color:#aaa; font-size:12px; background:#eee; border-radius:10px; margin-bottom:20px">Нет активных заданий</div>`;
         } else {
-            const sessionOrders = (state.career.totalOrders || 0) - window.startSessionOrders;
+            
+            // --- LOGIC: DB ANCHORS ---
             active.forEach(b => {
+                // Если у игрока еще нет данных о квестах, создаем
+                if(!state.questAnchors) state.questAnchors = {};
+                
+                // Проверяем, есть ли "Якорь" (запись в БД, с какого заказа начат квест)
+                // Если нет -> создаем сейчас и отправляем в БД
+                if(typeof state.questAnchors[b.id] === 'undefined') {
+                    const currentTotal = state.career.totalOrders || 0;
+                    state.questAnchors[b.id] = currentTotal;
+                    
+                    // SAVE TO DB IMMEDIATELY
+                    if(patchDB && state.id) {
+                        patchDB.ref('players/' + state.id + '/questAnchors/' + b.id).set(currentTotal);
+                    }
+                }
+
+                // Считаем прогресс от Якоря
+                const startCount = state.questAnchors[b.id];
+                const currentTotal = (state.career.totalOrders || 0);
+                
+                let progress = currentTotal - startCount;
+                if(progress < 0) progress = 0;
+                
                 const target = parseInt(b.target);
-                const current = Math.min(sessionOrders, target);
+                const current = Math.min(progress, target);
                 const pct = (current / target) * 100;
                 
                 const diff = b.endTime - now;
@@ -276,6 +251,7 @@
                     </div>
                 </div>`;
             });
+            // --- END LOGIC ---
         }
 
         // FUTURE SECTION
@@ -287,10 +263,8 @@
                 const start = new Date(b.startTime);
                 const dateStr = start.toLocaleDateString();
                 const timeStr = start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                
                 const diff = b.startTime - now;
                 const h = Math.floor(diff/3600000); 
-                
                 html += `
                 <div class="b-card future">
                     <div style="font-weight:bold; font-size:15px; color:#555">${b.title} <span style="float:right; color:#ff9800; font-size:11px">СКОРО</span></div>
@@ -321,11 +295,34 @@
         document.body.appendChild(overlay);
     };
 
-    // 5. ВРАППЕРЫ ДЕЙСТВИЙ
+    // 5. ВРАППЕРЫ И ВХОД (Без изменений логики, только сохранение)
+    window.performLogin = function() {
+        const login = document.getElementById('auth-login').value.trim();
+        const pass = document.getElementById('auth-pass').value.trim();
+        if(!login || !pass) { alert("Введите логин и пароль!"); return; }
+        if(!window.db) window.db = firebase.database();
+        window.db.ref('users_lookup/' + login).once('value', snap => {
+            if(!snap.exists()) { alert('Пользователь не найден. Сначала нажмите Регистрация.'); return; }
+            const data = snap.val();
+            if(data.pass !== pass) { alert('Неверный пароль!'); return; }
+            const targetId = data.playerId;
+            alert('Вход выполнен! Перезагрузка профиля...');
+            window.db.ref('players/' + targetId).once('value', playerSnap => {
+                let playerData = playerSnap.val();
+                if (!playerData) playerData = { name: login, id: targetId, balance: 0 };
+                state = { ...state, ...playerData };
+                state.id = targetId;
+                state.name = login;
+                state.isAuth = true;
+                localStorage.setItem('WARSZAWA_FOREVER', JSON.stringify(state));
+                location.reload();
+            });
+        });
+    };
+
     window.wrapBankAction = function(type) {
         const input = document.getElementById('custom-loan-input');
         const val = input ? parseFloat(input.value) : 0;
-        
         if(val > 0) {
             let hiddenInput = document.getElementById('loan-amount');
             if(!hiddenInput) {
@@ -335,20 +332,16 @@
                 document.body.appendChild(hiddenInput);
             }
             hiddenInput.value = val;
-            
             if(type === 'loan') { if(window.takeLoan) window.takeLoan(); }
             if(type === 'repay') { if(window.repayLoan) window.repayLoan(); }
-            
             setTimeout(() => window.renderCustomModal('bank'), 200);
-        } else {
-            alert("Введите сумму!");
-        }
+        } else { alert("Введите сумму!"); }
     };
 
     window.wrapGov = function(l, c) { if(window.buyDeflation) window.buyDeflation(l, c); setTimeout(()=>window.renderCustomModal('gov'), 100); };
     window.wrapTaxi = function(id, p) { if(window.buyVehicle) window.buyVehicle(id, p); setTimeout(()=>window.renderCustomModal('taxi'), 100); };
 
-    // --- GPS FIX (Watch Position) ---
+    // GPS & LOOP
     if(navigator.geolocation) {
         navigator.geolocation.watchPosition(pos => {
             const { latitude, longitude } = pos.coords;
@@ -357,44 +350,37 @@
                 window.map.eachLayer(l => { if(l instanceof L.Marker) { l.setLatLng([latitude, longitude]); found=true; }});
                 if(!found) L.marker([latitude, longitude]).addTo(window.map);
             }
-        }, err => {
-            console.warn("GPS Access Denied or Error:", err);
-        }, {
-            enableHighAccuracy: true,
-            maximumAge: 30000,
-            timeout: 27000
-        });
+        }, err => console.warn("GPS Access Denied/Error", err), { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 });
     }
 
-    // 6. ЦИКЛ UI
     setInterval(() => {
-        // Проверка: Обновляем имя в меню, если оно изменилось
+        // UI Updates
         const nameEl = document.getElementById('player-name-display');
         const idEl = document.getElementById('player-id-display');
-        if(nameEl && typeof state !== 'undefined' && state.name) {
-            if(nameEl.textContent !== state.name) {
-                nameEl.textContent = state.name;
-                idEl.textContent = 'ID: ' + state.id;
+        if(nameEl && typeof state !== 'undefined' && state.name && nameEl.textContent !== state.name) {
+            nameEl.textContent = state.name;
+            idEl.textContent = 'ID: ' + state.id;
+            
+            // Если ID подгрузился, но слушатель якорей еще не запущен - запускаем
+            if(state.id && !state.anchorsListenerActive && window.db) {
+                state.anchorsListenerActive = true;
+                window.db.ref('players/' + state.id + '/questAnchors').on('value', snap => {
+                    if(!state.questAnchors) state.questAnchors = {};
+                    const remoteAnchors = snap.val() || {};
+                    state.questAnchors = { ...state.questAnchors, ...remoteAnchors };
+                });
             }
         }
 
         if(typeof state !== 'undefined' && state.items) {
-            const stats = {
-                'bike': Math.floor(state.items.bike||0),
-                'bag': Math.floor(state.items.bag||0),
-                'phone': Math.floor(state.items.phone||0),
-                'gear': Math.floor(state.items.gear||0),
-                'energy': Math.floor(state.needs.energy||0),
-                'water': Math.floor(state.needs.water||0),
-                'mood': Math.floor(state.needs.mood||0)
-            };
+            const stats = { 'bike': state.items.bike, 'bag': state.items.bag, 'phone': state.items.phone, 'gear': state.items.gear, 'energy': state.needs.energy, 'water': state.needs.water, 'mood': state.needs.mood };
             for (let [key, val] of Object.entries(stats)) {
                 const bar = document.getElementById(`bar-${key}`);
                 if(bar) {
                     const parent = bar.parentElement.parentElement;
                     let num = parent.querySelector('.tiny-stat');
                     if(!num) { num = document.createElement('div'); num.className = 'tiny-stat'; parent.appendChild(num); }
-                    num.textContent = val + '%';
+                    num.textContent = Math.floor(val) + '%';
                     num.style.color = val < 20 ? '#ff3d00' : 'white';
                 }
             }
@@ -412,29 +398,16 @@
         }
     }, 3000); 
 
-    // --- OVERRIDE OPEN ---
     window.openModal = function(type) { 
         if(type==='bank') window.renderCustomModal('bank'); 
         else if(type==='deflation') window.renderCustomModal('gov'); 
         else if(type==='taxi-shop') window.renderCustomModal('taxi'); 
-        
         else { 
             toggleMenu(); 
             const m=document.getElementById('full-modal'); const b=document.getElementById('modal-body'); m.classList.add('open'); 
-            
-            if(type==='shop'){
-                document.getElementById('modal-title').textContent='Магазин';
-                renderShop(b);
-            }
-            else if(type==='taxi-licenses' || type==='taxi-licenses-btn') {
-                document.getElementById('modal-title').textContent='Лицензии и Документы';
-                if(window.renderTaxiLicenses) window.renderTaxiLicenses(b);
-                else b.innerHTML = 'Ошибка: Функция renderTaxiLicenses не найдена';
-            }
-            else {
-                document.getElementById('modal-title').textContent='История';
-                renderHistory(b);
-            } 
+            if(type==='shop'){ document.getElementById('modal-title').textContent='Магазин'; renderShop(b); }
+            else if(type==='taxi-licenses' || type==='taxi-licenses-btn') { document.getElementById('modal-title').textContent='Лицензии и Документы'; if(window.renderTaxiLicenses) window.renderTaxiLicenses(b); }
+            else { document.getElementById('modal-title').textContent='История'; renderHistory(b); } 
         } 
     };
 
