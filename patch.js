@@ -1,55 +1,79 @@
-// PATCH v5 — новые услуги и изменение процесса доставки (без окон)
+// PATCH UI v2 — мягкое обновление окон доставки (без ломки дизайна)
 
 (function () {
 
-  if (!(window.Telegram && Telegram.WebApp)) return;
+  window.addEventListener("load", () => {
 
-  // === НАСТРОЙКИ ===
-  window.deliveryModifiers = {
-    urgentChance: 0.25,      // шанс срочного заказа
-    waitChance: 0.30,        // шанс ожидания клиента
-    nightPenalty: 1.3,       // усталость ночью
-    tipChance: 0.4           // шанс чаевых
-  };
+    const style = document.createElement("style");
+    style.innerHTML = `
 
-  // === ПЕРЕХВАТ ЗАВЕРШЕНИЯ ЗАКАЗА ===
-  const originalCompleteOrder = window.completeOrder;
-
-  if (typeof originalCompleteOrder === "function") {
-
-    window.completeOrder = function (order) {
-
-      let bonus = 0;
-      let energyCost = 0;
-
-      // Срочная доставка
-      if (Math.random() < deliveryModifiers.urgentChance) {
-        bonus += 8;
-        energyCost += 5;
+      /* Общий фон окон */
+      .modal, 
+      .popup, 
+      .window, 
+      .order, 
+      .order-window,
+      .delivery,
+      .card {
+        background: #141414 !important;
+        color: #eaeaea !important;
+        border-radius: 16px !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
+        border: 1px solid rgba(255,255,255,0.06) !important;
       }
 
-      // Ожидание клиента
-      if (Math.random() < deliveryModifiers.waitChance) {
-        energyCost += 3;
-
-        if (Math.random() < deliveryModifiers.tipChance) {
-          bonus += 5;
-        }
+      /* Заголовки в окнах */
+      .modal h1, .modal h2, .modal h3,
+      .order h1, .order h2, .order h3,
+      .delivery h1, .delivery h2 {
+        font-weight: 600 !important;
+        letter-spacing: 0.3px !important;
+        margin-bottom: 8px !important;
       }
 
-      // Ночная усталость
-      const hour = new Date().getHours();
-      if (hour >= 22 || hour < 6) {
-        energyCost *= deliveryModifiers.nightPenalty;
+      /* Текст заказа */
+      .modal p,
+      .order p,
+      .delivery p {
+        opacity: 0.85 !important;
+        line-height: 1.4 !important;
       }
 
-      // применяем эффекты
-      if (window.balance !== undefined) window.balance += bonus;
-      if (window.energy !== undefined) window.energy -= energyCost;
+      /* Кнопки внутри доставки */
+      .modal button,
+      .order button,
+      .delivery button {
+        background: #1f1f1f !important;
+        color: #ffffff !important;
+        border-radius: 12px !important;
+        padding: 10px 14px !important;
+        font-size: 15px !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+      }
 
-      // вызываем оригинальную логику
-      return originalCompleteOrder.apply(this, arguments);
-    };
-  }
+      .modal button:active,
+      .order button:active,
+      .delivery button:active {
+        transform: scale(0.97);
+      }
+
+      /* Выделение важного (цена, расстояние, награда) */
+      .price, .reward, .money, .pay {
+        color: #00ff9c !important;
+        font-weight: 600 !important;
+      }
+
+      /* Разделители */
+      hr {
+        border: none !important;
+        border-top: 1px solid rgba(255,255,255,0.08) !important;
+        margin: 10px 0 !important;
+      }
+
+    `;
+
+    document.head.appendChild(style);
+    console.log("UI PATCH v2 активен");
+  });
 
 })();
