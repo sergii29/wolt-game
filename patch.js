@@ -1,98 +1,55 @@
-// PATCH v4 — события + выбор + последствия
+// PATCH v5 — новые услуги и изменение процесса доставки (без окон)
 
 (function () {
 
-  function isTelegram() {
-    return !!(window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe);
-  }
+  if (!(window.Telegram && Telegram.WebApp)) return;
 
-  function show(text) {
-    alert(text);
-  }
+  // === НАСТРОЙКИ ===
+  window.deliveryModifiers = {
+    urgentChance: 0.25,      // шанс срочного заказа
+    waitChance: 0.30,        // шанс ожидания клиента
+    nightPenalty: 1.3,       // усталость ночью
+    tipChance: 0.4           // шанс чаевых
+  };
 
-  function choose(text) {
-    return confirm(text);
-  }
+  // === ПЕРЕХВАТ ЗАВЕРШЕНИЯ ЗАКАЗА ===
+  const originalCompleteOrder = window.completeOrder;
 
-  if (!isTelegram()) {
-    show(
-      "⚠️ Полная версия игры доступна только в Telegram.\n\n" +
-      "В Android-приложении прогресс может сбрасываться."
-    );
-    return;
-  }
+  if (typeof originalCompleteOrder === "function") {
 
-  setTimeout(startStory, 1200);
+    window.completeOrder = function (order) {
 
-  function startStory() {
+      let bonus = 0;
+      let energyCost = 0;
 
-    const tgUser = Telegram.WebApp.initDataUnsafe.user;
-    const tgId = tgUser.id;
-    window.playerId = "tg_" + tgId;
-
-    const gameDay =
-      window.gameDay ??
-      window.state?.day ??
-      1;
-
-    window.storyFlags = window.storyFlags || {};
-
-    function once(key, fn) {
-      if (storyFlags[key]) return;
-      storyFlags[key] = true;
-      fn();
-    }
-
-    // === ДЕНЬ 1 — ВЫБОР ===
-    once("day1_intro", () => {
-      show(
-        "День 1.\n" +
-        "Ты выходишь на смену.\n" +
-        "Первый заказ уже ждёт."
-      );
-
-      const helpClient = choose(
-        "Клиент просит подождать 5 минут.\n\n" +
-        "Подождать?"
-      );
-
-      if (helpClient) {
-        show(
-          "Ты ждёшь клиента.\n" +
-          "Он благодарит и оставляет чаевые."
-        );
-        if (window.balance !== undefined) window.balance += 10;
-        storyFlags.goodStart = true;
-      } else {
-        show(
-          "Ты уезжаешь без ожидания.\n" +
-          "Заказ закрыт, но осадок остался."
-        );
-        storyFlags.goodStart = false;
+      // Срочная доставка
+      if (Math.random() < deliveryModifiers.urgentChance) {
+        bonus += 8;
+        energyCost += 5;
       }
-    });
 
-    // === ДЕНЬ 3 — ПОСЛЕДСТВИЕ ===
-    if (gameDay === 3) {
-      once("day3_result", () => {
-        if (storyFlags.goodStart) {
-          show(
-            "День 3.\n" +
-            "Тот самый клиент снова попадается.\n" +
-            "Он узнаёт тебя и даёт хороший заказ."
-          );
-          if (window.balance !== undefined) window.balance += 20;
-        } else {
-          show(
-            "День 3.\n" +
-            "Поддержка пишет жалобу.\n" +
-            "Кто-то вспомнил твой первый день."
-          );
-          if (window.energy !== undefined) window.energy -= 10;
+      // Ожидание клиента
+      if (Math.random() < deliveryModifiers.waitChance) {
+        energyCost += 3;
+
+        if (Math.random() < deliveryModifiers.tipChance) {
+          bonus += 5;
         }
-      });
-    }
+      }
 
+      // Ночная усталость
+      const hour = new Date().getHours();
+      if (hour >= 22 || hour < 6) {
+        energyCost *= deliveryModifiers.nightPenalty;
+      }
+
+      // применяем эффекты
+      if (window.balance !== undefined) window.balance += bonus;
+      if (window.energy !== undefined) window.energy -= energyCost;
+
+      // вызываем оригинальную логику
+      return originalCompleteOrder.apply(this, arguments);
+    };
   }
 
 })();
