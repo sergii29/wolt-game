@@ -1,13 +1,26 @@
 // ============================================================
-// --- PATCH v21: TOTAL RECOVERY (WHITE UI + ROCKET FIX) ---
+// --- PATCH v22: GPS FIX & ROCKET RELOAD ---
+// Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v21 Loaded: White Theme Restored");
+    console.log(">>> Patch v22 Loaded: GPS Silent & DB Fix");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
     
+    // 0. ВАЖНО: ПОДКЛЮЧЕНИЕ К БД (Fix для пустой вкладки)
+    let patchDB = null;
+    try {
+        if(window.db) {
+            patchDB = window.db;
+        } else if(window.firebase) {
+            // Если window.db нет, берем напрямую из инстанса
+            patchDB = firebase.database();
+            window.db = patchDB; // Чиним глобально
+        }
+    } catch(e) { console.error("Patch DB Error:", e); }
+
     // 1. СТИЛИ (БЕЛАЯ ТЕМА WOLT)
     const styles = `
         /* MENU & UI */
@@ -56,15 +69,17 @@
     const styleSheet = document.createElement("style"); styleSheet.innerText = styles; document.head.appendChild(styleSheet);
 
 
-    // 2. СИНХРОНИЗАЦИЯ
-    if(window.db) {
-        window.db.ref('bonuses/list').on('value', snap => {
+    // 2. СИНХРОНИЗАЦИЯ (ИСПРАВЛЕНО ЧТЕНИЕ ДАННЫХ)
+    if(patchDB) {
+        console.log(">>> Patch connected to DB");
+        patchDB.ref('bonuses/list').on('value', snap => {
             const data = snap.val() || {};
             window.bonusData = Object.entries(data).map(([key, val]) => ({id: key, ...val}));
+            // Если модалка открыта, обновляем её в реальном времени
             if(document.getElementById('bonus-modal')) window.renderBonusModal();
         });
         
-        window.db.ref('config').on('value', snap => {
+        patchDB.ref('config').on('value', snap => {
             const cfg = snap.val();
             if(cfg) {
                 if(!window.gameConfig) window.gameConfig = {};
@@ -85,12 +100,14 @@
                 }
             }
         });
+    } else {
+        console.error(">>> Patch DB Connection FAILED. Bonuses won't load.");
     }
 
     if(typeof window.startSessionOrders === 'undefined') window.startSessionOrders = (state.career.totalOrders || 0);
 
 
-    // 3. ОТРИСОВКА ОКОН (ИСПРАВЛЕНО)
+    // 3. ОТРИСОВКА ОКОН
     window.renderCustomModal = function(type) {
         const old = document.getElementById('active-custom-modal'); if(old) old.remove();
         const overlay = document.createElement('div');
@@ -102,7 +119,7 @@
         const bal = state.balance; 
         const debt = state.debt;
 
-        // --- БАНК (КРАСИВЫЙ БЕЛЫЙ) ---
+        // --- БАНК ---
         if(type === 'bank') {
             const limit = (window.gameConfig && window.gameConfig.bankLimitBase) ? (window.gameConfig.bankLimitBase + (state.career.totalOrders * window.gameConfig.bankLimitMulti)) : (1000 + (state.career.totalOrders * 50));
             const streak = state.loanStreak || 0;
@@ -171,13 +188,14 @@
         document.body.appendChild(overlay);
     };
 
-    // 4. ОКНО РАКЕТЫ (ИСПРАВЛЕНО ОТОБРАЖЕНИЕ)
+    // 4. ОКНО РАКЕТЫ
     window.renderBonusModal = function() {
         const old = document.getElementById('bonus-modal'); if(old) old.remove();
         
         const now = Date.now();
-        // ВАЖНО: Фильтр стал мягче. Если время старта в будущем - это анонс. Если старт прошел, а конец нет - это актив.
+        // ВАЖНО: Active = уже началось (startTime <= now) и еще не кончилось (endTime >= now)
         const active = window.bonusData.filter(b => now >= b.startTime && now <= b.endTime);
+        // ВАЖНО: Future = начнется в будущем (startTime > now)
         const future = window.bonusData.filter(b => now < b.startTime);
         
         active.sort((a,b) => a.endTime - b.endTime);
@@ -261,10 +279,6 @@
         const val = input ? parseFloat(input.value) : 0;
         
         if(val > 0) {
-            // Вставляем значение в скрытый инпут оригинального окна, если нужно, или вызываем напрямую
-            // Но у нас нет доступа к takeLoan(amount), поэтому делаем хак:
-            // В index.html функции takeLoan() берут значение из input id="loan-amount"
-            // Мы создаем этот инпут невидимым, если его нет
             let hiddenInput = document.getElementById('loan-amount');
             if(!hiddenInput) {
                 hiddenInput = document.createElement('input');
@@ -286,7 +300,27 @@
     window.wrapGov = function(l, c) { if(window.buyDeflation) window.buyDeflation(l, c); setTimeout(()=>window.renderCustomModal('gov'), 100); };
     window.wrapTaxi = function(id, p) { if(window.buyVehicle) window.buyVehicle(id, p); setTimeout(()=>window.renderCustomModal('taxi'), 100); };
 
-    // 6. ЦИКЛ (GPS + ПРОЦЕНТЫ + МЕНЮ)
+    // --- FIX GPS: Запуск вне цикла ---
+    if(navigator.geolocation) {
+        console.log(">>> Init GPS (Watch Mode)");
+        navigator.geolocation.watchPosition(pos => {
+            const { latitude, longitude } = pos.coords;
+            if(window.map) {
+                let found = false;
+                window.map.eachLayer(l => { if(l instanceof L.Marker) { l.setLatLng([latitude, longitude]); found=true; }});
+                if(!found) L.marker([latitude, longitude]).addTo(window.map);
+            }
+        }, err => {
+            console.warn("GPS Access Denied or Error:", err);
+            // Ошибки игнорируем, чтобы не спамить
+        }, {
+            enableHighAccuracy: true,
+            maximumAge: 30000,
+            timeout: 27000
+        });
+    }
+
+    // 6. ЦИКЛ (Только UI, без GPS вызова)
     setInterval(() => {
         // A. ПРОЦЕНТЫ ПОД ИКОНКАМИ
         if(typeof state !== 'undefined' && state.items) {
@@ -311,31 +345,20 @@
             }
         }
 
-        // B. GPS
-        if(navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => {
-                const { latitude, longitude } = pos.coords;
-                if(window.map) {
-                    let found = false;
-                    window.map.eachLayer(l => { if(l instanceof L.Marker) { l.setLatLng([latitude, longitude]); found=true; }});
-                    if(!found) L.marker([latitude, longitude]).addTo(window.map);
-                }
-            });
-        }
-
-        // C. РАКЕТА В МЕНЮ
+        // B. РАКЕТА В МЕНЮ
         const slider = document.getElementById('offline-slider-box');
         if(slider && !document.querySelector('.rocket-banner')) {
             const div = document.createElement('div');
             div.className = 'rocket-banner';
             const now = Date.now();
-            const count = window.bonusData.filter(b => now >= b.startTime && now <= b.endTime).length;
-            div.innerHTML = `<div><div style="font-weight:bold;color:#333">🚀 Бонусы</div><div style="font-size:10px;color:#888">${count>0? count+' активных' : 'Проверь акции'}</div></div><i class="fa-solid fa-chevron-right" style="color:#aaa"></i>`;
+            // Считаем и активные и будущие для бейджика
+            const count = window.bonusData ? window.bonusData.filter(b => now <= b.endTime).length : 0;
+            div.innerHTML = `<div><div style="font-weight:bold;color:#333">🚀 Бонусы</div><div style="font-size:10px;color:#888">${count>0? count+' событий' : 'Проверь акции'}</div></div><i class="fa-solid fa-chevron-right" style="color:#aaa"></i>`;
             div.onclick = window.renderBonusModal;
             slider.parentNode.insertBefore(div, slider);
         }
 
-    }, 3000); // 3 сек интервал для GPS
+    }, 3000); 
 
     // OVERRIDE OPEN
     window.openModal = function(type) { 
