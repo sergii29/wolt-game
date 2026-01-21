@@ -1,11 +1,11 @@
 // ============================================================
-// --- PATCH v7: REAL WOLT COURIER REPLICA (DARK MAP + WHITE UI) ---
+// --- PATCH v8: DYNAMIC DISTANCE + REAL WOLT UI ---
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v7: Wolt Partner UI Loaded");
+    console.log(">>> Patch v8 Loaded: Dynamic Distance Active");
 
-    // 1. СТИЛИ (CSS) - Копируем дизайн приложения курьера
+    // 1. СТИЛИ (CSS) - Wolt Partner Design
     const woltCourierStyles = `
         /* --- КАРТА (ТЕМНАЯ) --- */
         #map { 
@@ -23,81 +23,50 @@
             padding-bottom: 30px !important;
             color: #202125 !important;
         }
-
-        /* "Ручка" для свайпа сверху панели */
         .bottom-sheet::before {
-            content: '';
-            display: block;
-            width: 40px;
-            height: 4px;
-            background: #e0e0e0;
-            border-radius: 2px;
-            margin: -5px auto 15px auto;
+            content: ''; display: block; width: 40px; height: 4px;
+            background: #e0e0e0; border-radius: 2px; margin: -5px auto 15px auto;
         }
 
-        /* Заголовок города */
         #city-label {
-            font-size: 24px !important;
-            font-weight: 800 !important;
-            color: #202125 !important;
-            margin-bottom: 5px !important;
+            font-size: 24px !important; font-weight: 800 !important;
+            color: #202125 !important; margin-bottom: 5px !important;
             letter-spacing: -0.5px !important;
         }
 
         /* Статус (Доступность) */
         .wolt-status-row {
             display: flex; align-items: center; gap: 8px;
-            font-size: 14px; color: #555; margin-bottom: 15px;
-            font-weight: 500;
+            font-size: 14px; color: #555; margin-bottom: 15px; font-weight: 500;
         }
-        .status-icon { color: #00c37b; } /* Зеленый график */
+        .status-icon { color: #00c37b; }
 
         /* Баннер с ракетой */
         .rocket-banner {
-            background: #f7f7f7;
-            border-radius: 12px;
-            padding: 12px 15px;
+            background: #f7f7f7; border-radius: 12px; padding: 12px 15px;
             display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 20px;
-            cursor: pointer;
+            margin-bottom: 20px; cursor: pointer;
         }
         .rocket-text { font-size: 13px; font-weight: 600; color: #333; }
         .rocket-sub { font-size: 11px; color: #777; margin-top: 2px; }
 
-        /* СЛАЙДЕР (СИНЯЯ КНОПКА) */
+        /* СЛАЙДЕР И КНОПКИ */
         .slider-container {
-            background: #009de0 !important; /* Wolt Blue */
-            border-radius: 30px !important;
-            height: 56px !important;
-            border: none !important;
+            background: #009de0 !important; border-radius: 30px !important;
+            height: 56px !important; border: none !important;
         }
         .slider-text {
-            color: white !important;
-            font-weight: 700 !important;
-            font-size: 15px !important;
-            text-transform: none !important; /* Не капсом */
+            color: white !important; font-weight: 700 !important;
+            font-size: 15px !important; text-transform: none !important;
         }
         .slider-knob {
-            background: white !important;
-            color: #009de0 !important;
-            border-radius: 50% !important;
-            top: 4px !important; bottom: 4px !important; left: 4px !important;
+            background: white !important; color: #009de0 !important;
+            border-radius: 50% !important; top: 4px !important; bottom: 4px !important; left: 4px !important;
             width: 48px !important; height: 48px !important;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
         }
-
-        /* ИКОНКА ВЕЛОСИПЕДА НА КАРТЕ */
-        .wolt-marker-icon {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            color: white;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            backdrop-filter: blur(2px);
-        }
         
-        /* Скрываем старые элементы, которые мешают стилю */
+        /* Скрываем демо-алерт */
         #demo-mode-alert { display: none !important; }
     `;
 
@@ -106,72 +75,74 @@
     document.head.appendChild(styleSheet);
 
 
-    // 2. ИЗМЕНЕНИЕ КАРТЫ (НА ТЕМНУЮ, КАК НА СКРИНЕ)
+    // 2. ИЗМЕНЕНИЕ КАРТЫ НА ТЕМНУЮ
     setTimeout(() => {
         if(window.map) {
-            // Удаляем старые слои
             window.map.eachLayer((layer) => {
                 if(layer instanceof L.TileLayer) window.map.removeLayer(layer);
             });
-            
-            // Ставим CartoDB Dark Matter (Идеально подходит под скрин)
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap &copy; CARTO',
-                maxZoom: 19
+                attribution: '&copy; CARTO', maxZoom: 19
             }).addTo(window.map);
 
-            // Меняем маркер на велосипед в кружочке
             window.map.eachLayer((layer) => {
                 if(layer instanceof L.Marker) {
-                    const iconHtml = `<div class="wolt-marker-icon" style="width:40px; height:40px; font-size:18px;"><i class="fa-solid fa-bicycle"></i></div>`;
-                    const woltIcon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: iconHtml,
-                        iconSize: [40, 40],
-                        iconAnchor: [20, 20]
-                    });
+                    const iconHtml = `<div style="background:rgba(255,255,255,0.2); border:2px solid rgba(255,255,255,0.9); border-radius:50%; width:40px; height:40px; display:flex; justify-content:center; align-items:center; color:white; font-size:18px; backdrop-filter:blur(2px); box-shadow:0 0 15px rgba(0,0,0,0.5);"><i class="fa-solid fa-bicycle"></i></div>`;
+                    const woltIcon = L.divIcon({ className: 'custom-div-icon', html: iconHtml, iconSize: [40, 40], iconAnchor: [20, 20] });
                     layer.setIcon(woltIcon);
                 }
             });
         }
     }, 1000);
 
-    // 3. GPS (Синхронизация)
+    // 3. GPS
     setTimeout(() => {
-        if (navigator.geolocation) {
+        if (navigator.geolocation && window.map) {
             navigator.geolocation.getCurrentPosition((pos) => {
                 const { latitude, longitude } = pos.coords;
-                if(window.map) {
-                    window.map.setView([latitude, longitude], 16);
-                    window.map.eachLayer(l => { if(l instanceof L.Marker) l.setLatLng([latitude, longitude]); });
-                    
-                    // Создаем красивый пульсирующий круг (синяя точка GPS)
-                    // Это имитация той синей точки со скрина
-                    const dot = document.createElement('div');
-                    dot.innerHTML = '<div style="width:14px; height:14px; background:#4285F4; border:2px solid white; border-radius:50%; box-shadow:0 0 10px rgba(66,133,244,0.5);"></div>';
-                    // (Мы не можем добавить div прямо на карту без маркера, но маркер у нас уже есть - велосипед)
-                }
+                window.map.setView([latitude, longitude], 16);
+                window.map.eachLayer(l => { if(l instanceof L.Marker) l.setLatLng([latitude, longitude]); });
             });
         }
     }, 2000);
 
-    // 4. ПЕРЕПИСЫВАЕМ ТЕКСТЫ ИНТЕРФЕЙСА (POLISH)
-    // Мы внедряем HTML структуру, похожую на скриншот
+    // 4. ГЛАВНАЯ ЛОГИКА: ЖИВОЙ КИЛОМЕТРАЖ + ИНТЕРФЕЙС
     setInterval(() => {
-        // Заголовок города
-        const cityLbl = document.getElementById('city-label');
-        if(cityLbl && cityLbl.innerText !== 'Warsaw') {
-            cityLbl.innerHTML = 'Warsaw';
+        // А) Динамический километраж
+        // Мы ищем элемент с расстоянием и обновляем его математически
+        const orderDestEl = document.getElementById('order-dest');
+        
+        // Проверяем, есть ли активный заказ в памяти (глобальная переменная currentOrder)
+        if (typeof currentOrder !== 'undefined' && currentOrder && orderDestEl) {
+            const totalDist = parseFloat(currentOrder.distance); // Например 3.3
+            const progress = currentOrder.progress || 0; // Например 50 (%)
+            
+            // Формула: (Всего) * (1 - Прогресс/100)
+            let remaining = totalDist * (1 - (progress / 100));
+            if (remaining < 0) remaining = 0;
+            
+            // Определяем текст (Забрать или Доставить)
+            // stage 0/1 = Едем в ресторан. stage 2 = Едем к клиенту.
+            let prefix = "Забрать";
+            if (currentOrder.stage === 2) prefix = "К клиенту";
+            
+            // ОБНОВЛЯЕМ ТЕКСТ НА ЭКРАНЕ
+            orderDestEl.innerHTML = `<strong>${prefix}:</strong> ${remaining.toFixed(1)} km <span style="font-size:10px; color:#aaa">(GPS)</span>`;
+            
+            // Заодно обновляем полоску прогресса на карте (визуально)
+            const trackFill = document.getElementById('track-fill');
+            if(trackFill) trackFill.style.background = '#009de0'; // Синий цвет Wolt
         }
 
-        // Подзаголовок (вставляем один раз)
+        // Б) Wolt Интерфейс (тексты)
+        const cityLbl = document.getElementById('city-label');
+        if(cityLbl && cityLbl.innerText !== 'Warsaw') cityLbl.innerHTML = 'Warsaw';
+
         const offlineView = document.getElementById('offline-view');
         if(offlineView && !document.querySelector('.rocket-banner')) {
-            // Удаляем старый текст "Спрос: Высокий..."
             const oldInfo = offlineView.querySelector('p');
             if(oldInfo) oldInfo.style.display = 'none';
 
-            // Вставляем новый блок статуса и ракету
             const statusHTML = `
                 <div class="wolt-status-row">
                     <i class="fa-solid fa-chart-simple status-icon"></i>
@@ -185,46 +156,40 @@
                     <i class="fa-solid fa-chevron-right" style="color:#ccc; font-size:12px"></i>
                 </div>
             `;
-            
-            // Вставляем ПЕРЕД слайдером
             const slider = document.getElementById('offline-slider-box');
             if(slider) {
                 const container = document.createElement('div');
                 container.innerHTML = statusHTML;
                 slider.parentNode.insertBefore(container, slider);
-                
-                // Меняем текст слайдера
                 const sliderTxt = slider.querySelector('.slider-text');
                 if(sliderTxt) sliderTxt.innerText = "Przejdź do trybu online";
             }
         }
-    }, 1000);
+    }, 100); // Обновляем каждые 100мс для плавности
 
-
-    // 5. НОВЫЕ ЗАВЕДЕНИЯ (WARSAW PACK)
-    if(window.restaurants) {
-        window.restaurants = [
-            { name: "Kebab King", icon: "🌯" },
-            { name: "McDonald's", icon: "🍔" },
-            { name: "Pasibus", icon: "🍔" },
-            { name: "Charlotte", icon: "🥐" },
-            { name: "Manekin", icon: "🥞" },
-            { name: "Zapiecek", icon: "🥟" },
-            { name: "Hala Koszyki", icon: "🍲" },
-            { name: "Starbucks", icon: "☕" }
-        ];
-    }
-    
-    // 6. ВОЗВРАЩАЕМ ФУНКЦИОНАЛ ОКОН (BANK/GOV/TAXI) из прошлых патчей
-    // Чтобы кнопки меню продолжали работать красиво
+    // 5. ОКНА (БАНК, АВТОСАЛОН) - Чтобы они работали красиво
     window.renderCustomModal = function(type) {
-        const old = document.getElementById('active-custom-modal');
-        if(old) old.remove();
-        
-        // ... (Тот же код модалок, что в v5, для краткости не дублирую полностью, 
-        // но он нужен, чтобы банк был красивым. Если хочешь, я могу вернуть его сюда целиком)
+        const old = document.getElementById('active-custom-modal'); if(old) old.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'active-custom-modal';
+        overlay.className = 'custom-modal-overlay';
+        overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);";
+        overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+
+        let content = '';
+        if(type==='bank') {
+            content = `<h2 style="color:#009de0;text-align:center">Bank</h2><div style="background:#f5f5f5;padding:15px;border-radius:10px;margin-bottom:10px;color:black">Баланс: ${state.balance.toFixed(2)} PLN<br>Долг: ${state.debt.toFixed(2)} PLN</div><button onclick="takeLoan();document.getElementById('active-custom-modal').remove()" style="width:100%;padding:15px;background:#009de0;color:white;border:none;border-radius:10px;font-weight:bold">Взять кредит</button>`;
+        } else if (type==='taxi') {
+            content = `<h2 style="color:#009de0;text-align:center">Taxi (WIP)</h2>`;
+        }
+        overlay.innerHTML = `<div style="background:white;width:90%;padding:20px;border-radius:20px;position:relative">${content}</div>`;
+        document.body.appendChild(overlay);
     };
-    // Пока оставим просто перехватчик, чтобы не перегружать патч
-    // Если окна станут старыми - скажи, я добавлю их код сюда.
+
+    window.openModal = function(type) {
+        if(type==='bank') window.renderCustomModal('bank');
+        else if(type==='taxi-shop') window.renderCustomModal('taxi');
+        else { toggleMenu(); const m=document.getElementById('full-modal'); const b=document.getElementById('modal-body'); m.classList.add('open'); if(type==='shop'){document.getElementById('modal-title').textContent='Магазин';renderShop(b);}else{renderHistory(b);} }
+    };
 
 })();
