@@ -1,23 +1,22 @@
 // ============================================================
-// --- PATCH v22: GPS FIX & ROCKET RELOAD ---
+// --- PATCH v23: LICENSE FIX & FULL RESTORE ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v22 Loaded: GPS Silent & DB Fix");
+    console.log(">>> Patch v23 Loaded: Licenses Restored + GPS/DB Fix");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
     
-    // 0. ВАЖНО: ПОДКЛЮЧЕНИЕ К БД (Fix для пустой вкладки)
+    // 0. ПОДКЛЮЧЕНИЕ К БД (Fix для Ракетки)
     let patchDB = null;
     try {
         if(window.db) {
             patchDB = window.db;
         } else if(window.firebase) {
-            // Если window.db нет, берем напрямую из инстанса
             patchDB = firebase.database();
-            window.db = patchDB; // Чиним глобально
+            window.db = patchDB;
         }
     } catch(e) { console.error("Patch DB Error:", e); }
 
@@ -69,13 +68,11 @@
     const styleSheet = document.createElement("style"); styleSheet.innerText = styles; document.head.appendChild(styleSheet);
 
 
-    // 2. СИНХРОНИЗАЦИЯ (ИСПРАВЛЕНО ЧТЕНИЕ ДАННЫХ)
+    // 2. СИНХРОНИЗАЦИЯ
     if(patchDB) {
-        console.log(">>> Patch connected to DB");
         patchDB.ref('bonuses/list').on('value', snap => {
             const data = snap.val() || {};
             window.bonusData = Object.entries(data).map(([key, val]) => ({id: key, ...val}));
-            // Если модалка открыта, обновляем её в реальном времени
             if(document.getElementById('bonus-modal')) window.renderBonusModal();
         });
         
@@ -84,7 +81,6 @@
             if(cfg) {
                 if(!window.gameConfig) window.gameConfig = {};
                 Object.assign(window.gameConfig, cfg);
-                // Обновляем цены
                 if(cfg.itemPrices && window.ITEMS_DB) {
                     const p = cfg.itemPrices;
                     if(window.ITEMS_DB.water) window.ITEMS_DB.water.cost = p.water;
@@ -100,8 +96,6 @@
                 }
             }
         });
-    } else {
-        console.error(">>> Patch DB Connection FAILED. Bonuses won't load.");
     }
 
     if(typeof window.startSessionOrders === 'undefined') window.startSessionOrders = (state.career.totalOrders || 0);
@@ -169,7 +163,7 @@
              `;
         }
 
-        // --- ТАКСИ ---
+        // --- ТАКСИ (АВТОСАЛОН) ---
         else if(type === 'taxi') {
             const p = window.DYNAMIC_PRICES ? window.DYNAMIC_PRICES.cars : { skoda: 15000, toyota: 45000, tesla: 120000 };
             const cars = [
@@ -193,9 +187,7 @@
         const old = document.getElementById('bonus-modal'); if(old) old.remove();
         
         const now = Date.now();
-        // ВАЖНО: Active = уже началось (startTime <= now) и еще не кончилось (endTime >= now)
         const active = window.bonusData.filter(b => now >= b.startTime && now <= b.endTime);
-        // ВАЖНО: Future = начнется в будущем (startTime > now)
         const future = window.bonusData.filter(b => now < b.startTime);
         
         active.sort((a,b) => a.endTime - b.endTime);
@@ -300,9 +292,8 @@
     window.wrapGov = function(l, c) { if(window.buyDeflation) window.buyDeflation(l, c); setTimeout(()=>window.renderCustomModal('gov'), 100); };
     window.wrapTaxi = function(id, p) { if(window.buyVehicle) window.buyVehicle(id, p); setTimeout(()=>window.renderCustomModal('taxi'), 100); };
 
-    // --- FIX GPS: Запуск вне цикла ---
+    // --- GPS FIX (Watch Position) ---
     if(navigator.geolocation) {
-        console.log(">>> Init GPS (Watch Mode)");
         navigator.geolocation.watchPosition(pos => {
             const { latitude, longitude } = pos.coords;
             if(window.map) {
@@ -312,7 +303,6 @@
             }
         }, err => {
             console.warn("GPS Access Denied or Error:", err);
-            // Ошибки игнорируем, чтобы не спамить
         }, {
             enableHighAccuracy: true,
             maximumAge: 30000,
@@ -320,9 +310,8 @@
         });
     }
 
-    // 6. ЦИКЛ (Только UI, без GPS вызова)
+    // 6. ЦИКЛ UI
     setInterval(() => {
-        // A. ПРОЦЕНТЫ ПОД ИКОНКАМИ
         if(typeof state !== 'undefined' && state.items) {
             const stats = {
                 'bike': Math.floor(state.items.bike||0),
@@ -345,31 +334,45 @@
             }
         }
 
-        // B. РАКЕТА В МЕНЮ
         const slider = document.getElementById('offline-slider-box');
         if(slider && !document.querySelector('.rocket-banner')) {
             const div = document.createElement('div');
             div.className = 'rocket-banner';
             const now = Date.now();
-            // Считаем и активные и будущие для бейджика
             const count = window.bonusData ? window.bonusData.filter(b => now <= b.endTime).length : 0;
             div.innerHTML = `<div><div style="font-weight:bold;color:#333">🚀 Бонусы</div><div style="font-size:10px;color:#888">${count>0? count+' событий' : 'Проверь акции'}</div></div><i class="fa-solid fa-chevron-right" style="color:#aaa"></i>`;
             div.onclick = window.renderBonusModal;
             slider.parentNode.insertBefore(div, slider);
         }
-
     }, 3000); 
 
-    // OVERRIDE OPEN
+    // --- OVERRIDE OPEN (FIXED LICENSES HERE) ---
     window.openModal = function(type) { 
+        // 1. Специфические модалки (Белые)
         if(type==='bank') window.renderCustomModal('bank'); 
         else if(type==='deflation') window.renderCustomModal('gov'); 
         else if(type==='taxi-shop') window.renderCustomModal('taxi'); 
+        
+        // 2. Полноэкранные модалки (Снизу вверх)
         else { 
             toggleMenu(); 
             const m=document.getElementById('full-modal'); const b=document.getElementById('modal-body'); m.classList.add('open'); 
-            if(type==='shop'){document.getElementById('modal-title').textContent='Магазин';renderShop(b);}
-            else{document.getElementById('modal-title').textContent='История';renderHistory(b);} 
+            
+            if(type==='shop'){
+                document.getElementById('modal-title').textContent='Магазин';
+                renderShop(b);
+            }
+            // ИСПРАВЛЕНИЕ: ДОБАВЛЕН БЛОК ДЛЯ ЛИЦЕНЗИЙ
+            else if(type==='taxi-licenses' || type==='taxi-licenses-btn') {
+                document.getElementById('modal-title').textContent='Лицензии и Документы';
+                if(window.renderTaxiLicenses) window.renderTaxiLicenses(b);
+                else b.innerHTML = 'Ошибка: Функция renderTaxiLicenses не найдена';
+            }
+            else {
+                // Если ничего не совпало - открываем Историю
+                document.getElementById('modal-title').textContent='История';
+                renderHistory(b);
+            } 
         } 
     };
 
