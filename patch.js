@@ -1,4 +1,4 @@
-// PATCH v3 — Telegram главный, Android вторичный
+// PATCH v3.1 — ждём инициализацию игры (FIX)
 
 (function () {
 
@@ -10,7 +10,7 @@
     alert(text);
   }
 
-  // === ЕСЛИ ЭТО НЕ TELEGRAM ===
+  // === ЕСЛИ НЕ TELEGRAM ===
   if (!isTelegram()) {
     show(
       "⚠️ Внимание\n\n" +
@@ -18,59 +18,67 @@
       "В Android-приложении прогресс может сбрасываться.\n\n" +
       "Рекомендуем играть через Telegram."
     );
-    return; // дальше ничего не запускаем
+    return;
   }
 
-  // === TELEGRAM РЕЖИМ ===
-  const tgUser = Telegram.WebApp.initDataUnsafe.user;
-  const tgId = tgUser.id;
+  // ⏳ ЖДЁМ, ПОКА ИГРА ЗАГРУЗИТСЯ
+  setTimeout(startStory, 1200);
 
-  window.playerId = "tg_" + tgId;
+  function startStory() {
 
-  // базовые значения
-  window.gameDay = window.gameDay || 1;
-  window.energy = window.energy || 100;
-  window.balance = window.balance || 0;
-  window.storyFlags = window.storyFlags || {};
+    // Telegram user
+    const tgUser = Telegram.WebApp.initDataUnsafe.user;
+    const tgId = tgUser.id;
+    window.playerId = "tg_" + tgId;
 
-  function once(key, fn) {
-    if (storyFlags[key]) return;
-    storyFlags[key] = true;
-    fn();
-  }
+    // если игра использует state — берём оттуда
+    const gameDay =
+      window.gameDay ??
+      window.state?.day ??
+      1;
 
-  // === СЮЖЕТ ===
+    window.storyFlags = window.storyFlags || {};
 
-  once("day1", () => {
-    show(
-      "День 1.\n" +
-      "Ты выходишь на смену в Варшаве.\n" +
-      "Это не просто подработка.\n" +
-      "Это начало твоей истории."
-    );
-  });
+    function once(key, fn) {
+      if (storyFlags[key]) return;
+      storyFlags[key] = true;
+      fn();
+    }
 
-  if (gameDay === 3) {
-    once("rain", () => {
+    // === СЮЖЕТ ===
+
+    once("day1", () => {
       show(
-        "День 3.\n" +
-        "Дождь льёт без остановки.\n" +
-        "Заказы есть, но силы уходят быстрее."
+        "День 1.\n" +
+        "Ты выходишь на смену в Варшаве.\n" +
+        "Город шумит.\n" +
+        "Это начало твоей истории."
       );
-      energy -= 15;
     });
-  }
 
-  if (gameDay === 5) {
-    once("conflict", () => {
-      show(
-        "День 5.\n" +
-        "Клиент недоволен.\n" +
-        "Поддержка молчит.\n" +
-        "Ты впервые чувствуешь злость."
-      );
-      energy -= 20;
-    });
+    if (gameDay === 3) {
+      once("rain", () => {
+        show(
+          "День 3.\n" +
+          "Дождь льёт без остановки.\n" +
+          "Работать тяжелее."
+        );
+        if (window.energy !== undefined) window.energy -= 15;
+      });
+    }
+
+    if (gameDay === 5) {
+      once("conflict", () => {
+        show(
+          "День 5.\n" +
+          "Клиент недоволен.\n" +
+          "Поддержка молчит.\n" +
+          "Ты чувствуешь злость."
+        );
+        if (window.energy !== undefined) window.energy -= 20;
+      });
+    }
+
   }
 
 })();
