@@ -1,199 +1,267 @@
 // ============================================================
-// --- PATCH v11: CUSTOMIZABLE BONUSES (SIMULATION SPEED) ---
+// --- PATCH v12: TOTAL WHITE THEME (MENU + TABS) ---
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v11: High Speed Bonuses Loaded");
+    console.log(">>> Patch v12: White Theme & Custom Bonuses Loaded");
 
-    // 1. КОНФИГУРАЦИЯ БОНУСОВ (То, что ты будешь менять из админки)
-    // target: сколько заказов
-    // reward: сколько денег
-    // timeLimit: сколько минут дается (для активных)
+    // 1. КОНФИГУРАЦИЯ БОНУСОВ (Твои настройки)
     window.bonusConfig = {
         active: [
-            { 
-                id: 1, 
-                title: "🔥 SPEEDRUN: 50 заказов", 
-                reward: 500, 
-                target: 50, 
-                desc: "Успей за 20 минут!", 
-                endTime: Date.now() + (20 * 60 * 1000) // 20 минут от сейчас
-            }, 
-            { 
-                id: 2, 
-                title: "💀 GRIND GOD: 550 заказов", 
-                reward: 7000, 
-                target: 550, 
-                desc: "Цель для маньяков (до 22:00)", 
-                endTime: new Date().setHours(22,0,0,0) // До 22:00 сегодня
-            }
+            { id: 1, title: "🔥 SPEEDRUN: 50 заказов", reward: 500, target: 50, desc: "Успей за 20 минут!", endTime: Date.now() + 1200000 }, 
+            { id: 2, title: "💀 GRIND GOD: 550 заказов", reward: 7000, target: 550, desc: "Цель для маньяков", endTime: new Date().setHours(23,59,59,999) }
         ],
         later: [
             { date: "Сегодня", time: "12:00-16:00", text: "Обеденный Раш: +150 PLN", target: "Сделай 100 заказов" },
             { date: "Сегодня", time: "18:00-22:00", text: "Вечерний Жор: +300 PLN", target: "Сделай 200 заказов" },
-            { date: "Завтра", time: "Весь день", text: "Выходной Марафон", target: "1000 заказов за 24ч" }
+            { date: "Завтра", time: "Весь день", text: "Выходной Марафон", target: "1000 заказов" }
         ]
     };
 
-    // Запоминаем старт сессии для подсчета прогресса
-    if(typeof window.startSessionOrders === 'undefined') {
-        window.startSessionOrders = (state.career.totalOrders || 0);
-    }
+    if(typeof window.startSessionOrders === 'undefined') window.startSessionOrders = (state.career.totalOrders || 0);
 
-
-    // 2. СТИЛИ (Wolt Design + Bonus UI)
+    // 2. СТИЛИ (PURE WHITE WOLT STYLE)
     const styles = `
-        /* DARK MAP & WHITE UI */
+        /* --- 1. КАРТА (ТЕМНАЯ - ОСТАВЛЯЕМ ДЛЯ КОНТРАСТА) --- */
         #map { background: #1a1a1a !important; filter: contrast(1.1) brightness(0.9); }
-        .bottom-sheet { background: #ffffff !important; color: #202125 !important; border-top-left-radius: 20px !important; border-top-right-radius: 20px !important; box-shadow: 0 -5px 30px rgba(0,0,0,0.2) !important; }
+
+        /* --- 2. БОКОВОЕ МЕНЮ (БЕЛОЕ) --- */
+        #side-menu {
+            background: #ffffff !important;
+            border-right: 1px solid #e0e0e0 !important;
+            color: #202125 !important;
+        }
+        .menu-item {
+            color: #202125 !important;
+            border-bottom: 1px solid #f0f0f0 !important;
+            font-weight: 500 !important;
+        }
+        .menu-item i { color: #555 !important; } /* Серые иконки по умолчанию */
         
-        /* HEADER ROCKET */
+        /* Цветные иконки в меню */
+        .menu-item .fa-store { color: #009de0 !important; }
+        .menu-item .fa-building-columns { color: #00c37b !important; }
+        .menu-item .fa-scale-unbalanced-flip { color: #5e6d76 !important; }
+        .menu-item .fa-clock-rotate-left { color: #202125 !important; }
+        
+        #player-name-display { color: #009de0 !important; font-weight: 800 !important; }
+        #player-id-display { color: #999 !important; }
+        .menu-section-title { color: #999 !important; }
+
+        /* --- 3. ОКНА (БАНК, ПРАВИТЕЛЬСТВО) - БЕЛЫЕ --- */
+        .custom-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+            z-index: 10000; display: flex; align-items: center; justify-content: center;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .custom-modal-box {
+            background: #ffffff; /* БЕЛЫЙ ФОН */
+            width: 90%; max-width: 380px; max-height: 85vh; overflow-y: auto;
+            border-radius: 20px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+            padding: 25px; position: relative; 
+            color: #202125; /* ТЕМНЫЙ ТЕКСТ */
+            font-family: 'Segoe UI', Roboto, sans-serif;
+        }
+        .close-btn {
+            position: absolute; top: 15px; right: 15px; width: 32px; height: 32px;
+            background: #f0f0f0; border-radius: 50%; color: #333;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-weight: bold; transition: background 0.2s;
+        }
+        .close-btn:active { background: #e0e0e0; }
+
+        /* Элементы внутри белых окон */
+        .info-card {
+            background: #f7f7f7; padding: 15px; border-radius: 12px; margin-bottom: 20px;
+            border: 1px solid #eee;
+        }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; color: #555; }
+        .info-val { font-weight: bold; color: #202125; }
+        .modal-h2 { text-align: center; margin: 5px 0 20px 0; font-size: 20px; font-weight: 800; color: #202125; }
+        
+        /* Кнопки действий */
+        .action-btn {
+            width: 100%; padding: 15px; margin-bottom: 10px; border: none; border-radius: 12px;
+            font-weight: bold; font-size: 14px; cursor: pointer; 
+            display: flex; justify-content: space-between; align-items: center;
+            transition: transform 0.1s; color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .action-btn:active { transform: scale(0.98); }
+
+        /* --- 4. НИЖНЯЯ ПАНЕЛЬ И GPS --- */
+        .bottom-sheet {
+            background: #ffffff !important; color: #202125 !important;
+            border-top-left-radius: 20px !important; border-top-right-radius: 20px !important;
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.15) !important;
+        }
         .rocket-banner {
             background: #f7f7f7; border-radius: 12px; padding: 12px 15px;
             display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 20px; cursor: pointer; transition: background 0.2s;
+            margin-bottom: 20px; cursor: pointer;
         }
-        .rocket-banner:active { background: #eee; }
         .rocket-text { font-size: 14px; font-weight: 700; color: #202125; }
-        .rocket-sub { font-size: 11px; color: #666; margin-top: 2px; }
-
-        /* ОКНО БОНУСОВ (МОДАЛКА) */
-        .bonus-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 20000;
-            display: flex; align-items: flex-end; /* Выезд снизу */
-        }
+        
+        /* --- БОНУСНОЕ ОКНО --- */
         .bonus-modal-card {
             background: #f2f2f2; width: 100%; height: 92vh;
             border-top-left-radius: 20px; border-top-right-radius: 20px;
             overflow-y: auto; padding: 20px; position: relative;
-            animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            animation: slideUp 0.3s;
         }
-        
-        .wolt-header { font-size: 26px; font-weight: 800; color: #202125; margin: 15px 0 25px 0; letter-spacing: -0.5px; }
-        .section-label { font-size: 14px; font-weight: 700; color: #202125; margin-bottom: 10px; }
-
-        /* КАРТОЧКА АКТИВНОГО БОНУСА */
-        .active-card {
-            background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #fff;
-        }
-        .ac-title { font-weight: 800; font-size: 16px; color: #202125; margin-bottom: 5px; }
-        
-        /* ЗЕЛЕНАЯ ПОЛОСКА */
+        .active-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .progress-track { height: 10px; background: #f0f0f0; border-radius: 5px; overflow: hidden; margin: 15px 0; }
-        .progress-fill {
-            height: 100%; background: #00c37b; /* WOLT GREEN */
-            border-radius: 5px; width: 0%; transition: width 0.5s ease-out;
-            background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.2) 10px, rgba(255,255,255,0.2) 20px);
-        }
-
-        .ac-meta { display: flex; justify-content: space-between; font-size: 12px; color: #777; font-weight: 500; }
-        .time-badge { display: flex; align-items: center; gap: 6px; }
-
-        /* СПИСОК "ПОЗЖЕ" */
-        .later-list { background: white; border-radius: 16px; padding: 0 20px; }
-        .later-item {
-            display: flex; padding: 20px 0; border-bottom: 1px solid #f5f5f5;
-        }
-        .later-item:last-child { border-bottom: none; }
+        .progress-fill { height: 100%; background: #00c37b; width: 0%; transition: width 0.5s; }
         
-        .li-date { width: 60px; font-size: 13px; color: #999; line-height: 1.4; }
-        .li-content { flex: 1; }
-        .li-title { font-weight: 700; font-size: 15px; color: #202125; margin-bottom: 4px; }
-        .li-sub { font-size: 13px; color: #666; }
-
-        .close-circle {
-            position: absolute; top: 15px; right: 15px; width: 36px; height: 36px;
-            background: #e0e0e0; border-radius: 50%; color: #333;
-            display: flex; align-items: center; justify-content: center; 
-            cursor: pointer; font-size: 16px; transition: background 0.2s;
-        }
-        .close-circle:active { background: #d0d0d0; }
-
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     `;
+
     const styleSheet = document.createElement("style"); styleSheet.innerText = styles; document.head.appendChild(styleSheet);
 
 
-    // 3. ФУНКЦИЯ ОТРИСОВКИ ОКНА БОНУСОВ
-    window.renderBonusModal = function() {
-        // Считаем прогресс (сколько заказов сделано за эту сессию)
-        const sessionProgress = (state.career.totalOrders || 0) - window.startSessionOrders;
-
-        // Генерация АКТИВНЫХ
-        let activeHtml = '';
-        window.bonusConfig.active.forEach(b => {
-            // Лимит 100%
-            let safeProgress = Math.min(sessionProgress, b.target);
-            let percent = (safeProgress / b.target) * 100;
-            
-            // Время окончания
-            let timeLeft = "Истекло";
-            let diff = b.endTime - Date.now();
-            if(diff > 0) {
-                let h = Math.floor(diff/3600000);
-                let m = Math.floor((diff%3600000)/60000);
-                timeLeft = `Осталось: ${h}ч ${m}мин`;
-                if(h===0) timeLeft = `Осталось: ${m} мин`;
-            }
-
-            activeHtml += `
-            <div class="active-card">
-                <div class="ac-title">${b.title} за ${b.reward.toFixed(2)} zł!</div>
-                <div class="progress-track">
-                    <div class="progress-fill" style="width: ${percent}%"></div>
-                </div>
-                <div class="ac-meta">
-                    <div class="time-badge"><i class="fa-regular fa-clock"></i> ${timeLeft}</div>
-                    <div><strong style="color:#202125">${safeProgress}</strong> / ${b.target}</div>
-                </div>
-            </div>`;
-        });
-
-        // Генерация БУДУЩИХ
-        let laterHtml = '';
-        window.bonusConfig.later.forEach(l => {
-            laterHtml += `
-            <div class="later-item">
-                <div class="li-date">${l.date}<br><span style="font-size:11px">${l.time}</span></div>
-                <div class="li-content">
-                    <div class="li-title">${l.text}</div>
-                    <div class="li-sub">${l.target}</div>
-                </div>
-            </div>`;
-        });
-
-        // Отрисовка
+    // 3. ФУНКЦИЯ ОТРИСОВКИ БЕЛЫХ ОКОН (BANK / GOV / TAXI)
+    window.renderCustomModal = function(type) {
+        const old = document.getElementById('active-custom-modal'); if(old) old.remove();
         const overlay = document.createElement('div');
-        overlay.className = 'bonus-modal-overlay';
-        overlay.id = 'bonus-modal';
+        overlay.id = 'active-custom-modal';
+        overlay.className = 'custom-modal-overlay';
         overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
 
-        overlay.innerHTML = `
-            <div class="bonus-modal-card">
-                <div class="close-circle" onclick="document.getElementById('bonus-modal').remove()">✕</div>
-                
-                <h1 class="wolt-header">Зарабатывай дополнительно</h1>
-                
-                <div class="section-label">Активные</div>
-                ${activeHtml}
+        let content = '';
+        const bal = state.balance; const debt = state.debt;
 
-                <div class="section-label" style="margin-top:25px">Позже</div>
-                <div class="later-list">
-                    ${laterHtml}
-                </div>
+        // --- БАНК (БЕЛЫЙ) ---
+        if(type === 'bank') {
+            const limit = 1000 + (state.career.totalOrders * 50);
+            const hasDebt = debt > 0;
+            
+            content = `
+                <div class="close-btn" onclick="document.getElementById('active-custom-modal').remove()">✕</div>
+                <h2 class="modal-h2">Варшава Банк</h2>
                 
-                <div style="text-align:center; margin-top:30px; color:#999; font-size:11px">
-                    Бонусы обновляются автоматически.<br>ID: ${state.id}
+                <div class="info-card">
+                    <div class="info-row"><span>Баланс</span><span class="info-val">${bal.toFixed(2)} PLN</span></div>
+                    <div class="info-row"><span>Долг</span><span class="info-val" style="color:${hasDebt?'#ff4757':'#202125'}">${debt.toFixed(2)} PLN</span></div>
+                    <div style="width:100%; height:1px; background:#eee; margin:10px 0;"></div>
+                    <div class="info-row"><span style="color:#999">Лимит</span><span style="color:#00c37b; font-weight:bold">${limit} PLN</span></div>
                 </div>
-            </div>
-        `;
+
+                <div style="font-size:12px; padding:12px; background:${hasDebt?'#fff0f0':'#e8f5e9'}; border-radius:8px; margin-bottom:20px; color:${hasDebt?'#d32f2f':'#2e7d32'}; display:flex; gap:10px; align-items:center;">
+                    <i class="fa-solid ${hasDebt?'fa-triangle-exclamation':'fa-circle-check'}"></i>
+                    <span>${hasDebt ? 'Часть дохода удерживается за долги.' : 'Кредитная история чиста.'}</span>
+                </div>
+
+                <button class="action-btn" onclick="wrapAction('loan')" style="background:#009de0;">
+                    <span>Взять кредит</span> <span style="background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px">+500</span>
+                </button>
+                <button class="action-btn" onclick="wrapAction('repay')" style="background:#00c37b;">
+                    <span>Погасить долг</span> <span style="background:rgba(255,255,255,0.2); padding:2px 6px; border-radius:4px">-500</span>
+                </button>
+            `;
+        }
+        
+        // --- ПРАВИТЕЛЬСТВО (БЕЛОЕ) ---
+        else if(type === 'gov') {
+             const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
+             const inflationRate = 0.1;
+             const inf = (levelSum * inflationRate * 100).toFixed(0);
+             const cost1 = 2700 * (1 + levelSum * inflationRate);
+             
+             let color = '#00c37b'; if(inf > 30) color = '#f1c40f'; if(inf > 80) color = '#ff4757';
+
+             content = `
+                <div class="close-btn" onclick="document.getElementById('active-custom-modal').remove()">✕</div>
+                <h2 class="modal-h2">Министерство</h2>
+                
+                <div style="text-align:center; margin:30px 0;">
+                    <div style="font-size:56px; font-weight:800; color:${color}; letter-spacing:-2px">${inf}%</div>
+                    <div style="font-size:13px; color:#999; text-transform:uppercase; font-weight:bold; letter-spacing:1px">Текущая Инфляция</div>
+                </div>
+
+                <div style="background:#f7f7f7; padding:15px; border-radius:12px; color:#555; font-size:13px; margin-bottom:20px; text-align:center; line-height:1.5">
+                    Высокая инфляция поднимает цены в магазине запчастей. Используйте связи для снижения.
+                </div>
+
+                <button class="action-btn" onclick="wrapGov(1, ${cost1})" style="background:#333;">
+                    <span>📉 Лоббирование (-1 ур)</span> <span style="color:#f1c40f">-${cost1.toFixed(0)}</span>
+                </button>
+             `;
+        }
+
+        // --- ТАКСИ (БЕЛОЕ) ---
+        else if(type === 'taxi') {
+            const cars = [
+                { id: 'skoda', name: 'Skoda Fabia', price: 15000, desc: 'Эконом', icon: 'fa-car-side', spd: 30 },
+                { id: 'toyota', name: 'Toyota Prius', price: 45000, desc: 'Гибрид', icon: 'fa-leaf', spd: 50 },
+                { id: 'tesla', name: 'Tesla Model 3', price: 120000, desc: 'Бизнес', icon: 'fa-bolt', spd: 90 }
+            ];
+            
+            content = `<div class="close-btn" onclick="document.getElementById('active-custom-modal').remove()">✕</div><h2 class="modal-h2">Автосалон</h2>`;
+            
+            cars.forEach(car => {
+                const isOwned = (state.taxi.vehicle === car.id);
+                content += `
+                <div style="background:white; border:1px solid ${isOwned?'#00c37b':'#eee'}; border-radius:12px; padding:15px; margin-bottom:12px; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                        <span style="font-weight:bold; font-size:16px"><i class="fa-solid ${car.icon}" style="color:#555"></i> ${car.name}</span>
+                        ${isOwned ? '<i class="fa-solid fa-circle-check" style="color:#00c37b"></i>' : ''}
+                    </div>
+                    <div style="display:flex; align-items:center; margin-bottom:15px; gap:10px">
+                        <span style="font-size:11px; color:#999">Скорость</span>
+                        <div style="flex:1; height:6px; background:#f0f0f0; border-radius:3px"><div style="width:${car.spd}%; height:100%; background:#009de0; border-radius:3px"></div></div>
+                    </div>
+                    <button class="action-btn" onclick="${isOwned?'':`wrapTaxi('${car.id}',${car.price})`}" style="background:${isOwned?'#00c37b':'#333'}; margin-bottom:0; padding:10px">
+                        ${isOwned ? 'В ГАРАЖЕ' : `КУПИТЬ ${car.price/1000}K PLN`}
+                    </button>
+                </div>`;
+            });
+        }
+
+        overlay.innerHTML = `<div class="custom-modal-box">${content}</div>`;
         document.body.appendChild(overlay);
     };
 
 
-    // 4. GPS FIX (Чтобы карта не тупила)
+    // 4. ОКНО БОНУСОВ (Тоже белое, код из v11 сохранен)
+    window.renderBonusModal = function() {
+        const sessionProgress = (state.career.totalOrders || 0) - window.startSessionOrders;
+        let activeHtml = '';
+        window.bonusConfig.active.forEach(b => {
+            let safeProgress = Math.min(sessionProgress, b.target);
+            let percent = (safeProgress / b.target) * 100;
+            let diff = b.endTime - Date.now();
+            let timeLeft = (diff > 0) ? Math.floor(diff/60000) + ' мин' : 'Завершено';
+
+            activeHtml += `
+            <div class="active-card">
+                <div style="font-weight:800; font-size:16px; color:#202125">${b.title} <span style="color:#00c37b">(${b.reward} PLN)</span></div>
+                <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#777">
+                    <div><i class="fa-regular fa-clock"></i> ${timeLeft}</div>
+                    <div><strong>${safeProgress}</strong> / ${b.target}</div>
+                </div>
+            </div>`;
+        });
+
+        const overlay = document.createElement('div');
+        overlay.className = 'bonus-modal-overlay';
+        overlay.id = 'bonus-modal';
+        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:20000; display:flex; align-items:flex-end;";
+        overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+        overlay.innerHTML = `<div class="bonus-modal-card">
+            <div class="close-circle" onclick="document.getElementById('bonus-modal').remove()">✕</div>
+            <h1 style="font-size:26px; font-weight:800; color:#202125; margin:15px 0 25px 0">Зарабатывай дополнительно</h1>
+            <div style="font-weight:700; color:#202125; margin-bottom:10px">Активные</div>
+            ${activeHtml}
+            <div style="text-align:center; margin-top:30px; color:#999; font-size:11px">Настройки симуляции обновлены</div>
+        </div>`;
+        document.body.appendChild(overlay);
+    };
+
+    // 5. ИНТЕГРАЦИЯ В МЕНЮ И GPS
     function forceGPS() {
         if (!navigator.geolocation || !window.map) return;
         navigator.geolocation.getCurrentPosition(
@@ -201,34 +269,40 @@
                 const { latitude, longitude } = pos.coords;
                 window.map.setView([latitude, longitude], 16);
                 window.map.eachLayer(l => { if(l instanceof L.Marker) l.setLatLng([latitude, longitude]); });
-            },
-            null, { enableHighAccuracy: true }
+            }, null, { enableHighAccuracy: true }
         );
     }
     setTimeout(forceGPS, 2000);
 
+    // 6. ХУКИ И ПЕРЕХВАТЧИКИ
+    window.openModal = function(type) {
+        if(type==='bank') window.renderCustomModal('bank');
+        else if(type==='deflation') window.renderCustomModal('gov');
+        else if(type==='taxi-shop') window.renderCustomModal('taxi');
+        else { 
+            toggleMenu(); 
+            const m=document.getElementById('full-modal'); const b=document.getElementById('modal-body'); 
+            m.classList.add('open'); 
+            if(type==='shop'){document.getElementById('modal-title').textContent='Магазин';renderShop(b);}
+            else{document.getElementById('modal-title').textContent='История';renderHistory(b);} 
+        }
+    };
 
-    // 5. ИНТЕГРАЦИЯ В ИНТЕРФЕЙС (Ракета + Обновление КМ)
+    window.wrapAction = function(a) { if(a==='loan' && window.takeLoan) window.takeLoan(); if(a==='repay' && window.repayLoan) window.repayLoan(); setTimeout(()=>window.renderCustomModal('bank'), 100); }
+    window.wrapGov = function(l, c) { if(window.buyDeflation) window.buyDeflation(l, c); setTimeout(()=>window.renderCustomModal('gov'), 100); }
+    window.wrapTaxi = function(id, p) { if(window.buyVehicle) window.buyVehicle(id, p); setTimeout(()=>window.renderCustomModal('taxi'), 100); }
+
+    // Вставка ракеты
     setInterval(() => {
-        // Название города
-        const cityLbl = document.getElementById('city-label');
-        if(cityLbl && cityLbl.innerText !== 'Warsaw') cityLbl.innerHTML = 'Warsaw';
-
-        // Кнопка Ракеты
         const offlineView = document.getElementById('offline-view');
         if(offlineView && !document.querySelector('.rocket-banner')) {
             const oldInfo = offlineView.querySelector('p'); if(oldInfo) oldInfo.style.display = 'none';
-
             const rocketHTML = `
                 <div style="display:flex; gap:10px; font-size:14px; color:#555; margin-bottom:15px; font-weight:500;">
-                    <i class="fa-solid fa-chart-simple" style="color:#00c37b"></i> 
-                    <span>Dostępność zamówień: <strong>Wysoka</strong></span>
+                    <i class="fa-solid fa-chart-simple" style="color:#00c37b"></i> <span>Dostępność: <strong>Wysoka</strong></span>
                 </div>
                 <div class="rocket-banner" onclick="window.renderBonusModal()">
-                    <div>
-                        <div class="rocket-text">🚀 Зарабатывай дополнительно</div>
-                        <div class="rocket-sub">Доступно 2 новых бонуса</div>
-                    </div>
+                    <div><div class="rocket-text">🚀 Зарабатывай дополнительно</div><div style="font-size:11px; color:#666">Доступно 2 новых бонуса</div></div>
                     <i class="fa-solid fa-chevron-right" style="color:#ccc; font-size:12px"></i>
                 </div>
             `;
@@ -236,59 +310,20 @@
             if(slider) {
                 const div = document.createElement('div'); div.innerHTML = rocketHTML;
                 slider.parentNode.insertBefore(div, slider);
-                
-                // Синий слайдер
                 slider.style.background = "#009de0";
                 const txt = slider.querySelector('.slider-text'); if(txt) { txt.innerText = "Przejdź do trybu online"; txt.style.color="white"; }
                 const knob = slider.querySelector('.slider-knob'); if(knob) { knob.style.background="white"; knob.style.color="#009de0"; }
             }
         }
-
-        // Динамический КМ (GPS стиль)
+        // Обновление GPS КМ
         const orderDestEl = document.getElementById('order-dest');
         if (typeof currentOrder !== 'undefined' && currentOrder && orderDestEl) {
             const totalDist = parseFloat(currentOrder.distance);
             const progress = currentOrder.progress || 0;
-            let remaining = totalDist * (1 - (progress / 100));
-            if (remaining < 0) remaining = 0;
+            let remaining = totalDist * (1 - (progress / 100)); if(remaining<0) remaining=0;
             let prefix = currentOrder.stage === 2 ? "К клиенту" : "Забрать";
             orderDestEl.innerHTML = `<strong>${prefix}:</strong> ${remaining.toFixed(1)} km <span style="font-size:10px; color:#aaa">(GPS)</span>`;
-            
-            // Синяя полоска прогресса
-            const trackFill = document.getElementById('track-fill');
-            if(trackFill) trackFill.style.background = '#009de0';
         }
-
     }, 200);
-
-    // 6. СОХРАНЕНИЕ ОСТАЛЬНЫХ ОКОН (BANK/GOV/TAXI) - ТЕМНЫЙ СТИЛЬ
-    window.renderCustomModal = function(type) {
-        const old = document.getElementById('active-custom-modal'); if(old) old.remove();
-        const overlay = document.createElement('div');
-        overlay.id = 'active-custom-modal';
-        overlay.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);backdrop-filter:blur(5px);z-index:10000;display:flex;align-items:center;justify-content:center;";
-        overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
-
-        let content = '';
-        if(type==='bank') {
-            const limit = 1000 + (state.career.totalOrders * 50);
-            content = `<h2 style="color:#f1c40f; text-align:center"><i class="fa-solid fa-building-columns"></i> Банк</h2><div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:12px; color:white; margin-bottom:20px">Баланс: ${state.balance.toFixed(2)} PLN<br>Долг: ${state.debt.toFixed(2)} PLN<br><small style="color:#7bed9f">Лимит: ${limit}</small></div><button onclick="if(window.takeLoan)takeLoan(); else{state.balance+=500;state.debt+=550;} document.getElementById('active-custom-modal').remove();" style="width:100%; padding:15px; background:blue; color:white; border:none; border-radius:10px; margin-bottom:10px; font-weight:bold">Взять кредит (+500)</button><button onclick="if(window.repayLoan)repayLoan(); else{state.balance-=500;state.debt-=500;} document.getElementById('active-custom-modal').remove();" style="width:100%; padding:15px; background:green; color:white; border:none; border-radius:10px; font-weight:bold">Погасить долг (-500)</button>`;
-        } 
-        else if(type==='gov') {
-             content = `<h2 style="color:#aaa; text-align:center">Министерство</h2><div style="text-align:center; font-size:40px; color:orange; margin:20px 0">10%</div><div style="text-align:center; color:#777; margin-bottom:20px">ИНФЛЯЦИЯ</div><button onclick="if(window.buyDeflation)buyDeflation(1,2700); document.getElementById('active-custom-modal').remove();" style="width:100%; padding:15px; background:#333; color:white; border:none; border-radius:10px;">Взятка (-2700)</button>`;
-        }
-        else if(type==='taxi') {
-             content = `<h2 style="color:cyan; text-align:center">Таксопарк</h2><div style="text-align:center; padding:20px; color:#ccc">Машины доступны в полной версии</div>`;
-        }
-        overlay.innerHTML = `<div style="background:linear-gradient(145deg, #1e1e24, #25252b); width:90%; padding:25px; border-radius:20px; border:1px solid rgba(255,255,255,0.1); color:white; font-family:sans-serif;">${content}</div>`;
-        document.body.appendChild(overlay);
-    };
-
-    window.openModal = function(type) {
-        if(type==='bank') window.renderCustomModal('bank');
-        else if(type==='deflation') window.renderCustomModal('gov');
-        else if(type==='taxi-shop') window.renderCustomModal('taxi');
-        else { toggleMenu(); const m=document.getElementById('full-modal'); const b=document.getElementById('modal-body'); m.classList.add('open'); if(type==='shop'){document.getElementById('modal-title').textContent='Магазин';renderShop(b);}else{renderHistory(b);} }
-    };
 
 })();
