@@ -1,129 +1,120 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Panel</title>
+<title>Админка — Режим Бога</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-<!-- Your database config -->
+<!-- Твоя база -->
 <script src="database.js"></script>
 
 <style>
 body {
-  background:#0f0f0f;
-  color:#eaeaea;
+  background:#0e0e0e;
+  color:#fff;
   font-family:Arial, sans-serif;
   padding:10px;
 }
 .card {
   border:1px solid #333;
-  border-radius:6px;
-  padding:10px;
-  margin-bottom:12px;
+  border-radius:8px;
+  padding:12px;
+  margin-bottom:14px;
 }
-h3 {
-  margin:4px 0 8px;
+h2 {
+  margin:0 0 10px;
+  font-size:18px;
 }
 input, select, button {
   width:100%;
+  padding:8px;
   margin:4px 0;
-  padding:6px;
   background:#1c1c1c;
   color:#fff;
   border:1px solid #444;
   border-radius:4px;
 }
 button {
-  background:#2d2d2d;
+  background:#2b2b2b;
+  font-weight:bold;
 }
-button:active {
-  background:#444;
-}
+.status-online { color:#4caf50; }
+.status-offline { color:#f44336; }
 pre {
   background:#000;
   padding:6px;
+  max-height:200px;
+  overflow:auto;
 }
 </style>
 </head>
 
 <body>
 
-<!-- PLAYERS -->
+<!-- ИГРОКИ -->
 <div class="card">
-  <h3>Players</h3>
+  <h2>👤 Игроки (баланс, энергия, настроение)</h2>
+
   <select id="playerSelect"></select>
-  <button onclick="loadPlayer()">Load player</button>
+  <div id="playerStatus"></div>
 
-  <div id="playerEditor" style="display:none">
-    <input id="pBalance" type="number" placeholder="Balance">
-    <input id="pEnergy" type="number" placeholder="Energy">
-    <input id="pMood" type="number" placeholder="Mood">
-    <button onclick="savePlayer()">Save</button>
-  </div>
+  <input id="pBalance" type="number" placeholder="Баланс (PLN)">
+  <input id="pEnergy" type="number" placeholder="Энергия">
+  <input id="pMood" type="number" placeholder="Настроение">
+
+  <button onclick="savePlayer()">💾 Сохранить игрока</button>
 </div>
 
-<!-- DELIVERY -->
+<!-- ЭКОНОМИКА -->
 <div class="card">
-  <h3>Delivery тариф</h3>
-  <input id="delBase" placeholder="Base price">
-  <input id="delKm" placeholder="Price per km">
-  <button onclick="saveDelivery()">Save</button>
+  <h2>🌍 Экономика (режим бога)</h2>
+
+  <input id="inflation" type="number" placeholder="Инфляция (%)" value="5">
+  <input id="bankTrust" type="number" placeholder="Доверие банка" value="100">
+
+  <button onclick="saveEconomy()">💾 Сохранить экономику</button>
 </div>
 
-<!-- GOALS -->
+<!-- ДОСТАВКА -->
 <div class="card">
-  <h3>Courier goal</h3>
-  <input id="gTime" placeholder="Minutes">
-  <input id="gCount" placeholder="Deliveries">
-  <input id="gBonus" placeholder="Bonus">
-  <button onclick="saveGoal()">Save</button>
+  <h2>🚴 Тарифы доставки</h2>
+
+  <input id="delBase" type="number" placeholder="Базовая цена доставки" value="6">
+  <input id="delKm" type="number" placeholder="Цена за км" value="2">
+
+  <button onclick="saveDelivery()">💾 Сохранить тарифы</button>
 </div>
 
-<!-- ECONOMY -->
+<!-- ЦЕЛИ -->
 <div class="card">
-  <h3>Economy</h3>
-  <input id="infl" placeholder="Inflation">
-  <input id="trust" placeholder="Bank trust">
-  <button onclick="saveEco()">Save</button>
+  <h2>🎯 Зарабатывай дополнительно (цели)</h2>
+
+  <input id="goalTime" type="number" placeholder="Время (минуты)" value="35">
+  <input id="goalCount" type="number" placeholder="Кол-во доставок" value="12">
+  <input id="goalBonus" type="number" placeholder="Бонус (PLN)" value="50">
+
+  <button onclick="saveGoal()">💾 Сохранить цель</button>
 </div>
 
-<!-- SHOP -->
+<!-- МАГАЗИН -->
 <div class="card">
-  <h3>Shop</h3>
+  <h2>🛒 Магазин</h2>
+
   <select id="shopItem"></select>
-  <input id="shopPrice" placeholder="Price">
-  <input id="shopEnergy" placeholder="Energy">
-  <button onclick="saveShop()">Save</button>
+  <input id="shopPrice" type="number" placeholder="Цена товара">
+  <input id="shopEnergy" type="number" placeholder="Энергия от товара">
+
+  <button onclick="saveShop()">💾 Сохранить товар</button>
 </div>
 
-<!-- TAXI -->
+<!-- ЛОГИ -->
 <div class="card">
-  <h3>Taxi</h3>
-  <input id="taxiBase" placeholder="Base price">
-  <input id="taxiChance" placeholder="Chance">
-  <input id="taxiTimer" placeholder="Timer">
-  <button onclick="saveTaxi()">Save</button>
-</div>
-
-<!-- EVENTS -->
-<div class="card">
-  <h3>Events</h3>
-  <select id="eventType">
-    <option value="crisis">Crisis</option>
-    <option value="boom">Boom</option>
-    <option value="taxi">Taxi strike</option>
-  </select>
-  <button onclick="runEvent()">Run event</button>
-</div>
-
-<!-- LOGS -->
-<div class="card">
-  <h3>Admin logs</h3>
-  <button onclick="loadLogs()">Refresh</button>
+  <h2>📜 Логи (кто что менял)</h2>
+  <button onclick="loadLogs()">🔄 Обновить</button>
   <pre id="logBox"></pre>
 </div>
 
@@ -131,158 +122,134 @@ pre {
 let currentPlayer = null;
 let currentItem = null;
 
-/* PLAYERS */
-db.ref("players").on("value", s => {
+/* ИГРОКИ */
+db.ref("players").on("value", snap => {
   playerSelect.innerHTML = "";
-  s.forEach(c => {
-    let o = document.createElement("option");
-    o.value = c.key;
-    o.textContent = c.key;
+  snap.forEach(p => {
+    const o = document.createElement("option");
+    o.value = p.key;
+    o.textContent = p.key;
     playerSelect.appendChild(o);
   });
+  if (playerSelect.value) loadPlayer();
 });
+
+playerSelect.onchange = loadPlayer;
 
 function loadPlayer(){
   currentPlayer = playerSelect.value;
   db.ref("players/"+currentPlayer).once("value").then(s=>{
-    let d = s.val() || {};
-    pBalance.value = d.balance || 0;
-    pEnergy.value = d.energy || 0;
-    pMood.value = d.mood || 0;
-    playerEditor.style.display = "block";
+    const d = s.val() || {};
+    pBalance.value = d.balance ?? 0;
+    pEnergy.value = d.energy ?? 0;
+    pMood.value = d.mood ?? 0;
+
+    if (d.online) {
+      playerStatus.innerHTML = "Статус: <span class='status-online'>онлайн</span>";
+    } else {
+      playerStatus.innerHTML = "Статус: <span class='status-offline'>оффлайн</span>";
+    }
   });
 }
 
 function savePlayer(){
-  db.ref("players/"+currentPlayer).once("value").then(old=>{
-    let before = old.val() || {};
-    let after = {
-      balance:+pBalance.value,
-      energy:+pEnergy.value,
-      mood:+pMood.value
-    };
-    db.ref("players/"+currentPlayer).update(after);
-    addLog("player_update", before, after);
-  });
+  if (!currentPlayer) return;
+  const after = {
+    balance:+pBalance.value,
+    energy:+pEnergy.value,
+    mood:+pMood.value
+  };
+  db.ref("players/"+currentPlayer).update(after);
+  addLog("Изменён игрок "+currentPlayer, after);
 }
 
-/* DELIVERY */
-db.ref("delivery").once("value").then(s=>{
-  let d = s.val() || {};
-  delBase.value = d.basePrice || 0;
-  delKm.value = d.pricePerKm || 0;
+/* ЭКОНОМИКА */
+db.ref("economy").once("value").then(s=>{
+  const d = s.val() || {};
+  inflation.value = d.inflation ?? 5;
+  bankTrust.value = d.bankTrust ?? 100;
 });
+
+function saveEconomy(){
+  const data = {
+    inflation:+inflation.value,
+    bankTrust:+bankTrust.value
+  };
+  db.ref("economy").update(data);
+  addLog("Экономика изменена", data);
+}
+
+/* ДОСТАВКА */
+db.ref("delivery").once("value").then(s=>{
+  const d = s.val() || {};
+  delBase.value = d.basePrice ?? 6;
+  delKm.value = d.pricePerKm ?? 2;
+});
+
 function saveDelivery(){
-  db.ref("delivery").update({
+  const data = {
     basePrice:+delBase.value,
     pricePerKm:+delKm.value
-  });
+  };
+  db.ref("delivery").update(data);
+  addLog("Тарифы доставки изменены", data);
 }
 
-/* GOALS */
+/* ЦЕЛИ */
 function saveGoal(){
-  db.ref("goals/daily").set({
-    time:+gTime.value,
-    deliveries:+gCount.value,
-    bonus:+gBonus.value
-  });
+  const data = {
+    time:+goalTime.value,
+    deliveries:+goalCount.value,
+    bonus:+goalBonus.value
+  };
+  db.ref("goals/daily").set(data);
+  addLog("Цель изменена", data);
 }
 
-/* ECONOMY */
-db.ref("economy").once("value").then(s=>{
-  let d = s.val() || {};
-  infl.value = d.inflation || 0;
-  trust.value = d.bankTrust || 0;
-});
-function saveEco(){
-  db.ref("economy").update({
-    inflation:+infl.value,
-    bankTrust:+trust.value
-  });
-}
-
-/* SHOP */
-db.ref("shop/products").on("value", s=>{
+/* МАГАЗИН */
+db.ref("shop/products").on("value", snap=>{
   shopItem.innerHTML="";
-  s.forEach(p=>{
-    let o=document.createElement("option");
+  snap.forEach(p=>{
+    const o=document.createElement("option");
     o.value=p.key;
     o.textContent=p.key;
     shopItem.appendChild(o);
   });
-  shopItem.dispatchEvent(new Event("change"));
 });
+
 shopItem.onchange=()=>{
-  currentItem = shopItem.value;
+  currentItem=shopItem.value;
   db.ref("shop/products/"+currentItem).once("value").then(s=>{
-    let d=s.val()||{};
-    shopPrice.value=d.price||0;
-    shopEnergy.value=d.energy||0;
+    const d=s.val()||{};
+    shopPrice.value=d.price??0;
+    shopEnergy.value=d.energy??0;
   });
 };
+
 function saveShop(){
-  db.ref("shop/products/"+currentItem).update({
+  const data = {
     price:+shopPrice.value,
     energy:+shopEnergy.value
-  });
+  };
+  db.ref("shop/products/"+currentItem).update(data);
+  addLog("Товар изменён "+currentItem, data);
 }
 
-/* TAXI */
-db.ref("taxi").once("value").then(s=>{
-  let d=s.val()||{};
-  taxiBase.value=d.basePrice||0;
-  taxiChance.value=d.chance||0;
-  taxiTimer.value=d.timer||0;
-});
-function saveTaxi(){
-  db.ref("taxi").update({
-    basePrice:+taxiBase.value,
-    chance:+taxiChance.value,
-    timer:+taxiTimer.value
-  });
-}
-
-/* EVENTS */
-function runEvent(){
-  if(eventType.value==="crisis"){
-    db.ref("economy").once("value").then(s=>{
-      let b=s.val();
-      let a={inflation:b.inflation+10,bankTrust:b.bankTrust-15};
-      db.ref("economy").update(a);
-      addLog("crisis",b,a);
-    });
-  }
-  if(eventType.value==="boom"){
-    db.ref("economy").once("value").then(s=>{
-      let b=s.val();
-      let a={inflation:Math.max(0,b.inflation-5),bankTrust:b.bankTrust+10};
-      db.ref("economy").update(a);
-      addLog("boom",b,a);
-    });
-  }
-  if(eventType.value==="taxi"){
-    db.ref("taxi").once("value").then(s=>{
-      let b=s.val();
-      let a={...b,chance:Math.max(1,b.chance-50),basePrice:b.basePrice*2};
-      db.ref("taxi").update(a);
-      addLog("taxi_strike",b,a);
-    });
-  }
-}
-
-/* LOGS */
-function addLog(action,before,after){
+/* ЛОГИ */
+function addLog(action, data){
   db.ref("adminLogs").push({
     time:new Date().toLocaleString(),
-    action,before,after
+    action,
+    data
   });
 }
+
 function loadLogs(){
   db.ref("adminLogs").limitToLast(30).once("value").then(s=>{
     logBox.textContent="";
     s.forEach(l=>{
       logBox.textContent +=
-        l.val().time+" | "+l.val().action+"\n";
+        l.val().time+" — "+l.val().action+"\n";
     });
   });
 }
