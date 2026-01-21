@@ -1,10 +1,10 @@
 // ============================================================
-// --- PATCH v27: ROCKET DATABASE PERSISTENCE ---
+// --- PATCH v28: KM COUNTDOWN FIX ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v27 Loaded: DB Quest Anchors");
+    console.log(">>> Patch v28 Loaded: Distance Countdown Fixed");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
@@ -20,7 +20,7 @@
         }
     } catch(e) { console.error("Patch DB Error:", e); }
 
-    // 1. СТИЛИ (Дизайн Wolt)
+    // 1. СТИЛИ (Дизайн Wolt) - БЕЗ ИЗМЕНЕНИЙ
     const styles = `
         /* MENU & UI */
         #side-menu { background: #ffffff !important; border-right: 1px solid #eee !important; color: #333 !important; }
@@ -68,7 +68,7 @@
     const styleSheet = document.createElement("style"); styleSheet.innerText = styles; document.head.appendChild(styleSheet);
 
 
-    // 2. СИНХРОНИЗАЦИЯ С БД
+    // 2. СИНХРОНИЗАЦИЯ С БД (С ЯКОРЯМИ ДЛЯ КВЕСТОВ)
     if(patchDB) {
         // Загрузка списка бонусов
         patchDB.ref('bonuses/list').on('value', snap => {
@@ -98,7 +98,7 @@
             }
         });
 
-        // --- NEW: ЗАГРУЗКА ЯКОРЕЙ (ТОЧЕК СТАРТА КВЕСТОВ) ИЗ БД ---
+        // ЗАГРУЗКА ЯКОРЕЙ (ПРОГРЕСС КВЕСТОВ)
         if(typeof state !== 'undefined' && state.id) {
              patchDB.ref('players/' + state.id + '/questAnchors').on('value', snap => {
                  if(!state.questAnchors) state.questAnchors = {};
@@ -190,7 +190,7 @@
         document.body.appendChild(overlay);
     };
 
-    // 4. ОКНО РАКЕТЫ (FIXED DB LOGIC)
+    // 4. ОКНО РАКЕТЫ (DB LOGIC)
     window.renderBonusModal = function() {
         const old = document.getElementById('bonus-modal'); if(old) old.remove();
         
@@ -211,22 +211,16 @@
             
             // --- LOGIC: DB ANCHORS ---
             active.forEach(b => {
-                // Если у игрока еще нет данных о квестах, создаем
                 if(!state.questAnchors) state.questAnchors = {};
                 
-                // Проверяем, есть ли "Якорь" (запись в БД, с какого заказа начат квест)
-                // Если нет -> создаем сейчас и отправляем в БД
                 if(typeof state.questAnchors[b.id] === 'undefined') {
                     const currentTotal = state.career.totalOrders || 0;
                     state.questAnchors[b.id] = currentTotal;
-                    
-                    // SAVE TO DB IMMEDIATELY
                     if(patchDB && state.id) {
                         patchDB.ref('players/' + state.id + '/questAnchors/' + b.id).set(currentTotal);
                     }
                 }
 
-                // Считаем прогресс от Якоря
                 const startCount = state.questAnchors[b.id];
                 const currentTotal = (state.career.totalOrders || 0);
                 
@@ -295,7 +289,7 @@
         document.body.appendChild(overlay);
     };
 
-    // 5. ВРАППЕРЫ И ВХОД (Без изменений логики, только сохранение)
+    // 5. ВРАППЕРЫ И ВХОД
     window.performLogin = function() {
         const login = document.getElementById('auth-login').value.trim();
         const pass = document.getElementById('auth-pass').value.trim();
@@ -361,7 +355,6 @@
             nameEl.textContent = state.name;
             idEl.textContent = 'ID: ' + state.id;
             
-            // Если ID подгрузился, но слушатель якорей еще не запущен - запускаем
             if(state.id && !state.anchorsListenerActive && window.db) {
                 state.anchorsListenerActive = true;
                 window.db.ref('players/' + state.id + '/questAnchors').on('value', snap => {
@@ -409,6 +402,28 @@
             else if(type==='taxi-licenses' || type==='taxi-licenses-btn') { document.getElementById('modal-title').textContent='Лицензии и Документы'; if(window.renderTaxiLicenses) window.renderTaxiLicenses(b); }
             else { document.getElementById('modal-title').textContent='История'; renderHistory(b); } 
         } 
+    };
+
+    // --- NEW: FIX KM UPDATE (PATCH v28) ---
+    window.updateTrack = function(p) {
+        const fill = document.getElementById('track-fill');
+        const icon = document.getElementById('track-icon');
+        if(fill) fill.style.width = p + '%';
+        if(icon) icon.style.left = p + '%';
+
+        // Обновляем текст километража
+        if(currentOrder && currentOrder.distance) {
+            const destEl = document.getElementById('order-dest');
+            if(destEl) {
+                const totalDist = parseFloat(currentOrder.distance);
+                let remaining = totalDist * (1 - (p / 100));
+                if(remaining < 0) remaining = 0;
+                
+                // Сохраняем префикс (Поездка или Забрать)
+                const prefix = state.taxi.active ? 'Поездка' : 'Забрать';
+                destEl.textContent = `${prefix}: ${remaining.toFixed(1)} km`;
+            }
+        }
     };
 
 })();
