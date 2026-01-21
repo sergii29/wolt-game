@@ -1,85 +1,87 @@
-// --- PATCH V3: DARK MODE & UI FIX (ICONS RESTORED) ---
+// --- PATCH: BANK RESTRUCTURE v1 ---
+// Полностью обновляет визуальную структуру меню "Банк"
 
-(function() {
-    console.log(">>> Patch v3 Loaded: UI Fixed");
+// Перезаписываем стандартную функцию отображения банка
+window.showBank = function() {
+    const modal = document.getElementById('modal');
+    const content = document.getElementById('modal-content');
+    
+    // 1. Расчеты для отображения
+    // Если есть долг, высчитываем процент "штрафа" при доставке (обычно это 20-30% или фиксировано)
+    // В вашей игре это может быть реализовано по-разному, здесь мы просто показываем статус.
+    const hasDebt = state.debt > 0;
+    const penaltyText = hasDebt ? "⚠️ С активным долгом часть дохода с заказов списывается автоматически!" : "✅ Долгов нет, вы получаете 100% дохода.";
+    
+    // 2. Формируем новый HTML для окна
+    content.innerHTML = `
+        <h2 style="color: #ffd700; text-align: center; margin-bottom: 20px;">🏦 WARSAW BANK</h2>
+        
+        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span style="color: #aaa;">Ваш баланс:</span>
+                <span style="color: #fff; font-weight: bold;">${state.balance.toFixed(2)} PLN</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span style="color: #aaa;">Текущий долг:</span>
+                <span style="color: #ff6b6b; font-weight: bold;">${state.debt.toFixed(2)} PLN</span>
+            </div>
+             <div style="display: flex; justify-content: space-between;">
+                <span style="color: #aaa;">Кредитный лимит:</span>
+                <span style="color: #4cd137; font-weight: bold;">${(7000 + (state.reputation || 0) * 10).toFixed(0)} PLN</span>
+            </div>
+        </div>
 
-    const darkStyles = `
-        /* --- 1. Исправление верхней панели (чтобы иконки не улетали) --- */
-        #stats-bar, .top-bar {
-            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%) !important;
-            backdrop-filter: blur(10px) !important;
-            border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+        <div style="font-size: 12px; color: ${hasDebt ? '#ff9f43' : '#2ecc71'}; text-align: center; margin-bottom: 20px; font-style: italic;">
+            ${penaltyText}
+        </div>
+
+        <div style="display: grid; gap: 10px;">
+            <button onclick="takeLoan()" style="background: linear-gradient(90deg, #1e3799, #0c2461); color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold;">
+                💰 Взять кредит (+500 PLN)
+            </button>
             
-            /* ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ: */
-            padding-top: 45px !important;  /* Отступ сверху для статус-бара телефона */
-            padding-bottom: 15px !important;
-            height: auto !important;       /* Высота подстраивается */
-            min-height: 100px !important;  /* Минимальная высота */
-            
-            display: flex !important;
-            align-items: flex-end !important; /* Прижимаем иконки к низу панели */
-            justify-content: space-around !important;
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            z-index: 9999 !important;
-        }
+            <button onclick="repayDebt()" style="background: linear-gradient(90deg, #009432, #006266); color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold;">
+                💸 Погасить долг (-500 PLN)
+            </button>
 
-        /* Делаем иконки и текст ярче и читаемее */
-        .stat-item {
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            opacity: 1 !important;
-        }
-
-        .stat-item span {
-            color: #00ffcc !important; /* Неоновый цвет текста */
-            font-weight: bold !important;
-            font-size: 11px !important;
-            margin-top: 4px !important;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
-        }
-
-        /* --- 2. Нижняя панель (Темная тема) --- */
-        div[style*="background-color: white"], 
-        div[style*="background: white"],
-        .bg-white, .bottom-sheet, #active-order-panel {
-            background: linear-gradient(160deg, #1a1a2e 0%, #16213e 100%) !important;
-            color: #fff !important;
-            border-top: 1px solid rgba(0, 255, 200, 0.2) !important;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.7) !important;
-            z-index: 9000 !important; /* Чтобы не перекрывало верх */
-        }
-
-        div[style*="background-color: white"] h2,
-        div[style*="background-color: white"] p,
-        div[style*="background-color: white"] span {
-            color: #e0e0e0 !important;
-        }
-
-        /* Кнопки */
-        div[onclick*="offline"] {
-            background: rgba(255, 87, 34, 0.15) !important;
-            border: 1px solid rgba(255, 87, 34, 0.5) !important;
-        }
+             <button onclick="closeModal()" style="background: #333; color: #ccc; padding: 10px; border: 1px solid #555; border-radius: 8px; margin-top: 10px;">
+                Закрыть
+            </button>
+        </div>
     `;
 
-    // Удаляем старые стили если есть, чтобы не дублировать
-    const oldStyle = document.getElementById("patch-styles");
-    if (oldStyle) oldStyle.remove();
+    // 3. Показываем окно
+    modal.style.display = 'flex';
+};
 
-    const styleSheet = document.createElement("style");
-    styleSheet.id = "patch-styles";
-    styleSheet.innerText = darkStyles;
-    document.head.appendChild(styleSheet);
+// Функция взятия кредита (дублируем логику, чтобы работала из патча)
+window.takeLoan = function() {
+    const limit = 7000 + (state.reputation || 0) * 10;
+    if (state.debt >= limit) {
+        alert("Банк: Отказано. Вы достигли кредитного лимита!");
+        return;
+    }
+    state.balance += 500;
+    state.debt += 500;
+    updateUI();
+    showBank(); // Обновляем окно банка сразу
+};
 
-    // Уведомление
-    const toast = document.createElement("div");
-    toast.innerText = "🛠 UI PATCH V3: FIXED";
-    toast.style.cssText = "position:fixed; top:120px; left:50%; transform:translateX(-50%); background:#00d2ff; color:black; padding:5px 15px; z-index:10000; border-radius:20px; font-weight:bold; box-shadow: 0 5px 15px rgba(0,0,0,0.5);";
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+// Функция погашения
+window.repayDebt = function() {
+    if (state.debt <= 0) {
+        alert("У вас нет долгов!");
+        return;
+    }
+    if (state.balance < 500) {
+        alert("Недостаточно средств для погашения!");
+        return;
+    }
+    state.balance -= 500;
+    state.debt -= 500;
+    if (state.debt < 0) state.debt = 0; // Защита от минуса
+    updateUI();
+    showBank();
+};
 
-})();
+console.log("Bank Structure Updated");
