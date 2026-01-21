@@ -1,10 +1,10 @@
 // ============================================================
-// --- PATCH v24: BANK TEXT UPDATE & FULL RESTORE ---
+// --- PATCH v25: LOGIN FIX & AUTO-AUTH ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v24 Loaded: Bank UI Updated + All Fixes");
+    console.log(">>> Patch v25 Loaded: Auth System Fixed");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
@@ -100,6 +100,57 @@
 
     if(typeof window.startSessionOrders === 'undefined') window.startSessionOrders = (state.career.totalOrders || 0);
 
+    // ============================================================
+    // --- AUTH FIX (ПЕРЕОПРЕДЕЛЕНИЕ ЛОГИНА) ---
+    // ============================================================
+    window.performLogin = function() {
+        const login = document.getElementById('auth-login').value.trim();
+        const pass = document.getElementById('auth-pass').value.trim();
+        
+        if(!login || !pass) { alert("Введите логин и пароль!"); return; }
+
+        if(!window.db) window.db = firebase.database();
+
+        window.db.ref('users_lookup/' + login).once('value', snap => {
+            if(!snap.exists()) {
+                // Если юзера нет - это ошибка, мы не регистрируем при входе
+                alert('Пользователь не найден. Сначала нажмите Регистрация.');
+                return;
+            }
+            
+            const data = snap.val();
+            if(data.pass !== pass) {
+                alert('Неверный пароль!');
+                return;
+            }
+
+            // УСПЕШНЫЙ ВХОД
+            const targetId = data.playerId;
+            alert('Вход выполнен! Перезагрузка профиля...');
+            
+            // Загружаем данные игрока, чтобы сохранить их в LocalStorage
+            window.db.ref('players/' + targetId).once('value', playerSnap => {
+                let playerData = playerSnap.val();
+                if (!playerData) {
+                    playerData = { name: login, id: targetId, balance: 0 };
+                }
+                
+                // ВАЖНО: Обновляем локальное состояние
+                state = { ...state, ...playerData };
+                state.id = targetId;
+                state.name = login;
+                state.isAuth = true;
+
+                // СОХРАНЯЕМ В ПАМЯТЬ БРАУЗЕРА (Ключ: WARSZAWA_FOREVER)
+                localStorage.setItem('WARSZAWA_FOREVER', JSON.stringify(state));
+                
+                // ПЕРЕЗАГРУЖАЕМ СТРАНИЦУ, чтобы применились все изменения и ID
+                location.reload();
+            });
+        });
+    };
+    // ============================================================
+
 
     // 3. ОТРИСОВКА ОКОН
     window.renderCustomModal = function(type) {
@@ -119,7 +170,6 @@
             const streak = state.loanStreak || 0;
             const comission = streak === 0 ? 0 : (streak === 1 ? 10 : 20);
             
-            // ЦВЕТ КОМИССИИ (Если 0 - зеленый, если больше - красный)
             const comColor = comission > 0 ? '#ff3d00' : '#00c853';
 
             content = `
@@ -318,6 +368,16 @@
 
     // 6. ЦИКЛ UI
     setInterval(() => {
+        // Проверка: Обновляем имя в меню, если оно изменилось
+        const nameEl = document.getElementById('player-name-display');
+        const idEl = document.getElementById('player-id-display');
+        if(nameEl && typeof state !== 'undefined' && state.name) {
+            if(nameEl.textContent !== state.name) {
+                nameEl.textContent = state.name;
+                idEl.textContent = 'ID: ' + state.id;
+            }
+        }
+
         if(typeof state !== 'undefined' && state.items) {
             const stats = {
                 'bike': Math.floor(state.items.bike||0),
