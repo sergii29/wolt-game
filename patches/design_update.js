@@ -1,10 +1,10 @@
 // ============================================================
-// --- PATCH v30: IRONCLAD SYNC (ULTIMATE PERSISTENCE) ---
+// --- PATCH v31: QUEST PAYOUTS (AUTO-CLAIM) ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v30 Loaded: IRONCLAD SYNC ACTIVE");
+    console.log(">>> Patch v31 Loaded: AUTO-PAYOUTS ACTIVE");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
@@ -109,7 +109,6 @@
         
         console.log(">>> IRONCLAD CLOUD LISTENER ATTACHED TO: " + state.id);
 
-        // Индикатор синхронизации
         let syncDot = document.getElementById('sync-dot');
         if(!syncDot) {
             syncDot = document.createElement('div');
@@ -118,40 +117,35 @@
             document.body.appendChild(syncDot);
         }
 
-        // ОТКЛЮЧАЕМ СТАРЫЕ СЛУШАТЕЛИ, ЧТОБЫ НЕ БЫЛО ДУБЛЕЙ
         window.db.ref('players/' + state.id).off(); 
         
-        // СЛУШАЕМ ВЕСЬ ПРОФИЛЬ ЦЕЛИКОМ
         window.db.ref('players/' + state.id).on('value', (snap) => {
             const data = snap.val();
             if (!data) return;
 
-            // АНИМАЦИЯ СИНХРОНИЗАЦИИ
             syncDot.classList.add('syncing');
             setTimeout(() => syncDot.classList.remove('syncing'), 500);
 
-            // БАН
             if (data.isBanned) {
                 document.body.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100%;background:black;color:red;font-size:20px;font-weight:bold;">⛔ ДОСТУП ЗАПРЕЩЕН</div>`;
                 return;
             }
 
-            // --- ЖЕЛЕЗНОЕ ОБНОВЛЕНИЕ STATE ---
             let uiNeedsUpdate = false;
 
-            // 1. БАЛАНС
+            // БАЛАНС
             if (data.balance !== undefined && Math.abs(data.balance - state.balance) > 0.01) {
                 state.balance = data.balance;
                 uiNeedsUpdate = true;
             }
             
-            // 2. КАРЬЕРА (Всего заказов) - КРИТИЧНО ДЛЯ КВЕСТОВ
+            // КАРЬЕРА
             if (data.career && JSON.stringify(data.career) !== JSON.stringify(state.career)) {
                 state.career = data.career;
                 uiNeedsUpdate = true;
             }
 
-            // 3. ИНВЕНТАРЬ И ПРЕДМЕТЫ
+            // ИНВЕНТАРЬ
             if(data.inventory && JSON.stringify(data.inventory) !== JSON.stringify(state.inventory)) {
                 state.inventory = data.inventory; uiNeedsUpdate = true;
             }
@@ -160,14 +154,14 @@
             }
             if(data.stats) { state.needs = data.stats; uiNeedsUpdate = true; } 
 
-            // 4. ТАКСИ (Машина, лицензии)
+            // ТАКСИ
             if(data.taxi && JSON.stringify(data.taxi) !== JSON.stringify(state.taxi)) {
                 state.taxi = data.taxi; 
                 if(window.updateMenuState) window.updateMenuState();
                 uiNeedsUpdate = true;
             }
 
-            // 5. ЯКОРЯ КВЕСТОВ (Синхронизация прогресса ракетки)
+            // ЯКОРЯ КВЕСТОВ
             if(data.questAnchors) {
                 if(!state.questAnchors) state.questAnchors = {};
                 if(JSON.stringify(data.questAnchors) !== JSON.stringify(state.questAnchors)) {
@@ -176,18 +170,22 @@
                 }
             }
 
-            // --- СОХРАНЕНИЕ В ПАМЯТЬ ТЕЛЕФОНА ---
-            // Мы доверяем Облаку больше, чем телефону. Если Облако сказало - мы пишем.
+            // CLAIMED QUESTS (Новое!)
+            if(data.claimedQuests) {
+                if(!state.claimedQuests) state.claimedQuests = {};
+                if(JSON.stringify(data.claimedQuests) !== JSON.stringify(state.claimedQuests)) {
+                    state.claimedQuests = data.claimedQuests;
+                    uiNeedsUpdate = true;
+                }
+            }
+
             if(uiNeedsUpdate) {
                 localStorage.setItem('WARSZAWA_FOREVER', JSON.stringify(state));
                 if(window.updateUI) window.updateUI();
-                
-                // Если открыто окно бонусов - обновим его
                 if(document.getElementById('bonus-modal')) window.renderBonusModal();
             }
         });
 
-        // Inbox Listener
         window.db.ref('players/' + state.id + '/adminInbox').off();
         window.db.ref('players/' + state.id + '/adminInbox').on('child_added', (snap) => {
             const cmd = snap.val();
@@ -196,23 +194,23 @@
         });
     };
 
-    // ПРИНУДИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ ПРИ ЛЮБОМ СОХРАНЕНИИ
-    // Переопределяем функцию syncToCloud, убирая задержку для важных вещей
     if(window.syncToCloud) {
         const oldSync = window.syncToCloud;
         window.syncToCloud = function(force) {
-            // Всегда форсируем отправку в БД, чтобы не было рассинхрона
-            // Firebase справится, трафик текстовый минимальный.
+            // Форсируем сохранение вложенных объектов, которых могло не быть в старом коде
+            if(window.db && state.id) {
+                window.db.ref('players/' + state.id + '/claimedQuests').set(state.claimedQuests || {});
+                window.db.ref('players/' + state.id + '/questAnchors').set(state.questAnchors || {});
+            }
             oldSync(true); 
         }
     }
 
-    // Перезапуск слушателя
     setTimeout(() => { if(window.listenToCloud) window.listenToCloud(); }, 1000);
 
     // ------------------------------------------------------------------------
 
-    // 3. ОТРИСОВКА ОКОН (Модалки)
+    // UI RENDERERS
     window.renderCustomModal = function(type) {
         const old = document.getElementById('active-custom-modal'); if(old) old.remove();
         const overlay = document.createElement('div');
@@ -224,7 +222,6 @@
         const bal = state.balance; 
         const debt = state.debt;
 
-        // --- БАНК ---
         if(type === 'bank') {
             const limit = (window.gameConfig && window.gameConfig.bankLimitBase) ? (window.gameConfig.bankLimitBase + (state.career.totalOrders * window.gameConfig.bankLimitMulti)) : (1000 + (state.career.totalOrders * 50));
             const streak = state.loanStreak || 0;
@@ -251,10 +248,7 @@
                 <button class="action-btn btn-green" onclick="wrapBankAction('loan')">ВЗЯТЬ</button>
                 ${debt > 0 ? `<button class="action-btn btn-dark" onclick="wrapBankAction('repay')">ВЕРНУТЬ</button>` : ''}
             `;
-        }
-        
-        // --- ПРАВИТЕЛЬСТВО ---
-        else if(type === 'gov') {
+        } else if(type === 'gov') {
              const levelSum = Object.values(state.repairs).reduce((a,b)=>a+b,0);
              const ir = (window.gameConfig && window.gameConfig.inflationRate) || 0.1;
              const inf = (levelSum * ir * 100).toFixed(0);
@@ -272,10 +266,7 @@
                     <button style="background:#333; color:white; padding:8px 12px; border-radius:6px; border:none" onclick="wrapGov(1, ${cost})">-${cost.toFixed(0)}</button>
                 </div>
              `;
-        }
-
-        // --- ТАКСИ (АВТОСАЛОН) ---
-        else if(type === 'taxi') {
+        } else if(type === 'taxi') {
             const p = window.DYNAMIC_PRICES ? window.DYNAMIC_PRICES.cars : { skoda: 15000, toyota: 45000, tesla: 120000 };
             const cars = [
                 { id: 'skoda', name: 'Skoda Fabia', price: p.skoda||15000, icon:'fa-car-side' }, 
@@ -288,12 +279,10 @@
                 content += `<div class="b-card" style="display:flex; justify-content:space-between; align-items:center"><div><b>${car.name}</b></div><button onclick="${isOwned?'':`wrapTaxi('${car.id}',${car.price})`}" style="padding:8px; border-radius:5px; border:none; background:${isOwned?'green':'#333'}; color:white">${isOwned?'ЕСТЬ':car.price}</button></div>`;
             });
         }
-
         overlay.innerHTML = `<div class="custom-modal-box">${content}</div>`;
         document.body.appendChild(overlay);
     };
 
-    // 4. ОКНО РАКЕТЫ (DB LOGIC + ANCHORS)
     window.renderBonusModal = function() {
         const old = document.getElementById('bonus-modal'); if(old) old.remove();
         
@@ -306,17 +295,13 @@
 
         let html = '';
 
-        // ACTIVE SECTION
         html += `<div class="section-label" style="font-weight:bold; color:#555; margin-bottom:10px">🔥 Активные сейчас</div>`;
         if (active.length === 0) {
             html += `<div style="text-align:center; padding:20px; color:#aaa; font-size:12px; background:#eee; border-radius:10px; margin-bottom:20px">Нет активных заданий</div>`;
         } else {
-            
-            // --- LOGIC: DB ANCHORS ---
             active.forEach(b => {
                 if(!state.questAnchors) state.questAnchors = {};
                 
-                // Если якоря нет - создаем и пишем в БД
                 if(typeof state.questAnchors[b.id] === 'undefined') {
                     const currentTotal = state.career.totalOrders || 0;
                     state.questAnchors[b.id] = currentTotal;
@@ -325,7 +310,6 @@
                     }
                 }
 
-                // Считаем прогресс
                 const startCount = state.questAnchors[b.id];
                 const currentTotal = (state.career.totalOrders || 0);
                 
@@ -339,10 +323,16 @@
                 const diff = b.endTime - now;
                 const h = Math.floor(diff/3600000);
                 const m = Math.floor((diff%3600000)/60000);
+                
+                // Проверка на выплату (визуально для игрока)
+                const isClaimed = state.claimedQuests && state.claimedQuests[b.id];
+                const btnText = isClaimed ? '✅ ГОТОВО' : `+${b.reward} PLN`;
+                const btnColor = isClaimed ? '#ccc' : '#00c853';
+                const btnBg = isClaimed ? '#eee' : '#e8f5e9';
 
                 html += `
                 <div class="b-card active">
-                    <div style="font-weight:bold; font-size:15px">${b.title} <span style="float:right; color:#00c853; background:#e8f5e9; padding:2px 6px; border-radius:4px; font-size:11px">+${b.reward} PLN</span></div>
+                    <div style="font-weight:bold; font-size:15px">${b.title} <span style="float:right; color:${btnColor}; background:${btnBg}; padding:2px 6px; border-radius:4px; font-size:11px">${btnText}</span></div>
                     <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
                     <div style="font-size:11px; color:#666; margin-top:5px; display:flex; justify-content:space-between">
                         <span>Осталось: ${h}ч ${m}м</span>
@@ -352,7 +342,6 @@
             });
         }
 
-        // FUTURE SECTION
         html += `<div class="section-label" style="font-weight:bold; color:#555; margin-bottom:10px; margin-top:20px">⏳ Скоро (Анонсы)</div>`;
         if (future.length === 0) {
             html += `<div style="text-align:center; padding:20px; color:#aaa; font-size:12px;">Нет запланированных акций</div>`;
@@ -393,7 +382,6 @@
         document.body.appendChild(overlay);
     };
 
-    // 5. ВРАППЕРЫ И ВХОД (РЕАНИМАЦИЯ ПОСЛЕ СБРОСА)
     window.performLogin = function() {
         const login = document.getElementById('auth-login').value.trim();
         const pass = document.getElementById('auth-pass').value.trim();
@@ -405,19 +393,13 @@
             if(data.pass !== pass) { alert('Неверный пароль!'); return; }
             const targetId = data.playerId;
             alert('Вход выполнен! Восстанавливаем данные...');
-            
-            // ЗАГРУЖАЕМ ПОЛНЫЙ ПРОФИЛЬ С СЕРВЕРА
             window.db.ref('players/' + targetId).once('value', playerSnap => {
                 let playerData = playerSnap.val();
                 if (!playerData) playerData = { name: login, id: targetId, balance: 0 };
-                
-                // ЖЕСТКАЯ ПЕРЕЗАПИСЬ STATE
                 state = { ...state, ...playerData };
                 state.id = targetId;
                 state.name = login;
                 state.isAuth = true;
-                
-                // СОХРАНЯЕМ В ЛОКАЛКУ НАВЕЧНО
                 localStorage.setItem('WARSZAWA_FOREVER', JSON.stringify(state));
                 location.reload();
             });
@@ -445,7 +427,6 @@
     window.wrapGov = function(l, c) { if(window.buyDeflation) window.buyDeflation(l, c); setTimeout(()=>window.renderCustomModal('gov'), 100); };
     window.wrapTaxi = function(id, p) { if(window.buyVehicle) window.buyVehicle(id, p); setTimeout(()=>window.renderCustomModal('taxi'), 100); };
 
-    // GPS & LOOP
     if(navigator.geolocation) {
         navigator.geolocation.watchPosition(pos => {
             const { latitude, longitude } = pos.coords;
@@ -454,18 +435,16 @@
                 window.map.eachLayer(l => { if(l instanceof L.Marker) { l.setLatLng([latitude, longitude]); found=true; }});
                 if(!found) L.marker([latitude, longitude]).addTo(window.map);
             }
-        }, err => console.warn("GPS Access Denied/Error", err), { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 });
+        }, err => console.warn("GPS Error", err), { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 });
     }
 
+    // --- GAME LOOP ---
     setInterval(() => {
-        // UI Updates
         const nameEl = document.getElementById('player-name-display');
         const idEl = document.getElementById('player-id-display');
         if(nameEl && typeof state !== 'undefined' && state.name && nameEl.textContent !== state.name) {
             nameEl.textContent = state.name;
             idEl.textContent = 'ID: ' + state.id;
-            
-            // Если ID подгрузился, пробуем подцепиться к облаку еще раз (на всякий случай)
             if(state.id && window.db && !window.listenerActive) {
                 window.listenerActive = true;
                 window.listenToCloud();
@@ -485,6 +464,40 @@
                 }
             }
         }
+
+        // --- NEW: AUTO-CLAIM QUEST REWARDS (PATCH v31) ---
+        if(window.bonusData && window.bonusData.length > 0 && state && state.career) {
+            const now = Date.now();
+            const active = window.bonusData.filter(b => now >= b.startTime && now <= b.endTime);
+            
+            active.forEach(b => {
+                if(!state.questAnchors || typeof state.questAnchors[b.id] === 'undefined') return;
+
+                const startCount = state.questAnchors[b.id];
+                const currentTotal = (state.career.totalOrders || 0);
+                const progress = currentTotal - startCount;
+                const target = parseInt(b.target);
+
+                if (progress >= target) {
+                    // Квест выполнен, проверяем выплату
+                    if(!state.claimedQuests) state.claimedQuests = {};
+                    
+                    if(!state.claimedQuests[b.id]) {
+                        // НАЧИСЛЕНИЕ
+                        const reward = parseFloat(b.reward);
+                        state.balance += reward;
+                        state.claimedQuests[b.id] = true; // Помечаем как выплаченный
+                        
+                        // Сохраняем в БД немедленно
+                        if(window.syncToCloud) window.syncToCloud(true);
+                        
+                        // Уведомление
+                        if(window.showToast) window.showToast(`🎯 Квест выполнен! +${reward} PLN`, 'success');
+                    }
+                }
+            });
+        }
+        // ------------------------------------------------
 
         const slider = document.getElementById('offline-slider-box');
         if(slider && !document.querySelector('.rocket-banner')) {
@@ -511,14 +524,11 @@
         } 
     };
 
-    // --- KM FIX (Из прошлых версий) ---
     window.updateTrack = function(p) {
         const fill = document.getElementById('track-fill');
         const icon = document.getElementById('track-icon');
         if(fill) fill.style.width = p + '%';
         if(icon) icon.style.left = p + '%';
-
-        // Обновляем текст километража
         if(currentOrder && currentOrder.distance) {
             const destEl = document.getElementById('order-dest');
             if(destEl) {
