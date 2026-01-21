@@ -1,4 +1,4 @@
-// PATCH UI v2 — мягкое обновление окон доставки (без ломки дизайна)
+// PATCH UI v3 — реальное изменение окон доставки (по структуре)
 
 (function () {
 
@@ -7,73 +7,43 @@
     const style = document.createElement("style");
     style.innerHTML = `
 
-      /* Общий фон окон */
-      .modal, 
-      .popup, 
-      .window, 
-      .order, 
-      .order-window,
-      .delivery,
-      .card {
-        background: #141414 !important;
+      /* === НИЖНЕЕ ОКНО ДОСТАВКИ === */
+      div[style*="background: #fff"],
+      div[style*="background:#fff"],
+      div[style*="background: white"] {
+        background: #121212 !important;
         color: #eaeaea !important;
-        border-radius: 16px !important;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
-        border: 1px solid rgba(255,255,255,0.06) !important;
+        border-radius: 18px 18px 0 0 !important;
+        box-shadow: 0 -12px 40px rgba(0,0,0,0.7) !important;
       }
 
-      /* Заголовки в окнах */
-      .modal h1, .modal h2, .modal h3,
-      .order h1, .order h2, .order h3,
-      .delivery h1, .delivery h2 {
-        font-weight: 600 !important;
-        letter-spacing: 0.3px !important;
-        margin-bottom: 8px !important;
+      /* ТЕКСТ В ОКНЕ */
+      div[style*="background"] p,
+      div[style*="background"] span {
+        color: #eaeaea !important;
       }
 
-      /* Текст заказа */
-      .modal p,
-      .order p,
-      .delivery p {
-        opacity: 0.85 !important;
-        line-height: 1.4 !important;
-      }
-
-      /* Кнопки внутри доставки */
-      .modal button,
-      .order button,
-      .delivery button {
-        background: #1f1f1f !important;
-        color: #ffffff !important;
-        border-radius: 12px !important;
-        padding: 10px 14px !important;
-        font-size: 15px !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
-      }
-
-      .modal button:active,
-      .order button:active,
-      .delivery button:active {
-        transform: scale(0.97);
-      }
-
-      /* Выделение важного (цена, расстояние, награда) */
-      .price, .reward, .money, .pay {
+      /* СУММА ЗАКАЗА */
+      span:has(text()),
+      .money,
+      .price {
         color: #00ff9c !important;
         font-weight: 600 !important;
       }
 
-      /* Разделители */
-      hr {
-        border: none !important;
-        border-top: 1px solid rgba(255,255,255,0.08) !important;
-        margin: 10px 0 !important;
+      /* ПРОГРЕСС БАР */
+      progress,
+      div[role="progressbar"] {
+        border-radius: 6px !important;
+        overflow: hidden !important;
       }
 
-    `;
+      /* КНОПКА ПРИНЯТЬ ЗАКАЗ */
+      button,
+      div[role="button"] {
+        border-radius: 14px !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+      }
 
-    document.head.appendChild(style);
-    console.log("UI PATCH v2 активен");
-  });
-
-})();
+      /* СИНЯЯ
