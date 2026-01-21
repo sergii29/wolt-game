@@ -1,10 +1,10 @@
 // ============================================================
-// --- PATCH v23: LICENSE FIX & FULL RESTORE ---
+// --- PATCH v24: BANK TEXT UPDATE & FULL RESTORE ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v23 Loaded: Licenses Restored + GPS/DB Fix");
+    console.log(">>> Patch v24 Loaded: Bank UI Updated + All Fixes");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
@@ -119,6 +119,9 @@
             const streak = state.loanStreak || 0;
             const comission = streak === 0 ? 0 : (streak === 1 ? 10 : 20);
             
+            // ЦВЕТ КОМИССИИ (Если 0 - зеленый, если больше - красный)
+            const comColor = comission > 0 ? '#ff3d00' : '#00c853';
+
             content = `
                 <div class="close-btn" onclick="document.getElementById('active-custom-modal').remove()">✕</div>
                 <h2 style="text-align:center; margin-top:0">Банк (Кредит)</h2>
@@ -132,7 +135,10 @@
 
                 <div style="margin-bottom:20px; padding:0 10px">
                     <div class="bank-info-row"><span>УСЛОВИЯ КРЕДИТА:</span></div>
-                    <div class="bank-info-row"><span>Попытка №${streak+1}</span> <span style="color:#00c853; font-weight:bold">Комиссия: +${comission}%</span></div>
+                    <div class="bank-info-row">
+                        <span>Кредитный уровень ${streak+1}</span> 
+                        <span style="color:${comColor}; font-weight:bold">Комиссия: +${comission}%</span>
+                    </div>
                 </div>
 
                 <input id="custom-loan-input" type="number" placeholder="Сумма кредита..." style="width:100%; padding:15px; border-radius:12px; border:1px solid #ddd; font-size:18px; margin-bottom:10px; box-sizing:border-box;">
@@ -346,14 +352,12 @@
         }
     }, 3000); 
 
-    // --- OVERRIDE OPEN (FIXED LICENSES HERE) ---
+    // --- OVERRIDE OPEN ---
     window.openModal = function(type) { 
-        // 1. Специфические модалки (Белые)
         if(type==='bank') window.renderCustomModal('bank'); 
         else if(type==='deflation') window.renderCustomModal('gov'); 
         else if(type==='taxi-shop') window.renderCustomModal('taxi'); 
         
-        // 2. Полноэкранные модалки (Снизу вверх)
         else { 
             toggleMenu(); 
             const m=document.getElementById('full-modal'); const b=document.getElementById('modal-body'); m.classList.add('open'); 
@@ -362,14 +366,12 @@
                 document.getElementById('modal-title').textContent='Магазин';
                 renderShop(b);
             }
-            // ИСПРАВЛЕНИЕ: ДОБАВЛЕН БЛОК ДЛЯ ЛИЦЕНЗИЙ
             else if(type==='taxi-licenses' || type==='taxi-licenses-btn') {
                 document.getElementById('modal-title').textContent='Лицензии и Документы';
                 if(window.renderTaxiLicenses) window.renderTaxiLicenses(b);
                 else b.innerHTML = 'Ошибка: Функция renderTaxiLicenses не найдена';
             }
             else {
-                // Если ничего не совпало - открываем Историю
                 document.getElementById('modal-title').textContent='История';
                 renderHistory(b);
             } 
