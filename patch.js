@@ -1,49 +1,76 @@
-// PATCH UI v4 — принудительное изменение окон доставки (MutationObserver)
+// PATCH GAME v1 — типы доставок + репутация (с сохранением)
 
 (function () {
 
-  function restyle(el) {
-    if (!el || !el.style) return;
+  if (!(window.Telegram && Telegram.WebApp)) return;
 
-    // тёмная карточка
-    el.style.background = "#121212";
-    el.style.color = "#eaeaea";
-    el.style.borderRadius = "18px 18px 0 0";
-    el.style.boxShadow = "0 -12px 40px rgba(0,0,0,0.7)";
+  // ждём state и функции сохранения
+  const wait = setInterval(() => {
+    if (window.state && typeof window.addMoney === "function") {
+      clearInterval(wait);
+      initPatch();
+    }
+  }, 300);
 
-    // текст внутри
-    el.querySelectorAll("*").forEach(child => {
-      if (child.style) {
-        child.style.color = "#eaeaea";
+  function initPatch() {
+
+    // === ИНИЦИАЛИЗАЦИЯ ПАМЯТИ ===
+    state.reputation = state.reputation ?? 0;        // скрытая репутация
+    state.jobsDone = state.jobsDone ?? 0;
+    state.hardJobs = state.hardJobs ?? 0;
+
+    // === ПЕРЕХВАТ ДОХОДА ===
+    const originalAddMoney = window.addMoney;
+
+    window.addMoney = function (amount) {
+
+      // определяем тип доставки
+      const roll = Math.random();
+      let type = "normal";
+      let bonus = 0;
+      let repChange = 0;
+
+      if (roll < 0.20 + state.reputation * 0.01) {
+        type = "urgent";
+        bonus = 8;
+        repChange = 1;
+      } else if (roll < 0.40) {
+        type = "heavy";
+        bonus = 4;
+        repChange = 1;
+      } else if (roll < 0.55) {
+        type = "cheap";
+        bonus = -2;
+        repChange = -1;
       }
-    });
 
-    // кнопки
-    el.querySelectorAll("button, div[role='button']").forEach(btn => {
-      btn.style.borderRadius = "14px";
-      btn.style.fontWeight = "600";
-    });
-  }
+      // применяем эффекты
+      state.jobsDone++;
+      if (type !== "normal") state.hardJobs++;
 
-  const observer = new MutationObserver(mutations => {
-    mutations.forEach(m => {
-      m.addedNodes.forEach(node => {
-        if (!(node instanceof HTMLElement)) return;
+      state.reputation += repChange;
+      state.reputation = Math.max(-10, Math.min(10, state.reputation));
 
-        // нижнее окно (fixed снизу)
-        const style = getComputedStyle(node);
-        if (style.position === "fixed" && style.bottom === "0px") {
-          restyle(node);
-        }
-      });
-    });
-  });
+      // усиливаем эффект при плохой репутации
+      const finalAmount = amount + bonus + Math.floor(state.reputation * 0.5);
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true
-  });
+      return originalAddMoney(finalAmount);
+    };
 
-  console.log("UI PATCH v4 активен (observer)");
+    // === ПЕРЕХВАТ УСТАЛОСТИ ===
+    const originalUseEnergy = window.useEnergy;
 
-})();
+    if (typeof originalUseEnergy === "function") {
+      window.useEnergy = function (amount) {
+
+        let extra = 0;
+
+        // если берёшь сложные заказы — быстрее устаёшь
+        if (state.hardJobs > 5) extra += 2;
+        if (state.hardJobs > 10) extra += 4;
+
+        return originalUseEnergy(amount + extra);
+      };
+    }
+
+    // === СО
