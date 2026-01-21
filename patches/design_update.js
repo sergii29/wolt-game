@@ -1,10 +1,10 @@
 // ============================================================
-// --- PATCH v28: KM COUNTDOWN FIX ---
+// --- PATCH v30: IRONCLAD SYNC (ULTIMATE PERSISTENCE) ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v28 Loaded: Distance Countdown Fixed");
+    console.log(">>> Patch v30 Loaded: IRONCLAD SYNC ACTIVE");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
@@ -62,13 +62,17 @@
         .b-card.future { border-left-color: #ff9800; }
         .prog-bar { height: 6px; background: #eee; border-radius: 3px; margin-top: 10px; overflow: hidden; }
         .prog-fill { height: 100%; background: #00c853; width: 0%; }
+        
+        /* SYNC INDICATOR */
+        .sync-dot { position: absolute; top: 15px; right: 60px; width: 10px; height: 10px; background: #00c853; border-radius: 50%; z-index: 2000; box-shadow: 0 0 5px #00c853; transition: all 0.3s; }
+        .sync-dot.syncing { background: #ffeb3b; box-shadow: 0 0 5px #ffeb3b; }
 
         @keyframes popIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
     `;
     const styleSheet = document.createElement("style"); styleSheet.innerText = styles; document.head.appendChild(styleSheet);
 
 
-    // 2. СИНХРОНИЗАЦИЯ С БД (С ЯКОРЯМИ ДЛЯ КВЕСТОВ)
+    // 2. СИНХРОНИЗАЦИЯ С БД (ЖЕЛЕЗНОБЕТОННАЯ)
     if(patchDB) {
         // Загрузка списка бонусов
         patchDB.ref('bonuses/list').on('value', snap => {
@@ -97,19 +101,118 @@
                 }
             }
         });
+    }
 
-        // ЗАГРУЗКА ЯКОРЕЙ (ПРОГРЕСС КВЕСТОВ)
-        if(typeof state !== 'undefined' && state.id) {
-             patchDB.ref('players/' + state.id + '/questAnchors').on('value', snap => {
-                 if(!state.questAnchors) state.questAnchors = {};
-                 const remoteAnchors = snap.val() || {};
-                 state.questAnchors = { ...state.questAnchors, ...remoteAnchors };
-                 if(document.getElementById('bonus-modal')) window.renderBonusModal();
-             });
+    // --- MEGA SYNC FUNCTION ---
+    window.listenToCloud = function() {
+        if (!window.db || !state.id) return;
+        
+        console.log(">>> IRONCLAD CLOUD LISTENER ATTACHED TO: " + state.id);
+
+        // Индикатор синхронизации
+        let syncDot = document.getElementById('sync-dot');
+        if(!syncDot) {
+            syncDot = document.createElement('div');
+            syncDot.id = 'sync-dot';
+            syncDot.className = 'sync-dot';
+            document.body.appendChild(syncDot);
+        }
+
+        // ОТКЛЮЧАЕМ СТАРЫЕ СЛУШАТЕЛИ, ЧТОБЫ НЕ БЫЛО ДУБЛЕЙ
+        window.db.ref('players/' + state.id).off(); 
+        
+        // СЛУШАЕМ ВЕСЬ ПРОФИЛЬ ЦЕЛИКОМ
+        window.db.ref('players/' + state.id).on('value', (snap) => {
+            const data = snap.val();
+            if (!data) return;
+
+            // АНИМАЦИЯ СИНХРОНИЗАЦИИ
+            syncDot.classList.add('syncing');
+            setTimeout(() => syncDot.classList.remove('syncing'), 500);
+
+            // БАН
+            if (data.isBanned) {
+                document.body.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100%;background:black;color:red;font-size:20px;font-weight:bold;">⛔ ДОСТУП ЗАПРЕЩЕН</div>`;
+                return;
+            }
+
+            // --- ЖЕЛЕЗНОЕ ОБНОВЛЕНИЕ STATE ---
+            let uiNeedsUpdate = false;
+
+            // 1. БАЛАНС
+            if (data.balance !== undefined && Math.abs(data.balance - state.balance) > 0.01) {
+                state.balance = data.balance;
+                uiNeedsUpdate = true;
+            }
+            
+            // 2. КАРЬЕРА (Всего заказов) - КРИТИЧНО ДЛЯ КВЕСТОВ
+            if (data.career && JSON.stringify(data.career) !== JSON.stringify(state.career)) {
+                state.career = data.career;
+                uiNeedsUpdate = true;
+            }
+
+            // 3. ИНВЕНТАРЬ И ПРЕДМЕТЫ
+            if(data.inventory && JSON.stringify(data.inventory) !== JSON.stringify(state.inventory)) {
+                state.inventory = data.inventory; uiNeedsUpdate = true;
+            }
+            if(data.items && JSON.stringify(data.items) !== JSON.stringify(state.items)) {
+                state.items = data.items; uiNeedsUpdate = true;
+            }
+            if(data.stats) { state.needs = data.stats; uiNeedsUpdate = true; } 
+
+            // 4. ТАКСИ (Машина, лицензии)
+            if(data.taxi && JSON.stringify(data.taxi) !== JSON.stringify(state.taxi)) {
+                state.taxi = data.taxi; 
+                if(window.updateMenuState) window.updateMenuState();
+                uiNeedsUpdate = true;
+            }
+
+            // 5. ЯКОРЯ КВЕСТОВ (Синхронизация прогресса ракетки)
+            if(data.questAnchors) {
+                if(!state.questAnchors) state.questAnchors = {};
+                if(JSON.stringify(data.questAnchors) !== JSON.stringify(state.questAnchors)) {
+                    state.questAnchors = data.questAnchors;
+                    uiNeedsUpdate = true;
+                }
+            }
+
+            // --- СОХРАНЕНИЕ В ПАМЯТЬ ТЕЛЕФОНА ---
+            // Мы доверяем Облаку больше, чем телефону. Если Облако сказало - мы пишем.
+            if(uiNeedsUpdate) {
+                localStorage.setItem('WARSZAWA_FOREVER', JSON.stringify(state));
+                if(window.updateUI) window.updateUI();
+                
+                // Если открыто окно бонусов - обновим его
+                if(document.getElementById('bonus-modal')) window.renderBonusModal();
+            }
+        });
+
+        // Inbox Listener
+        window.db.ref('players/' + state.id + '/adminInbox').off();
+        window.db.ref('players/' + state.id + '/adminInbox').on('child_added', (snap) => {
+            const cmd = snap.val();
+            if(window.handleAdminCommand) window.handleAdminCommand(cmd);
+            snap.ref.remove();
+        });
+    };
+
+    // ПРИНУДИТЕЛЬНАЯ СИНХРОНИЗАЦИЯ ПРИ ЛЮБОМ СОХРАНЕНИИ
+    // Переопределяем функцию syncToCloud, убирая задержку для важных вещей
+    if(window.syncToCloud) {
+        const oldSync = window.syncToCloud;
+        window.syncToCloud = function(force) {
+            // Всегда форсируем отправку в БД, чтобы не было рассинхрона
+            // Firebase справится, трафик текстовый минимальный.
+            oldSync(true); 
         }
     }
 
-    // 3. ОТРИСОВКА ОКОН
+    // Перезапуск слушателя
+    setTimeout(() => { if(window.listenToCloud) window.listenToCloud(); }, 1000);
+
+    // ------------------------------------------------------------------------
+
+    // 3. ОТРИСОВКА ОКОН (Модалки)
     window.renderCustomModal = function(type) {
         const old = document.getElementById('active-custom-modal'); if(old) old.remove();
         const overlay = document.createElement('div');
@@ -190,7 +293,7 @@
         document.body.appendChild(overlay);
     };
 
-    // 4. ОКНО РАКЕТЫ (DB LOGIC)
+    // 4. ОКНО РАКЕТЫ (DB LOGIC + ANCHORS)
     window.renderBonusModal = function() {
         const old = document.getElementById('bonus-modal'); if(old) old.remove();
         
@@ -213,6 +316,7 @@
             active.forEach(b => {
                 if(!state.questAnchors) state.questAnchors = {};
                 
+                // Если якоря нет - создаем и пишем в БД
                 if(typeof state.questAnchors[b.id] === 'undefined') {
                     const currentTotal = state.career.totalOrders || 0;
                     state.questAnchors[b.id] = currentTotal;
@@ -221,6 +325,7 @@
                     }
                 }
 
+                // Считаем прогресс
                 const startCount = state.questAnchors[b.id];
                 const currentTotal = (state.career.totalOrders || 0);
                 
@@ -245,7 +350,6 @@
                     </div>
                 </div>`;
             });
-            // --- END LOGIC ---
         }
 
         // FUTURE SECTION
@@ -289,7 +393,7 @@
         document.body.appendChild(overlay);
     };
 
-    // 5. ВРАППЕРЫ И ВХОД
+    // 5. ВРАППЕРЫ И ВХОД (РЕАНИМАЦИЯ ПОСЛЕ СБРОСА)
     window.performLogin = function() {
         const login = document.getElementById('auth-login').value.trim();
         const pass = document.getElementById('auth-pass').value.trim();
@@ -300,14 +404,20 @@
             const data = snap.val();
             if(data.pass !== pass) { alert('Неверный пароль!'); return; }
             const targetId = data.playerId;
-            alert('Вход выполнен! Перезагрузка профиля...');
+            alert('Вход выполнен! Восстанавливаем данные...');
+            
+            // ЗАГРУЖАЕМ ПОЛНЫЙ ПРОФИЛЬ С СЕРВЕРА
             window.db.ref('players/' + targetId).once('value', playerSnap => {
                 let playerData = playerSnap.val();
                 if (!playerData) playerData = { name: login, id: targetId, balance: 0 };
+                
+                // ЖЕСТКАЯ ПЕРЕЗАПИСЬ STATE
                 state = { ...state, ...playerData };
                 state.id = targetId;
                 state.name = login;
                 state.isAuth = true;
+                
+                // СОХРАНЯЕМ В ЛОКАЛКУ НАВЕЧНО
                 localStorage.setItem('WARSZAWA_FOREVER', JSON.stringify(state));
                 location.reload();
             });
@@ -355,13 +465,10 @@
             nameEl.textContent = state.name;
             idEl.textContent = 'ID: ' + state.id;
             
-            if(state.id && !state.anchorsListenerActive && window.db) {
-                state.anchorsListenerActive = true;
-                window.db.ref('players/' + state.id + '/questAnchors').on('value', snap => {
-                    if(!state.questAnchors) state.questAnchors = {};
-                    const remoteAnchors = snap.val() || {};
-                    state.questAnchors = { ...state.questAnchors, ...remoteAnchors };
-                });
+            // Если ID подгрузился, пробуем подцепиться к облаку еще раз (на всякий случай)
+            if(state.id && window.db && !window.listenerActive) {
+                window.listenerActive = true;
+                window.listenToCloud();
             }
         }
 
@@ -404,7 +511,7 @@
         } 
     };
 
-    // --- NEW: FIX KM UPDATE (PATCH v28) ---
+    // --- KM FIX (Из прошлых версий) ---
     window.updateTrack = function(p) {
         const fill = document.getElementById('track-fill');
         const icon = document.getElementById('track-icon');
@@ -418,8 +525,6 @@
                 const totalDist = parseFloat(currentOrder.distance);
                 let remaining = totalDist * (1 - (p / 100));
                 if(remaining < 0) remaining = 0;
-                
-                // Сохраняем префикс (Поездка или Забрать)
                 const prefix = state.taxi.active ? 'Поездка' : 'Забрать';
                 destEl.textContent = `${prefix}: ${remaining.toFixed(1)} km`;
             }
