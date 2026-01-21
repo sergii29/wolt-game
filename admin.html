@@ -3,147 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WARSZAWA GOD PANEL</title>
+    <title>GOD MODE v7.0: ROCKET PLANNER</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #f3f4f6; font-family: sans-serif; padding: 20px; font-size: 13px; color: #111; }
-        .header { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; }
-        .tab { background: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; border: 1px solid #ddd; font-weight: bold; white-space: nowrap; }
-        .tab.active { background: #2563eb; color: white; border-color: #2563eb; }
-        .panel { display: none; }
-        .panel.active { display: block; }
+        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding: 15px; font-size: 13px; color: #1c1e21; }
         
-        .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card h3 { margin: 0 0 15px 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; color: #2563eb; font-size: 14px; text-transform: uppercase; }
+        /* HEADER & TABS */
+        .header { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .status { font-weight: bold; color: #ccc; } .status.on { color: #00c853; }
+        .nav { display: flex; gap: 5px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .nav-btn { flex: 1; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: bold; min-width: 90px; }
+        .nav-btn.active { background: #1877f2; color: white; border-color: #1877f2; }
+        .view { display: none; } .view.active { display: block; }
+
+        /* CARDS */
+        .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; }
+        .card h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #1877f2; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        input { width: 80px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
         
-        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
-        .row label { font-weight: 600; color: #444; }
-        .row small { color: #888; display: block; font-size: 10px; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: bold; color: white; cursor: pointer; margin-top: 5px; }
+        .btn-green { background: #42b72a; } .btn-blue { background: #1877f2; } .btn-red { background: #fa3e3e; }
+
+        /* ROCKET PLANNER STYLES */
+        .rk-editor { background: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #90caf9; margin-bottom: 15px; }
+        .rk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .rk-full { width: 100%; box-sizing: border-box; text-align: left; }
+        .rk-label { font-size: 11px; color: #555; display: block; margin-bottom: 3px; font-weight: bold; }
         
-        input { text-align: right; padding: 6px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; width: 100px; }
-        input:focus { border-color: #2563eb; outline: none; }
-        
-        .btn { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn:hover { background: #1d4ed8; }
-        .btn-red { background: #ef4444; }
-        
-        /* Players List */
-        .p-item { background: white; padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-left: 4px solid #ccc; }
-        .p-item.online { border-left-color: #10b981; }
-        .p-item:hover { transform: translateX(5px); transition: 0.2s; }
-        
-        /* Modal */
-        .modal-wrap { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; justify-content: center; align-items: center; }
-        .modal { background: white; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 20px; border-radius: 15px; }
+        .bonus-item { background: white; border: 1px solid #eee; padding: 10px; border-radius: 6px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .bonus-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; }
+        .bg-active { background: #00c853; } .bg-future { background: #ff9800; } .bg-ended { background: #9e9e9e; }
+
+        /* OTHER STYLES (Simple) */
+        .p-card { background: white; padding: 10px; border-radius: 6px; margin-bottom: 5px; border-left: 4px solid #ccc; cursor: pointer; display: flex; justify-content: space-between; }
+        .p-card.on { border-left-color: #42b72a; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99; justify-content: center; align-items: center; }
+        .modal.open { display: flex; }
+        .modal-box { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 10px; max-height: 90vh; overflow-y: auto; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2 style="margin:0">👑 GOD MODE <small style="font-size:12px; color:#888">v6.0</small></h2>
-    <div id="status" style="font-weight:bold; color:orange">CONNECTING...</div>
+    <h2 style="margin:0">GOD MODE <small>v7.0</small></h2>
+    <div id="status" class="status">OFFLINE</div>
 </div>
 
-<div class="tabs">
-    <div class="tab active" onclick="show('players')">👥 Игроки</div>
-    <div class="tab" onclick="show('eco')">💸 Экономика</div>
-    <div class="tab" onclick="show('shop')">🛒 Магазин</div>
-    <div class="tab" onclick="show('taxi')">🚖 Такси Цены</div>
-    <div class="tab" onclick="show('rocket')">🚀 Ракета</div>
+<div class="nav">
+    <button class="nav-btn active" onclick="tab('rocket')">🚀 Ракета</button>
+    <button class="nav-btn" onclick="tab('players')">👥 Игроки</button>
+    <button class="nav-btn" onclick="tab('tariffs')">💸 Тарифы</button>
+    <button class="nav-btn" onclick="tab('system')">⚙️ Система</button>
 </div>
 
-<div id="players" class="panel active">
-    <input type="text" id="p-search" placeholder="🔍 Поиск..." onkeyup="renderPlayers()" style="width:100%; padding:12px; box-sizing:border-box; margin-bottom:15px">
-    <div id="p-list">Загрузка...</div>
+<div id="rocket" class="view active">
+    
+    <div class="card">
+        <h3>🛠 Создать Акцию</h3>
+        <div class="rk-editor">
+            <div style="margin-bottom:10px">
+                <span class="rk-label">Название акции (Заголовок)</span>
+                <input type="text" id="rk-title" class="rk-full" placeholder='Например: "Вечерний жор"'>
+            </div>
+            
+            <div class="rk-grid">
+                <div>
+                    <span class="rk-label">Тип цели</span>
+                    <select id="rk-type" class="rk-full" style="padding:6px; border-radius:4px; border:1px solid #ccc">
+                        <option value="orders">Сделать заказов</option>
+                        <option value="money">Заработать денег</option>
+                    </select>
+                </div>
+                <div>
+                    <span class="rk-label">Количество (Цель)</span>
+                    <input type="number" id="rk-target" class="rk-full" placeholder="10">
+                </div>
+            </div>
+
+            <div style="margin-bottom:10px">
+                <span class="rk-label">Награда (PLN)</span>
+                <input type="number" id="rk-reward" class="rk-full" placeholder="500">
+            </div>
+
+            <div class="rk-grid">
+                <div>
+                    <span class="rk-label">Начало (Дата и Время)</span>
+                    <input type="datetime-local" id="rk-start" class="rk-full">
+                </div>
+                <div>
+                    <span class="rk-label">Конец (Дата и Время)</span>
+                    <input type="datetime-local" id="rk-end" class="rk-full">
+                </div>
+            </div>
+            
+            <button class="btn btn-blue" onclick="createBonus()">ДОБАВИТЬ В РАСПИСАНИЕ</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📅 Расписание Бонусов</h3>
+        <div id="bonus-list">Загрузка...</div>
+    </div>
 </div>
 
-<div id="eco" class="panel">
-    <div class="card">
-        <h3>Доходы</h3>
-        <div class="row"><div><label>Базовая подача</label><small>За старт заказа</small></div><input type="number" id="basePickupPay"></div>
-        <div class="row"><div><label>Оплата за КМ</label><small>Множитель расстояния</small></div><input type="number" id="perKmPay"></div>
-        <div class="row"><div><label>Множитель ТАКСИ</label><small>Во сколько раз такси дороже</small></div><input type="number" id="taxiMulti"></div>
-        <div class="row"><div><label>Разброс цены (+/-)</label><small>Рандомность заработка</small></div><input type="number" id="payVariance"></div>
-    </div>
-    <div class="card">
-        <h3>Банк и Сложность</h3>
-        <div class="row"><div><label>Кредит (Старт)</label><small>Лимит для новичка</small></div><input type="number" id="bankLimitBase"></div>
-        <div class="row"><div><label>Доверие за заказ</label><small>Рост лимита</small></div><input type="number" id="bankLimitMulti"></div>
-        <div class="row"><div><label>Трата Энергии</label><small>За один клик</small></div><input type="number" id="energyDrain" step="0.01"></div>
-        <div class="row"><div><label>Трата Воды</label><small>За один клик</small></div><input type="number" id="waterDrain" step="0.01"></div>
-        <div class="row"><div><label>Инфляция (%)</label><small>Удорожание за поломку</small></div><input type="number" id="inflationRate"></div>
-    </div>
-    <button class="btn" onclick="saveAll()">СОХРАНИТЬ НАСТРОЙКИ</button>
+<div id="players" class="view">
+    <input type="text" id="search" placeholder="🔍 Поиск..." onkeyup="renderPlayers()" style="width:100%; padding:10px; box-sizing:border-box; margin-bottom:10px">
+    <div id="p-list">Loading...</div>
 </div>
 
-<div id="shop" class="panel">
+<div id="tariffs" class="view">
     <div class="card">
-        <h3>Товары (Базовая цена)</h3>
-        <div class="row"><div><label>Вода</label></div><input type="number" id="price_water"></div>
-        <div class="row"><div><label>Сникерс (Bar)</label></div><input type="number" id="price_bar"></div>
-        <div class="row"><div><label>RedBull</label></div><input type="number" id="price_energy"></div>
-        <div class="row"><div><label>Кофе</label></div><input type="number" id="price_coffee"></div>
-        <div class="row"><div><label>Бензин</label></div><input type="number" id="price_gas"></div>
+        <h3>Экономика</h3>
+        <div class="row"><label>Базовая подача</label><input type="number" id="basePickupPay"></div>
+        <div class="row"><label>Оплата за КМ</label><input type="number" id="perKmPay"></div>
+        <div class="row"><label>Множитель ТАКСИ</label><input type="number" id="taxiMulti"></div>
     </div>
-    <div class="card">
-        <h3>Сервис (Базовая цена)</h3>
-        <div class="row"><div><label>Ремонт Велосипеда</label></div><input type="number" id="price_rep_bike"></div>
-        <div class="row"><div><label>Ремонт Сумки</label></div><input type="number" id="price_rep_bag"></div>
-        <div class="row"><div><label>Связь (Телефон)</label></div><input type="number" id="price_rep_phone"></div>
-        <div class="row"><div><label>Одежда / Шины</label></div><input type="number" id="price_rep_gear"></div>
-    </div>
-    <button class="btn" onclick="saveAll()">ОБНОВИТЬ ЦЕННИКИ</button>
+    <button class="btn btn-green" onclick="saveConfig()">СОХРАНИТЬ</button>
 </div>
 
-<div id="taxi" class="panel">
+<div id="system" class="view">
     <div class="card">
-        <h3>Автомобили</h3>
-        <div class="row"><div><label>Skoda Fabia</label></div><input type="number" id="car_skoda"></div>
-        <div class="row"><div><label>Toyota Prius</label></div><input type="number" id="car_toyota"></div>
-        <div class="row"><div><label>Tesla Model 3</label></div><input type="number" id="car_tesla"></div>
+        <h3>Сброс</h3>
+        <button class="btn btn-red" onclick="if(confirm('Удалить все бонусы?')) db.ref('bonuses/list').remove()">ОЧИСТИТЬ РАСПИСАНИЕ АКЦИЙ</button>
     </div>
-    <div class="card">
-        <h3>Документы</h3>
-        <div class="row"><div><label>Права (B)</label></div><input type="number" id="lic_driver"></div>
-        <div class="row"><div><label>Страховка</label></div><input type="number" id="lic_ins"></div>
-        <div class="row"><div><label>Лицензия</label></div><input type="number" id="lic_taxi"></div>
-    </div>
-    <button class="btn" onclick="saveAll()">СОХРАНИТЬ АВТОСАЛОН</button>
 </div>
 
-<div id="rocket" class="panel">
-    <div class="card">
-        <h3>Активные Цели</h3>
-        <div id="rocket-list"></div>
-        <button class="btn" style="background:#444; margin-top:10px" onclick="addRocket()">+ Добавить</button>
-    </div>
-    <button class="btn" onclick="pushRocket()">🚀 ЗАПУСТИТЬ РАКЕТУ</button>
-</div>
-
-<div class="modal-wrap" id="modal">
-    <div class="modal">
-        <h2 id="pm-name">Игрок</h2>
+<div id="modal" class="modal">
+    <div class="modal-box">
+        <h2 id="m-name">Игрок</h2>
         <div class="card">
             <h3>Баланс</h3>
-            <div class="row"><label>Деньги</label><input type="number" id="pm-bal"></div>
-            <div class="row"><label>Долг</label><input type="number" id="pm-debt"></div>
+            <input type="number" id="m-bal" style="width:100%">
         </div>
-        <div class="card">
-            <h3>Инвентарь</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px">
-                <input type="number" id="pm-i-w" placeholder="Вода"><input type="number" id="pm-i-b" placeholder="Еда"><input type="number" id="pm-i-e" placeholder="RedBull">
-                <input type="number" id="pm-i-c" placeholder="Кофе"><input type="number" id="pm-i-g" placeholder="Бенз">
-            </div>
+        <div style="display:flex; gap:5px">
+            <button class="btn" style="background:#ffc107; color:black" onclick="giveTaxi()">🎁 ДАТЬ ТАКСИ</button>
+            <button class="btn btn-red" onclick="banUser()">БАН</button>
         </div>
-        <div style="display:flex; gap:10px">
-            <button class="btn" style="background:#f59e0b; color:black" onclick="giveTaxi()">🎁 ДАТЬ ТАКСИ (FREE)</button>
-            <button class="btn btn-red" onclick="banUser()">BAN</button>
-        </div>
-        <button class="btn" onclick="saveUser()">СОХРАНИТЬ</button>
-        <button class="btn" style="background:#ccc; color:#000" onclick="document.getElementById('modal').style.display='none'">ЗАКРЫТЬ</button>
+        <button class="btn btn-green" onclick="saveUser()">СОХРАНИТЬ</button>
+        <button class="btn" style="background:#ccc; color:#333" onclick="closeModal()">ЗАКРЫТЬ</button>
     </div>
 </div>
 
@@ -152,138 +152,150 @@
     firebase.initializeApp(fb);
     const db = firebase.database();
     
-    let players = {}, activeId = null, rockets = [];
+    let players = {}, bonuses = [];
+    let activeId = null;
 
-    db.ref('.info/connected').on('value', s => document.getElementById('status').innerText = s.val() ? 'ONLINE' : 'OFFLINE');
+    db.ref('.info/connected').on('value', s => {
+        document.getElementById('status').innerText = s.val() ? 'ONLINE' : 'OFFLINE';
+        document.getElementById('status').className = s.val() ? 'status on' : 'status';
+    });
 
-    // Читаем Игроков
+    // LISTENERS
     db.ref('players').on('value', s => { players = s.val() || {}; renderPlayers(); });
-
-    // Читаем Конфиг
     db.ref('config').on('value', s => {
         const c = s.val() || {};
         const set = (id, v) => { if(document.getElementById(id)) document.getElementById(id).value = v; };
-        
-        // Eco
         set('basePickupPay', c.basePickupPay||4); set('perKmPay', c.perKmPay||1.5); set('taxiMulti', c.taxiMulti||4);
-        set('bankLimitBase', c.bankLimitBase||1000); set('bankLimitMulti', c.bankLimitMulti||50);
-        set('energyDrain', c.energyDrain||0.15); set('waterDrain', c.waterDrain||0.1); set('inflationRate', (c.inflationRate||0.1)*100);
-        set('payVariance', c.payVariance||2);
-
-        // Shop
-        const p = c.itemPrices || {};
-        set('price_water', p.water||2); set('price_bar', p.bar||4.5); set('price_energy', p.energy_drink||7);
-        set('price_coffee', p.coffee||9); set('price_gas', p.gas||12);
-        set('price_rep_bike', p.repair_bike||5); set('price_rep_bag', p.repair_bag||2);
-        set('price_rep_phone', p.repair_phone||1); set('price_rep_gear', p.repair_gear||3);
-
-        // Cars & Lic
-        set('car_skoda', p.car_skoda||15000); set('car_toyota', p.car_toyota||45000); set('car_tesla', p.car_tesla||120000);
-        set('lic_driver', p.lic_driver||2500); set('lic_ins', p.lic_insurance||1200); set('lic_taxi', p.lic_taxi||5000);
+    });
+    
+    // NEW: LISTEN TO BONUS LIST
+    db.ref('bonuses/list').on('value', s => {
+        const data = s.val() || {};
+        bonuses = Object.entries(data).map(([k,v]) => ({id:k, ...v}));
+        renderBonuses();
     });
 
-    // Читаем Ракету
-    db.ref('bonuses/active').on('value', s => { rockets = s.val() || []; renderRockets(); });
+    // --- ROCKET LOGIC ---
+    function createBonus() {
+        const title = document.getElementById('rk-title').value;
+        const target = parseInt(document.getElementById('rk-target').value);
+        const reward = parseFloat(document.getElementById('rk-reward').value);
+        const start = new Date(document.getElementById('rk-start').value).getTime();
+        const end = new Date(document.getElementById('rk-end').value).getTime();
+        const type = document.getElementById('rk-type').value;
+
+        if(!title || !target || !reward || !start || !end) {
+            alert("Заполните все поля!"); return;
+        }
+        if(end <= start) {
+            alert("Дата конца должна быть позже начала!"); return;
+        }
+
+        const newBonus = {
+            title, target, reward, startTime: start, endTime: end, type
+        };
+
+        db.ref('bonuses/list').push(newBonus).then(() => {
+            alert("Акция добавлена в расписание!");
+            // Очистка полей
+            document.getElementById('rk-title').value = '';
+        });
+    }
+
+    function deleteBonus(id) {
+        if(confirm("Удалить эту акцию?")) db.ref('bonuses/list/'+id).remove();
+    }
+
+    function renderBonuses() {
+        const c = document.getElementById('bonus-list');
+        c.innerHTML = '';
+        const now = Date.now();
+
+        // Сортировка по времени начала
+        bonuses.sort((a,b) => a.startTime - b.startTime);
+
+        bonuses.forEach(b => {
+            let status = '';
+            let badgeClass = '';
+            
+            if (now < b.startTime) {
+                status = '⏳ Скоро'; badgeClass = 'bg-future';
+            } else if (now >= b.startTime && now <= b.endTime) {
+                status = '🔥 Активна'; badgeClass = 'bg-active';
+            } else {
+                status = '🏁 Завершена'; badgeClass = 'bg-ended';
+            }
+
+            const startStr = new Date(b.startTime).toLocaleString();
+            const endStr = new Date(b.endTime).toLocaleString();
+
+            c.innerHTML += `
+            <div class="bonus-item">
+                <div style="flex:1">
+                    <div style="font-weight:bold; font-size:14px">${b.title} <span class="bonus-badge ${badgeClass}">${status}</span></div>
+                    <div style="font-size:11px; color:#666">Цель: ${b.target} (${b.type==='orders'?'Заказов':'Денег'}) | Награда: ${b.reward} PLN</div>
+                    <div style="font-size:10px; color:#888; margin-top:2px">С: ${startStr} <br>По: ${endStr}</div>
+                </div>
+                <button onclick="deleteBonus('${b.id}')" style="background:none; border:none; color:red; font-weight:bold; cursor:pointer; font-size:16px">✕</button>
+            </div>`;
+        });
+        
+        if(bonuses.length === 0) c.innerHTML = '<div style="text-align:center; color:#999; padding:20px">Нет запланированных акций</div>';
+    }
+
+    // --- PLAYERS & TABS ---
+    function tab(id) {
+        document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.target.classList.add('active');
+    }
 
     function renderPlayers() {
-        const c = document.getElementById('p-list'); c.innerHTML = '';
-        const search = document.getElementById('p-search').value.toLowerCase();
+        const list = document.getElementById('p-list');
+        const term = document.getElementById('search').value.toLowerCase();
+        list.innerHTML = '';
         
-        Object.entries(players).forEach(([id, p]) => {
-            if((p.name||'').toLowerCase().includes(search) || id.includes(search)) {
-                const online = (Date.now() - (p.lastSeen||0) < 20000);
-                c.innerHTML += `<div class="p-item ${online?'online':''}" onclick="edit('${id}')">
-                    <div><b>${p.name||'Guest'}</b><br><small>${id}</small></div>
-                    <div style="text-align:right"><b>${(p.balance||0).toFixed(2)} PLN</b><br><small>${online?'ONLINE':'OFFLINE'}</small></div>
-                </div>`;
-            }
+        const arr = Object.entries(players).map(([k,v]) => ({id:k, ...v}));
+        const filtered = arr.filter(p => (p.name||'Guest').toLowerCase().includes(term));
+        
+        filtered.sort((a,b) => (b.balance||0) - (a.balance||0));
+
+        filtered.forEach(p => {
+            const online = (Date.now() - (p.lastSeen||0) < 15000);
+            list.innerHTML += `<div class="p-card ${online?'on':''}" onclick="edit('${p.id}')">
+                <div><b>${p.name||'Anon'}</b><br><small>${p.id}</small></div>
+                <div style="text-align:right"><b>${(p.balance||0).toFixed(2)}</b><br><small>${online?'ON':'OFF'}</small></div>
+            </div>`;
         });
     }
 
     function edit(id) {
         activeId = id; const p = players[id];
-        document.getElementById('modal').style.display = 'flex';
-        document.getElementById('pm-name').innerText = p.name;
-        document.getElementById('pm-bal').value = p.balance||0;
-        document.getElementById('pm-debt').value = p.debt||0;
-        const i = p.inventory || {};
-        document.getElementById('pm-i-w').value = i.water||0;
-        document.getElementById('pm-i-b').value = i.bar||0;
-        document.getElementById('pm-i-e').value = i.energy_drink||0;
-        document.getElementById('pm-i-c').value = i.coffee||0;
-        document.getElementById('pm-i-g').value = i.gas||0;
+        document.getElementById('modal').classList.add('open');
+        document.getElementById('m-name').innerText = p.name;
+        document.getElementById('m-bal').value = p.balance||0;
     }
-
+    function closeModal() { document.getElementById('modal').classList.remove('open'); activeId = null; }
     function saveUser() {
         if(!activeId) return;
-        db.ref('players/'+activeId).update({
-            balance: parseFloat(document.getElementById('pm-bal').value),
-            debt: parseFloat(document.getElementById('pm-debt').value),
-            'inventory/water': parseInt(document.getElementById('pm-i-w').value),
-            'inventory/bar': parseInt(document.getElementById('pm-i-b').value),
-            'inventory/energy_drink': parseInt(document.getElementById('pm-i-e').value),
-            'inventory/coffee': parseInt(document.getElementById('pm-i-c').value),
-            'inventory/gas': parseInt(document.getElementById('pm-i-g').value),
-        }).then(()=>alert('Сохранено!'));
+        db.ref('players/'+activeId).update({ balance: parseFloat(document.getElementById('m-bal').value) });
+        closeModal();
     }
-
     function giveTaxi() {
-        if(confirm('Выдать Tesla и все права бесплатно?')) {
-            db.ref('players/'+activeId+'/taxi').update({ unlocked:true, vehicle:'tesla', licenses:{driver:true, insurance:true, taxi:true} });
-            alert('Выдано!');
-        }
+        if(confirm('Дать такси?')) db.ref('players/'+activeId+'/taxi').update({ unlocked:true, vehicle:'tesla', licenses:{driver:true, insurance:true, taxi:true} });
     }
-
-    function saveAll() {
+    function banUser() {
+        if(activeId) db.ref('players/'+activeId).update({ isBanned: !players[activeId].isBanned });
+        closeModal();
+    }
+    
+    function saveConfig() {
         const get = (id) => parseFloat(document.getElementById(id).value);
-        const data = {
-            basePickupPay: get('basePickupPay'), perKmPay: get('perKmPay'), taxiMulti: get('taxiMulti'), payVariance: get('payVariance'),
-            bankLimitBase: get('bankLimitBase'), bankLimitMulti: get('bankLimitMulti'),
-            energyDrain: get('energyDrain'), waterDrain: get('waterDrain'), inflationRate: get('inflationRate')/100,
-            itemPrices: {
-                water: get('price_water'), bar: get('price_bar'), energy_drink: get('price_energy'), coffee: get('price_coffee'), gas: get('price_gas'),
-                repair_bike: get('price_rep_bike'), repair_bag: get('price_rep_bag'), repair_phone: get('price_rep_phone'), repair_gear: get('price_rep_gear'),
-                car_skoda: get('car_skoda'), car_toyota: get('car_toyota'), car_tesla: get('car_tesla'),
-                lic_driver: get('lic_driver'), lic_insurance: get('lic_ins'), lic_taxi: get('lic_taxi')
-            }
-        };
-        db.ref('config').update(data).then(()=>alert('ВСЕ ЦЕНЫ ОБНОВЛЕНЫ!'));
-    }
-
-    // Rocket Logic
-    function renderRockets() {
-        const c = document.getElementById('rocket-list'); c.innerHTML = '';
-        rockets.forEach((r, i) => {
-            c.innerHTML += `<div style="background:#eee; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; gap:5px">
-                <input class="rk-t" value="${r.title}" placeholder="Текст" style="flex:2">
-                <input class="rk-r" value="${r.reward}" placeholder="Награда" type="number">
-                <input class="rk-g" value="${r.target}" placeholder="Цель" type="number">
-                <input class="rk-m" value="${Math.floor((r.endTime-Date.now())/60000)}" placeholder="Мин" type="number">
-                <button onclick="rockets.splice(${i},1);renderRockets()" style="background:red; border:none; color:white; border-radius:5px">X</button>
-            </div>`;
-        });
-    }
-    function addRocket() { rockets.push({title:"Бонус", reward:100, target:10, endTime:Date.now()+3600000}); renderRockets(); }
-    function pushRocket() {
-        const data = [];
-        document.querySelectorAll('#rocket-list > div').forEach((row, i) => {
-            data.push({
-                id: i+1,
-                title: row.querySelector('.rk-t').value,
-                reward: parseFloat(row.querySelector('.rk-r').value),
-                target: parseInt(row.querySelector('.rk-g').value),
-                endTime: Date.now() + (parseInt(row.querySelector('.rk-m').value)*60000)
-            });
-        });
-        db.ref('bonuses/active').set(data).then(()=>alert('Ракета улетела!'));
-    }
-
-    function show(id) {
-        document.querySelectorAll('.panel').forEach(e=>e.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        event.target.classList.add('active');
+        db.ref('config').update({ basePickupPay: get('basePickupPay'), perKmPay: get('perKmPay'), taxiMulti: get('taxiMulti') });
+        alert('Сохранено');
     }
 </script>
 </body>
 </html>
+
