@@ -1,49 +1,49 @@
-// PATCH UI v3 — реальное изменение окон доставки (по структуре)
+// PATCH UI v4 — принудительное изменение окон доставки (MutationObserver)
 
 (function () {
 
-  window.addEventListener("load", () => {
+  function restyle(el) {
+    if (!el || !el.style) return;
 
-    const style = document.createElement("style");
-    style.innerHTML = `
+    // тёмная карточка
+    el.style.background = "#121212";
+    el.style.color = "#eaeaea";
+    el.style.borderRadius = "18px 18px 0 0";
+    el.style.boxShadow = "0 -12px 40px rgba(0,0,0,0.7)";
 
-      /* === НИЖНЕЕ ОКНО ДОСТАВКИ === */
-      div[style*="background: #fff"],
-      div[style*="background:#fff"],
-      div[style*="background: white"] {
-        background: #121212 !important;
-        color: #eaeaea !important;
-        border-radius: 18px 18px 0 0 !important;
-        box-shadow: 0 -12px 40px rgba(0,0,0,0.7) !important;
+    // текст внутри
+    el.querySelectorAll("*").forEach(child => {
+      if (child.style) {
+        child.style.color = "#eaeaea";
       }
+    });
 
-      /* ТЕКСТ В ОКНЕ */
-      div[style*="background"] p,
-      div[style*="background"] span {
-        color: #eaeaea !important;
-      }
+    // кнопки
+    el.querySelectorAll("button, div[role='button']").forEach(btn => {
+      btn.style.borderRadius = "14px";
+      btn.style.fontWeight = "600";
+    });
+  }
 
-      /* СУММА ЗАКАЗА */
-      span:has(text()),
-      .money,
-      .price {
-        color: #00ff9c !important;
-        font-weight: 600 !important;
-      }
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      m.addedNodes.forEach(node => {
+        if (!(node instanceof HTMLElement)) return;
 
-      /* ПРОГРЕСС БАР */
-      progress,
-      div[role="progressbar"] {
-        border-radius: 6px !important;
-        overflow: hidden !important;
-      }
+        // нижнее окно (fixed снизу)
+        const style = getComputedStyle(node);
+        if (style.position === "fixed" && style.bottom === "0px") {
+          restyle(node);
+        }
+      });
+    });
+  });
 
-      /* КНОПКА ПРИНЯТЬ ЗАКАЗ */
-      button,
-      div[role="button"] {
-        border-radius: 14px !important;
-        font-size: 16px !important;
-        font-weight: 600 !important;
-      }
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
 
-      /* СИНЯЯ
+  console.log("UI PATCH v4 активен (observer)");
+
+})();
