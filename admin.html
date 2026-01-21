@@ -3,213 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WARSAW GOD MODE</title>
+    <title>WARSAW GOD MODE v5.0</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        :root { --primary: #2563eb; --danger: #dc2626; --success: #16a34a; --bg: #f8fafc; --surface: #ffffff; --border: #e2e8f0; }
-        body { background: var(--bg); color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; font-size: 13px; }
+        /* БЕЛЫЙ ЧИСТЫЙ ДИЗАЙН */
+        :root { --bg: #f3f4f6; --card: #ffffff; --text: #1f2937; --blue: #2563eb; --green: #10b981; --red: #ef4444; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; font-size: 14px; }
         
-        /* HEADER */
-        .header { background: var(--surface); padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .logo { font-weight: 900; font-size: 16px; letter-spacing: -0.5px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
-        .status { font-size: 10px; font-weight: bold; color: var(--success); background: #dcfce7; padding: 4px 8px; border-radius: 12px; }
+        /* ШАПКА */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--card); padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .status-dot { height: 10px; width: 10px; background: #ccc; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-online { background: var(--green); box-shadow: 0 0 10px var(--green); }
 
-        /* NAV */
-        .nav { display: flex; background: var(--surface); padding: 5px 15px; overflow-x: auto; gap: 5px; border-bottom: 1px solid var(--border); }
-        .nav-btn { background: none; border: none; padding: 10px 15px; color: #64748b; font-weight: 600; cursor: pointer; border-radius: 6px; white-space: nowrap; transition: 0.2s; }
-        .nav-btn.active { background: #eff6ff; color: var(--primary); }
-        .nav-btn:hover { background: #f1f5f9; }
-
-        /* CONTENT */
-        .view { display: none; padding: 15px; max-width: 800px; margin: 0 auto; animation: fadeIn 0.2s; }
-        .view.active { display: block; }
+        /* ТАБЫ (ВКЛАДКИ) */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn { background: var(--card); border: 1px solid #e5e7eb; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; color: #6b7280; flex: 1; min-width: 100px; text-align: center; transition: 0.2s; }
+        .tab-btn.active { background: var(--blue); color: white; border-color: var(--blue); box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3); }
+        
+        .panel { display: none; }
+        .panel.active { display: block; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* CARDS & TABLES */
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .card-header { font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        /* КАРТОЧКИ НАСТРОЕК */
+        .section { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; }
+        .section h3 { margin: 0 0 15px 0; font-size: 16px; border-bottom: 2px solid #f3f4f6; padding-bottom: 10px; color: var(--blue); text-transform: uppercase; letter-spacing: 1px; }
         
-        .data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-        .input-group { margin-bottom: 10px; }
-        .input-label { display: block; font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 600; }
-        input, select { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: #fff; box-sizing: border-box; transition: 0.2s; }
-        input:focus { border-color: var(--primary); outline: none; }
+        /* ПОЛЯ ВВОДА */
+        .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #f0f0f0; }
+        .label-box { flex: 1; }
+        .lbl-title { font-weight: 600; display: block; }
+        .lbl-desc { font-size: 11px; color: #9ca3af; display: block; margin-top: 2px; }
+        
+        input[type="number"], input[type="text"] { 
+            width: 100px; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; 
+            text-align: center; font-weight: bold; font-size: 14px; background: #f9fafb;
+        }
+        input:focus { outline: 2px solid var(--blue); border-color: transparent; background: white; }
 
-        /* PLAYER LIST */
-        .player-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.1s; }
-        .player-row:hover { background: #f8fafc; }
-        .p-avatar { width: 32px; height: 32px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #64748b; margin-right: 10px; }
-        .p-info { flex: 1; }
-        .p-name { font-weight: 600; color: #0f172a; }
-        .p-meta { font-size: 11px; color: #64748b; }
-        .p-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-left: 5px; }
-        .badge-online { background: #dcfce7; color: var(--success); }
-        .badge-ban { background: #fee2e2; color: var(--danger); }
-
-        /* BUTTONS */
-        .btn { width: 100%; padding: 10px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 8px; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-danger { background: #fee2e2; color: var(--danger); }
-        .btn-ghost { background: transparent; border: 1px solid var(--border); color: #475569; }
+        /* СПИСОК ИГРОКОВ */
+        .player-row { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #ccc; cursor: pointer; transition: transform 0.1s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .player-row:hover { transform: scale(1.01); background: #f8fafc; }
+        .player-row.online { border-left-color: var(--green); }
+        .player-row.banned { border-left-color: var(--red); opacity: 0.7; }
         
-        /* MODAL */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .modal-window { background: white; width: 95%; max-width: 500px; max-height: 90vh; border-radius: 16px; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-        .modal-content { padding: 20px; }
+        /* МОДАЛЬНОЕ ОКНО (РЕДАКТОР ИГРОКА) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal-box { background: white; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; border-radius: 16px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); }
         
-        /* BONUS EDITOR */
-        .bonus-item { background: #f1f5f9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border); }
+        /* КНОПКИ */
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+        .btn-save { background: var(--green); width: 100%; margin-top: 10px; font-size: 16px; padding: 15px; }
+        .btn-save:hover { background: #059669; }
+        .btn-ban { background: var(--red); }
+        
+        /* РАКЕТА */
+        .rocket-list { display: flex; flex-direction: column; gap: 10px; }
+        .rocket-item { background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="logo"><i class="fa-solid fa-user-secret"></i> WARSAW ADMIN <span style="font-size:10px; color:#94a3b8; font-weight:400">v4.0</span></div>
-        <div id="connection-status" class="status">OFFLINE</div>
-    </div>
-
-    <div class="nav">
-        <button class="nav-btn active" onclick="switchTab('tab-players')"><i class="fa-solid fa-users"></i> Игроки</button>
-        <button class="nav-btn" onclick="switchTab('tab-economy')"><i class="fa-solid fa-coins"></i> Экономика</button>
-        <button class="nav-btn" onclick="switchTab('tab-rocket')"><i class="fa-solid fa-rocket"></i> Ракета (Бонусы)</button>
-        <button class="nav-btn" onclick="switchTab('tab-system')"><i class="fa-solid fa-gear"></i> Система</button>
-    </div>
-
-    <div id="tab-players" class="view active">
-        <input type="text" id="player-search" placeholder="🔍 Поиск по имени или ID..." onkeyup="filterPlayers()" style="padding:12px; margin-bottom:15px; border-color:var(--primary)">
-        <div class="card" style="padding:0" id="players-list">
-            </div>
-    </div>
-
-    <div id="tab-economy" class="view">
-        <div class="card">
-            <div class="card-header">🏦 Министерство (Глобально) <button class="btn-ghost" style="width:auto; padding:4px 10px" onclick="saveConfig()">Сохранить</button></div>
-            <div class="data-grid">
-                <div><span class="input-label">Базовая оплата (PLN)</span><input type="number" id="cfg-basePickupPay"></div>
-                <div><span class="input-label">Оплата за КМ (PLN)</span><input type="number" id="cfg-perKmPay"></div>
-                <div><span class="input-label">Инфляция за уровень (%)</span><input type="number" id="cfg-inflationRate"></div>
-            </div>
+        <div>
+            <h2 style="margin:0; color:#111827"><i class="fa-solid fa-user-secret"></i> ПАНЕЛЬ БОГА</h2>
+            <small style="color:#6b7280">Warsaw Courier Control System</small>
         </div>
-
-        <div class="card">
-            <div class="card-header">💳 Банковская Система</div>
-            <div class="data-grid">
-                <div><span class="input-label">Базовый Кредит (PLN)</span><input type="number" id="cfg-bankLimitBase" placeholder="1000"></div>
-                <div><span class="input-label">Множитель Доверия (за заказ)</span><input type="number" id="cfg-bankLimitMulti" placeholder="50"></div>
-            </div>
-            <p style="font-size:11px; color:#666; margin-top:10px">Формула: База + (ВсегоЗаказов * Множитель)</p>
-        </div>
-
-        <div class="card">
-            <div class="card-header">🚖 Такси & Лицензии</div>
-            <div class="data-grid">
-                <div><span class="input-label">Лицензия (Цена)</span><input type="number" id="cfg-licPrice"></div>
-                <div><span class="input-label">Тариф Такси (Множитель)</span><input type="number" id="cfg-taxiMulti"></div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">🛒 Цены Товаров (Магазин)</div>
-            <div class="data-grid" id="items-price-list">
-                </div>
+        <div>
+            <span id="conn-status"><span class="status-dot"></span>Connecting...</span>
         </div>
     </div>
 
-    <div id="tab-rocket" class="view">
-        <div class="card">
-            <div class="card-header">🚀 Активные Цели (Ракета) <button class="btn-primary" style="width:auto" onclick="saveBonuses()">Отправить Ракету</button></div>
-            <div id="bonus-editor-container">
-                </div>
-            <button class="btn-ghost" onclick="addBonusSlot()" style="margin-top:10px">+ Добавить слот</button>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-players')">👥 Игроки</button>
+        <button class="tab-btn" onclick="switchTab('tab-economy')">💸 Тарифы</button>
+        <button class="tab-btn" onclick="switchTab('tab-items')">🎒 Магазин</button>
+        <button class="tab-btn" onclick="switchTab('tab-rocket')">🚀 Ракета</button>
+        <button class="tab-btn" onclick="switchTab('tab-system')">⚙️ Система</button>
+    </div>
+
+    <div id="tab-players" class="panel active">
+        <input type="text" id="search-player" placeholder="🔍 Найти жертву (имя или ID)..." onkeyup="renderPlayers()" style="width:100%; padding:15px; box-sizing:border-box; border-radius:8px; border:1px solid #ccc; margin-bottom:15px; font-size:16px;">
+        <div id="players-container">
+            <div style="text-align:center; padding:20px; color:#999">Загрузка списка игроков...</div>
         </div>
     </div>
 
-    <div id="tab-system" class="view">
-        <div class="card">
-            <div class="card-header">📝 Лог Операций</div>
-            <div id="system-logs" style="font-family:monospace; font-size:11px; max-height:300px; overflow-y:auto; background:#1e293b; color:#cbd5e1; padding:10px; border-radius:6px">
-                Загрузка логов...
+    <div id="tab-economy" class="panel">
+        <div class="section">
+            <h3>🚖 Доставка & Такси</h3>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Базовая подача</span><span class="lbl-desc">Сколько платим за старт заказа (PLN)</span></div>
+                <input type="number" id="cfg-basePickupPay" step="0.5">
+            </div>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Оплата за КМ</span><span class="lbl-desc">Цена за 1 километр пути</span></div>
+                <input type="number" id="cfg-perKmPay" step="0.1">
+            </div>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Множитель ТАКСИ</span><span class="lbl-desc">Во сколько раз такси выгоднее курьера (например 4.0 = в 4 раза)</span></div>
+                <input type="number" id="cfg-taxiMulti" step="0.1">
             </div>
         </div>
-        <div class="card" style="border-color:var(--danger)">
-            <div class="card-header" style="color:var(--danger)">⛔ Опасная Зона</div>
-            <button class="btn-danger" onclick="globalWipe()">☢️ ПОЛНЫЙ ВАЙП (ОБНУЛЕНИЕ)</button>
+
+        <div class="section">
+            <h3>💳 Банк & Инфляция</h3>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Кредит Доверия (База)</span><span class="lbl-desc">Сколько дают новичку (PLN)</span></div>
+                <input type="number" id="cfg-bankLimitBase">
+            </div>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Множитель Доверия</span><span class="lbl-desc">Сколько добавлять к лимиту за каждый выполненный заказ</span></div>
+                <input type="number" id="cfg-bankLimitMulti">
+            </div>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Инфляция (%)</span><span class="lbl-desc">На сколько % дорожает магазин за каждый уровень ремонта</span></div>
+                <input type="number" id="cfg-inflationRate" step="1">
+            </div>
+        </div>
+
+        <button class="btn btn-save" onclick="saveGlobalConfig()">💾 ПРИМЕНИТЬ КО ВСЕМ ИГРОКАМ</button>
+    </div>
+
+    <div id="tab-items" class="panel">
+        <div class="section">
+            <h3>🎒 Расходники (Цена в PLN)</h3>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Вода</span><span class="lbl-desc">Восстанавливает воду</span></div>
+                <input type="number" id="price-water">
+            </div>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Сникерс (Bar)</span><span class="lbl-desc">Еда + Настроение</span></div>
+                <input type="number" id="price-bar">
+            </div>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Энергетик (RedBull)</span><span class="lbl-desc">Остановка усталости</span></div>
+                <input type="number" id="price-energy_drink">
+            </div>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Кофе</span><span class="lbl-desc">Для настроения</span></div>
+                <input type="number" id="price-coffee">
+            </div>
+            <div class="control-row">
+                <div class="label-box"><span class="lbl-title">Бензин (Gas)</span><span class="lbl-desc">Только для такси</span></div>
+                <input type="number" id="price-gas">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🛠 Ремонт (Базовая цена)</h3>
+            <div class="control-row"><div class="label-box"><span class="lbl-title">Велосипед / Авто</span></div><input type="number" id="price-repair-bike"></div>
+            <div class="control-row"><div class="label-box"><span class="lbl-title">Сумка / Салон</span></div><input type="number" id="price-repair-bag"></div>
+            <div class="control-row"><div class="label-box"><span class="lbl-title">Телефон</span></div><input type="number" id="price-repair-phone"></div>
+            <div class="control-row"><div class="label-box"><span class="lbl-title">Одежда / Шины</span></div><input type="number" id="price-repair-gear"></div>
+        </div>
+
+        <div class="section">
+            <h3>📄 Лицензии (Стоимость)</h3>
+            <div class="control-row"><div class="label-box"><span class="lbl-title">Права (Driver)</span></div><input type="number" id="price-lic-driver"></div>
+            <div class="control-row"><div class="label-box"><span class="lbl-title">Страховка (Insurance)</span></div><input type="number" id="price-lic-insurance"></div>
+            <div class="control-row"><div class="label-box"><span class="lbl-title">Лицензия Такси</span></div><input type="number" id="price-lic-taxi"></div>
+        </div>
+
+        <button class="btn btn-save" onclick="saveGlobalConfig()">💾 ОБНОВИТЬ ЦЕННИКИ</button>
+    </div>
+
+    <div id="tab-rocket" class="panel">
+        <div class="section">
+            <h3>Управление Бонусами</h3>
+            <p style="font-size:12px; color:#666">Здесь создаются цели для игроков. Изменения мгновенны.</p>
+            
+            <div id="rocket-editor"></div>
+            
+            <button class="btn" style="background:#4b5563; margin-top:10px;" onclick="addBonusSlot()">+ Добавить цель</button>
+        </div>
+        <button class="btn btn-save" onclick="pushRocket()">🚀 ЗАПУСТИТЬ РАКЕТУ (ОТПРАВИТЬ)</button>
+    </div>
+
+    <div id="tab-system" class="panel">
+        <div class="section" style="border-color:red">
+            <h3 style="color:red">Опасная Зона</h3>
+            <p>Удалить всех игроков и сбросить базу данных.</p>
+            <button class="btn btn-ban" onclick="wipeAll()">☢️ ПОЛНЫЙ ВАЙП (RESET)</button>
+        </div>
+        <div class="section">
+            <h3>Логи (Последние 20)</h3>
+            <div id="logs-container" style="font-family:monospace; font-size:11px; color:#555"></div>
         </div>
     </div>
 
     <div id="player-modal" class="modal-overlay">
-        <div class="modal-window">
-            <div style="padding:15px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc">
-                <div>
-                    <div style="font-weight:900; font-size:18px" id="pm-name">Player</div>
-                    <div style="font-size:11px; color:#64748b" id="pm-id">ID</div>
-                </div>
-                <button onclick="closeModal()" style="background:none; border:none; font-size:20px; cursor:pointer">✕</button>
+        <div class="modal-box">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h2 style="margin:0" id="pm-title">Редактор Игрока</h2>
+                <button onclick="closeModal()" style="border:none; background:none; font-size:20px; cursor:pointer">✕</button>
             </div>
-            
-            <div class="modal-content">
-                <div style="display:flex; gap:10px; margin-bottom:20px">
-                    <button class="btn btn-primary" onclick="pmSave()">💾 Сохранить</button>
-                    <button class="btn btn-danger" onclick="pmBan()" id="pm-ban-btn">🚫 BAN</button>
-                    <button class="btn btn-ghost" onclick="pmReset()">♻️ Сброс</button>
-                </div>
 
-                <div class="input-group">
-                    <label class="input-label">💰 Баланс / 🏦 Долг</label>
-                    <div style="display:flex; gap:10px">
-                        <input type="number" id="pm-balance" placeholder="Баланс">
-                        <input type="number" id="pm-debt" placeholder="Долг">
-                    </div>
+            <div class="section">
+                <h3>💰 Кошелек</h3>
+                <div class="control-row">
+                    <span>Баланс (PLN)</span>
+                    <input type="number" id="pm-balance">
                 </div>
-
-                <div class="input-group">
-                    <label class="input-label">⚡ Энергия / 💧 Вода / 😎 Настроение</label>
-                    <div style="display:flex; gap:5px">
-                        <input type="number" id="pm-energy" placeholder="Eng">
-                        <input type="number" id="pm-water" placeholder="H2O">
-                        <input type="number" id="pm-mood" placeholder="Mood">
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label">📦 Всего заказов / 🔧 Уровень Инфляции (Ремонт)</label>
-                    <div style="display:flex; gap:10px">
-                        <input type="number" id="pm-orders">
-                        <input type="number" id="pm-repairs">
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label class="input-label">🎒 Инвентарь (Корзина)</label>
-                    <div class="data-grid">
-                        <input type="number" id="pm-inv-water" placeholder="Вода">
-                        <input type="number" id="pm-inv-bar" placeholder="Сникерс">
-                        <input type="number" id="pm-inv-energy" placeholder="RedBull">
-                        <input type="number" id="pm-inv-coffee" placeholder="Кофе">
-                        <input type="number" id="pm-inv-gas" placeholder="Бензин">
-                    </div>
-                </div>
-
-                <div style="margin-top:15px; padding:10px; background:#f0f9ff; border-radius:8px; border:1px solid #bae6fd">
-                    <label class="input-label" style="color:#0284c7">🚖 ТАКСИ УПРАВЛЕНИЕ</label>
-                    <div style="display:flex; gap:10px; align-items:center; margin-top:5px">
-                        <select id="pm-taxi-car">
-                            <option value="">Нет машины</option>
-                            <option value="skoda">Skoda</option>
-                            <option value="toyota">Toyota</option>
-                            <option value="tesla">Tesla</option>
-                        </select>
-                        <button class="btn-ghost" onclick="pmUnlockTaxi()" style="width:auto; white-space:nowrap">Открыть доступ</button>
-                    </div>
+                <div class="control-row">
+                    <span>Долг Банку</span>
+                    <input type="number" id="pm-debt">
                 </div>
             </div>
+
+            <div class="section">
+                <h3>🎒 Инвентарь (Штук)</h3>
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px">
+                    <div><small>Вода</small><input type="number" id="pm-inv-water" style="width:100%"></div>
+                    <div><small>Сникерс</small><input type="number" id="pm-inv-bar" style="width:100%"></div>
+                    <div><small>RedBull</small><input type="number" id="pm-inv-energy" style="width:100%"></div>
+                    <div><small>Бензин</small><input type="number" id="pm-inv-gas" style="width:100%"></div>
+                    <div><small>Кофе</small><input type="number" id="pm-inv-coffee" style="width:100%"></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>⚡ Состояние</h3>
+                <div class="control-row"><span>Энергия (0-100)</span><input type="number" id="pm-energy"></div>
+                <div class="control-row"><span>Вода (0-100)</span><input type="number" id="pm-water"></div>
+                <div class="control-row"><span>Настроение (0-100)</span><input type="number" id="pm-mood"></div>
+            </div>
+
+            <div class="section">
+                <h3>🚔 Администрация</h3>
+                <div style="display:flex; gap:10px">
+                    <button class="btn btn-ban" onclick="pmBanToggle()" id="pm-ban-btn">ЗАБАНИТЬ</button>
+                    <button class="btn" style="background:#f59e0b; color:black; flex:1" onclick="pmGiveFullTaxi()">🚕 ПОДАРИТЬ ТАКСИ (ВСЁ ВКЛ)</button>
+                </div>
+            </div>
+
+            <button class="btn btn-save" onclick="pmSave()">💾 СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
         </div>
     </div>
 
     <script>
-        // CONFIG
+        // --- 1. ПОДКЛЮЧЕНИЕ ---
         const firebaseConfig = {
             apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
             authDomain: "warszawa-courier.firebaseapp.com",
@@ -221,133 +256,233 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        
-        let playersData = {};
+
+        let allPlayers = {};
         let activePlayerId = null;
 
-        // --- INIT LISTENERS ---
+        // Индикатор связи
         db.ref('.info/connected').on('value', s => {
-            const el = document.getElementById('connection-status');
-            el.innerText = s.val() ? "ONLINE" : "DISCONNECTED";
-            el.style.background = s.val() ? "#dcfce7" : "#fee2e2";
-            el.style.color = s.val() ? "#16a34a" : "#dc2626";
-        });
-
-        // 1. PLAYERS SYNC
-        db.ref('players').on('value', snap => {
-            playersData = snap.val() || {};
-            renderPlayerList();
-        });
-
-        // 2. CONFIG SYNC
-        db.ref('config').on('value', snap => {
-            const cfg = snap.val() || {};
-            fillInput('cfg-basePickupPay', cfg.basePickupPay);
-            fillInput('cfg-perKmPay', cfg.perKmPay);
-            fillInput('cfg-inflationRate', (cfg.inflationRate || 0.1) * 100);
-            
-            // Bank
-            fillInput('cfg-bankLimitBase', cfg.bankLimitBase || 1000);
-            fillInput('cfg-bankLimitMulti', cfg.bankLimitMulti || 50);
-
-            // Taxi
-            fillInput('cfg-licPrice', 5000); // Placeholder if not in config
-            fillInput('cfg-taxiMulti', 4.0);
-
-            // Items
-            const items = cfg.itemPrices || { water: 2, bar: 4.5, energy_drink: 7 };
-            const container = document.getElementById('items-price-list');
-            container.innerHTML = '';
-            for(let [key, val] of Object.entries(items)) {
-                container.innerHTML += `<div><span class="input-label">${key}</span><input type="number" class="item-price-inp" data-key="${key}" value="${val}"></div>`;
+            const el = document.getElementById('conn-status');
+            if(s.val()) {
+                el.innerHTML = '<span class="status-dot status-online"></span>ONLINE (SYNCED)';
+                el.style.color = 'green';
+            } else {
+                el.innerHTML = '<span class="status-dot"></span>OFFLINE';
+                el.style.color = 'red';
             }
         });
 
-        // 3. BONUSES SYNC
-        db.ref('bonuses').on('value', snap => {
-            const bonuses = snap.val() || { active: [] };
-            renderBonusEditor(bonuses.active || []);
+        // --- 2. ЗАГРУЗКА ИГРОКОВ ---
+        db.ref('players').on('value', snap => {
+            allPlayers = snap.val() || {};
+            renderPlayers();
         });
 
-        // 4. LOGS
-        db.ref('logs').limitToLast(50).on('value', snap => {
-            const logs = snap.val();
-            const el = document.getElementById('system-logs');
-            if(!logs) { el.innerHTML = 'Нет логов'; return; }
-            el.innerHTML = Object.values(logs).reverse().map(l => 
-                `<div><span style="color:#64748b">[${new Date(l.timestamp).toLocaleTimeString()}]</span> <strong style="color:#e2e8f0">${l.playerName}</strong>: ${l.message}</div>`
-            ).join('');
-        });
-
-        // --- UI FUNCTIONS ---
-        function switchTab(id) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        function renderPlayerList() {
-            const term = document.getElementById('player-search').value.toLowerCase();
-            const list = document.getElementById('players-list');
+        function renderPlayers() {
+            const list = document.getElementById('players-container');
+            const search = document.getElementById('search-player').value.toLowerCase();
             list.innerHTML = '';
+
+            const arr = Object.entries(allPlayers).map(([id, p]) => ({id, ...p}));
             
-            Object.entries(playersData).forEach(([id, p]) => {
-                if(p.name && (p.name.toLowerCase().includes(term) || id.includes(term))) {
-                    const isOnline = (Date.now() - (p.lastSeen||0) < 15000);
-                    list.innerHTML += `
-                        <div class="player-row" onclick="openPlayer('${id}')">
-                            <div class="p-avatar">${p.name.charAt(0).toUpperCase()}</div>
-                            <div class="p-info">
-                                <div class="p-name">${p.name} 
-                                    ${isOnline ? '<span class="p-badge badge-online">ONLINE</span>' : ''}
-                                    ${p.isBanned ? '<span class="p-badge badge-ban">BANNED</span>' : ''}
-                                </div>
-                                <div class="p-meta">ID: ${id} • Баланс: ${(p.balance||0).toFixed(2)} PLN</div>
-                            </div>
-                            <div style="font-weight:bold; color:#64748b">✏️</div>
-                        </div>
-                    `;
-                }
+            // Фильтр
+            const filtered = arr.filter(p => {
+                const name = (p.name || "Guest").toLowerCase();
+                return name.includes(search) || p.id.includes(search);
+            });
+
+            if(filtered.length === 0) {
+                list.innerHTML = '<div style="padding:20px; text-align:center">Никого не найдено...</div>';
+                return;
+            }
+
+            // Сортировка: Онлайн выше, потом богатые
+            filtered.sort((a,b) => {
+                const aOn = (Date.now() - (a.lastSeen || 0) < 20000);
+                const bOn = (Date.now() - (b.lastSeen || 0) < 20000);
+                if(aOn && !bOn) return -1;
+                if(!aOn && bOn) return 1;
+                return (b.balance || 0) - (a.balance || 0);
+            });
+
+            filtered.forEach(p => {
+                const isOnline = (Date.now() - (p.lastSeen || 0) < 20000);
+                const role = p.taxi && p.taxi.active ? '🚕 TAXI' : '🚲 COURIER';
+                
+                let html = `
+                <div class="player-row ${isOnline?'online':''} ${p.isBanned?'banned':''}" onclick="openPlayer('${p.id}')">
+                    <div>
+                        <div style="font-weight:bold; font-size:16px">${p.name || 'Аноним'} ${p.isBanned ? '<span style="color:red">[BAN]</span>' : ''}</div>
+                        <div style="font-size:11px; color:#666">ID: ${p.id} • ${role}</div>
+                        <div style="margin-top:5px; font-weight:bold; color:var(--blue)">${(p.balance||0).toFixed(2)} PLN</div>
+                    </div>
+                    <div style="text-align:right; font-size:12px">
+                        <div>${isOnline ? '<span style="color:green">● В сети</span>' : '<span style="color:#999">○ Офлайн</span>'}</div>
+                        <div style="color:#666">Заказов: ${p.career?.totalOrders || 0}</div>
+                    </div>
+                </div>`;
+                list.innerHTML += html;
             });
         }
 
-        function filterPlayers() { renderPlayerList(); }
+        // --- 3. ЗАГРУЗКА НАСТРОЕК (ЦЕНЫ) ---
+        db.ref('config').on('value', snap => {
+            const cfg = snap.val() || {};
+            // Экономика
+            setInput('cfg-basePickupPay', cfg.basePickupPay || 4.0);
+            setInput('cfg-perKmPay', cfg.perKmPay || 1.5);
+            setInput('cfg-taxiMulti', cfg.taxiMulti || 4.0); // Новое для такси
+            setInput('cfg-bankLimitBase', cfg.bankLimitBase || 1000);
+            setInput('cfg-bankLimitMulti', cfg.bankLimitMulti || 50);
+            setInput('cfg-inflationRate', (cfg.inflationRate || 0.1) * 100);
 
+            // Цены
+            const prices = cfg.itemPrices || {};
+            setInput('price-water', prices.water || 2);
+            setInput('price-bar', prices.bar || 4.5);
+            setInput('price-energy_drink', prices.energy_drink || 7);
+            setInput('price-coffee', prices.coffee || 9);
+            setInput('price-gas', prices.gas || 12);
+            
+            // Ремонт и Лицензии
+            setInput('price-repair-bike', prices.repair_bike || 5);
+            setInput('price-repair-bag', prices.repair_bag || 2);
+            setInput('price-repair-phone', prices.repair_phone || 1);
+            setInput('price-repair-gear', prices.repair_gear || 3);
+            
+            setInput('price-lic-driver', prices.lic_driver || 2500);
+            setInput('price-lic-insurance', prices.lic_insurance || 1200);
+            setInput('price-lic-taxi', prices.lic_taxi || 5000);
+        });
+
+        function setInput(id, val) {
+            const el = document.getElementById(id);
+            if(el && document.activeElement !== el) el.value = val;
+        }
+
+        // --- 4. РАКЕТА (БОНУСЫ) ---
+        let currentBonuses = [];
+        db.ref('bonuses/active').on('value', snap => {
+            currentBonuses = snap.val() || [];
+            renderRocketEditor();
+        });
+
+        function renderRocketEditor() {
+            const container = document.getElementById('rocket-editor');
+            container.innerHTML = '';
+            currentBonuses.forEach((b, idx) => {
+                container.innerHTML += `
+                <div class="rocket-item">
+                    <div style="flex:1; display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap:10px;">
+                        <input type="text" value="${b.title}" class="rk-title" placeholder="Заголовок">
+                        <input type="number" value="${b.reward}" class="rk-reward" placeholder="Награда">
+                        <input type="number" value="${b.target}" class="rk-target" placeholder="Цель">
+                        <input type="number" value="${Math.floor((b.endTime - Date.now())/60000)}" class="rk-time" placeholder="Мин">
+                    </div>
+                    <button onclick="removeRocket(${idx})" style="margin-left:10px; color:red; border:none; background:none; font-weight:bold; cursor:pointer">X</button>
+                </div>`;
+            });
+        }
+
+        function addBonusSlot() {
+            currentBonuses.push({ title: "Срочный заказ!", reward: 100, target: 5, endTime: Date.now() + 3600000 });
+            renderRocketEditor(); // Локальный рендер, сохраним кнопкой
+        }
+        
+        function removeRocket(idx) {
+            currentBonuses.splice(idx, 1);
+            renderRocketEditor();
+        }
+
+        function pushRocket() {
+            // Собираем данные из инпутов
+            const items = document.querySelectorAll('.rocket-item');
+            const newData = [];
+            items.forEach((el, i) => {
+                const title = el.querySelector('.rk-title').value;
+                const reward = parseFloat(el.querySelector('.rk-reward').value);
+                const target = parseInt(el.querySelector('.rk-target').value);
+                const mins = parseInt(el.querySelector('.rk-time').value);
+                
+                newData.push({
+                    id: i+1,
+                    title: title,
+                    reward: reward,
+                    target: target,
+                    endTime: Date.now() + (mins * 60 * 1000)
+                });
+            });
+            
+            db.ref('bonuses/active').set(newData)
+                .then(() => alert('🚀 РАКЕТА ОТПРАВЛЕНА! У игроков обновились цели.'));
+        }
+
+        // --- 5. ФУНКЦИИ СОХРАНЕНИЯ ---
+        function saveGlobalConfig() {
+            const updates = {
+                basePickupPay: parseFloat(document.getElementById('cfg-basePickupPay').value),
+                perKmPay: parseFloat(document.getElementById('cfg-perKmPay').value),
+                taxiMulti: parseFloat(document.getElementById('cfg-taxiMulti').value),
+                bankLimitBase: parseFloat(document.getElementById('cfg-bankLimitBase').value),
+                bankLimitMulti: parseFloat(document.getElementById('cfg-bankLimitMulti').value),
+                inflationRate: parseFloat(document.getElementById('cfg-inflationRate').value) / 100,
+                
+                itemPrices: {
+                    water: parseFloat(document.getElementById('price-water').value),
+                    bar: parseFloat(document.getElementById('price-bar').value),
+                    energy_drink: parseFloat(document.getElementById('price-energy_drink').value),
+                    coffee: parseFloat(document.getElementById('price-coffee').value),
+                    gas: parseFloat(document.getElementById('price-gas').value),
+                    
+                    repair_bike: parseFloat(document.getElementById('price-repair-bike').value),
+                    repair_bag: parseFloat(document.getElementById('price-repair-bag').value),
+                    repair_phone: parseFloat(document.getElementById('price-repair-phone').value),
+                    repair_gear: parseFloat(document.getElementById('price-repair-gear').value),
+                    
+                    lic_driver: parseFloat(document.getElementById('price-lic-driver').value),
+                    lic_insurance: parseFloat(document.getElementById('price-lic-insurance').value),
+                    lic_taxi: parseFloat(document.getElementById('price-lic-taxi').value),
+                }
+            };
+            
+            db.ref('config').update(updates)
+                .then(() => alert('✅ ЦЕНЫ И ТАРИФЫ ОБНОВЛЕНЫ МГНОВЕННО!'));
+        }
+
+        // --- 6. УПРАВЛЕНИЕ ИГРОКОМ ---
         function openPlayer(id) {
             activePlayerId = id;
-            const p = playersData[id];
+            const p = allPlayers[id];
             if(!p) return;
 
             document.getElementById('player-modal').style.display = 'flex';
-            document.getElementById('pm-name').innerText = p.name;
-            document.getElementById('pm-id').innerText = id;
-
-            fillInput('pm-balance', p.balance);
-            fillInput('pm-debt', p.debt);
+            document.getElementById('pm-title').innerText = p.name;
             
-            const s = p.needs || {energy:100, water:100, mood:100};
-            fillInput('pm-energy', s.energy);
-            fillInput('pm-water', s.water);
-            fillInput('pm-mood', s.mood);
-
-            fillInput('pm-orders', (p.career?.totalOrders || 0));
-            // Calculate repairs level sum
-            const repairs = p.repairs || {};
-            const totalRepairs = Object.values(repairs).reduce((a,b)=>a+b,0);
-            fillInput('pm-repairs', totalRepairs);
-
+            // Финансы
+            document.getElementById('pm-balance').value = p.balance || 0;
+            document.getElementById('pm-debt').value = p.debt || 0;
+            
+            // Инвентарь
             const inv = p.inventory || {};
-            fillInput('pm-inv-water', inv.water);
-            fillInput('pm-inv-bar', inv.bar);
-            fillInput('pm-inv-energy', inv.energy_drink);
-            fillInput('pm-inv-coffee', inv.coffee);
-            fillInput('pm-inv-gas', inv.gas);
-
-            document.getElementById('pm-taxi-car').value = p.taxi?.vehicle || "";
+            document.getElementById('pm-inv-water').value = inv.water || 0;
+            document.getElementById('pm-inv-bar').value = inv.bar || 0;
+            document.getElementById('pm-inv-energy').value = inv.energy_drink || 0;
+            document.getElementById('pm-inv-gas').value = inv.gas || 0;
+            document.getElementById('pm-inv-coffee').value = inv.coffee || 0;
             
-            const btnBan = document.getElementById('pm-ban-btn');
-            btnBan.innerText = p.isBanned ? "РАЗБАНИТЬ" : "🚫 BAN";
+            // Статы
+            const stats = p.needs || { energy:100, water:100, mood:100 };
+            document.getElementById('pm-energy').value = Math.floor(stats.energy);
+            document.getElementById('pm-water').value = Math.floor(stats.water);
+            document.getElementById('pm-mood').value = Math.floor(stats.mood);
+            
+            // Кнопка бана
+            const btn = document.getElementById('pm-ban-btn');
+            if(p.isBanned) {
+                btn.innerText = "РАЗБАНИТЬ"; btn.style.background = "green";
+            } else {
+                btn.innerText = "ЗАБАНИТЬ"; btn.style.background = "red";
+            }
         }
 
         function closeModal() {
@@ -355,144 +490,73 @@
             activePlayerId = null;
         }
 
-        // --- ACTIONS ---
         function pmSave() {
             if(!activePlayerId) return;
             const updates = {
                 balance: parseFloat(document.getElementById('pm-balance').value),
                 debt: parseFloat(document.getElementById('pm-debt').value),
-                'needs/energy': parseInt(document.getElementById('pm-energy').value),
-                'needs/water': parseInt(document.getElementById('pm-water').value),
-                'needs/mood': parseInt(document.getElementById('pm-mood').value),
                 'inventory/water': parseInt(document.getElementById('pm-inv-water').value),
                 'inventory/bar': parseInt(document.getElementById('pm-inv-bar').value),
                 'inventory/energy_drink': parseInt(document.getElementById('pm-inv-energy').value),
-                'inventory/coffee': parseInt(document.getElementById('pm-inv-coffee').value),
                 'inventory/gas': parseInt(document.getElementById('pm-inv-gas').value),
-                'taxi/vehicle': document.getElementById('pm-taxi-car').value,
-                'career/totalOrders': parseInt(document.getElementById('pm-orders').value)
+                'inventory/coffee': parseInt(document.getElementById('pm-inv-coffee').value),
+                'needs/energy': parseInt(document.getElementById('pm-energy').value),
+                'needs/water': parseInt(document.getElementById('pm-water').value),
+                'needs/mood': parseInt(document.getElementById('pm-mood').value)
             };
-            
-            // Hacky repair update: if user changed total repairs, just dump into bike for now
-            // Or ideally, we shouldn't touch repairs structure unless we list all parts.
-            // Leaving repairs alone for simplicity unless requested.
-            
-            db.ref('players/' + activePlayerId).update(updates).then(() => alert('Сохранено!'));
+            db.ref('players/' + activePlayerId).update(updates)
+                .then(() => { closeModal(); alert('Игрок обновлен!'); });
         }
 
-        function pmBan() {
+        function pmBanToggle() {
             if(!activePlayerId) return;
-            const isBanned = playersData[activePlayerId].isBanned;
+            const isBanned = allPlayers[activePlayerId].isBanned || false;
             db.ref('players/' + activePlayerId).update({ isBanned: !isBanned });
             closeModal();
         }
-
-        function pmReset() {
+        
+        // --- 7. КНОПКА "ПОДАРИТЬ ТАКСИ" ---
+        function pmGiveFullTaxi() {
             if(!activePlayerId) return;
-            if(confirm('Обнулить игрока БЕСПЛАТНО?')) {
-                db.ref('players/' + activePlayerId + '/adminInbox').push({ type: 'FULL_RESET', charge: 0 });
-                alert('Команда на сброс отправлена.');
+            if(confirm("Выдать игроку ПОЛНЫЙ пакет такси бесплатно?\n(Откроет доступ, даст машину Tesla и все лицензии)")) {
+                db.ref('players/' + activePlayerId + '/taxi').update({ 
+                    unlocked: true,
+                    active: false, // пусть сам включит
+                    vehicle: 'tesla',
+                    licenses: {
+                        driver: true,
+                        insurance: true,
+                        taxi: true
+                    }
+                });
+                alert('✅ Такси-пакет выдан!');
                 closeModal();
             }
         }
-        
-        function pmUnlockTaxi() {
-             if(!activePlayerId) return;
-             db.ref('players/' + activePlayerId + '/taxi').update({ unlocked: true });
-             alert('Такси разблокировано для игрока.');
-        }
 
-        function saveConfig() {
-            const itemPrices = {};
-            document.querySelectorAll('.item-price-inp').forEach(i => {
-                itemPrices[i.getAttribute('data-key')] = parseFloat(i.value);
-            });
-
-            const updates = {
-                basePickupPay: parseFloat(document.getElementById('cfg-basePickupPay').value),
-                perKmPay: parseFloat(document.getElementById('cfg-perKmPay').value),
-                inflationRate: parseFloat(document.getElementById('cfg-inflationRate').value) / 100,
-                bankLimitBase: parseFloat(document.getElementById('cfg-bankLimitBase').value),
-                bankLimitMulti: parseFloat(document.getElementById('cfg-bankLimitMulti').value),
-                itemPrices: itemPrices
-            };
-            db.ref('config').update(updates).then(() => alert('Экономика обновлена!'));
-        }
-
-        // --- BONUS (ROCKET) SYSTEM ---
-        function renderBonusEditor(bonuses) {
-            const container = document.getElementById('bonus-editor-container');
-            container.innerHTML = '';
-            bonuses.forEach((b, idx) => {
-                container.innerHTML += `
-                <div class="bonus-item">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:5px">
-                        <strong>Слот #${idx+1}</strong>
-                        <button class="btn-ghost" style="width:auto; color:red; padding:2px" onclick="removeBonus(${idx})">✕</button>
-                    </div>
-                    <div class="data-grid">
-                        <input type="text" class="b-title" value="${b.title}" placeholder="Заголовок">
-                        <input type="number" class="b-reward" value="${b.reward}" placeholder="Награда (PLN)">
-                        <input type="number" class="b-target" value="${b.target}" placeholder="Цель (заказы)">
-                        <input type="number" class="b-minutes" value="${b.minutes || 60}" placeholder="Время (мин)">
-                    </div>
-                </div>`;
-            });
-        }
-
-        function addBonusSlot() {
-            const bonuses = getCurrentBonuses();
-            bonuses.push({ title: "Новая Цель", reward: 100, target: 10, minutes: 60 });
-            renderBonusEditor(bonuses);
-        }
-
-        function removeBonus(idx) {
-            const bonuses = getCurrentBonuses();
-            bonuses.splice(idx, 1);
-            renderBonusEditor(bonuses);
-        }
-
-        function getCurrentBonuses() {
-            const items = document.querySelectorAll('.bonus-item');
-            const res = [];
-            items.forEach(el => {
-                res.push({
-                    title: el.querySelector('.b-title').value,
-                    reward: parseFloat(el.querySelector('.b-reward').value),
-                    target: parseInt(el.querySelector('.b-target').value),
-                    minutes: parseInt(el.querySelector('.b-minutes').value)
-                });
-            });
-            return res;
-        }
-
-        function saveBonuses() {
-            const raw = getCurrentBonuses();
-            const now = Date.now();
-            // Convert simple minutes input to actual timestamps for the game
-            const readyBonuses = raw.map((b, i) => ({
-                id: i+1,
-                title: b.title,
-                reward: b.reward,
-                target: b.target,
-                endTime: now + (b.minutes * 60 * 1000)
-            }));
-            
-            db.ref('bonuses/active').set(readyBonuses).then(() => alert('🚀 Ракета обновлена! Игроки видят новые цели.'));
-        }
-
-        function globalWipe() {
-            if(confirm("ТЫ УВЕРЕН?! Это удалит ВСЕХ игроков и их прогресс. Это необратимо.")) {
-                if(confirm("ТОЧНО???")) {
-                    db.ref('players').remove().then(() => alert('Мир уничтожен.'));
-                }
+        function wipeAll() {
+            if(confirm("ТЫ ТОЧНО ХОЧЕШЬ УДАЛИТЬ ВСЕХ? ЭТО НЕЛЬЗЯ ОТМЕНИТЬ.")) {
+                db.ref('players').remove();
+                alert('Мир очищен.');
             }
         }
 
-        function fillInput(id, val) {
-            const el = document.getElementById(id);
-            if(el) el.value = (val !== undefined) ? val : "";
+        function switchTab(id) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
         }
+        
+        // Логи
+        db.ref('logs').limitToLast(20).on('value', snap => {
+            const c = document.getElementById('logs-container');
+            const d = snap.val();
+            if(!d) return;
+            c.innerHTML = Object.values(d).reverse().map(l => `<div>[${new Date(l.timestamp).toLocaleTimeString()}] <b>${l.playerName}</b>: ${l.message}</div>`).join('');
+        });
+
     </script>
 </body>
 </html>
+
