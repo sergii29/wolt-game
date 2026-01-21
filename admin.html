@@ -3,100 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GOD MODE v7.0: ROCKET PLANNER</title>
+    <title>GOD MODE v8.0</title>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding: 15px; font-size: 13px; color: #1c1e21; }
+        body { background: #f4f6f8; font-family: 'Segoe UI', sans-serif; padding: 15px; font-size: 13px; color: #333; }
+        .header { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .status { font-weight: bold; color: #ccc; font-size: 11px; } .status.on { color: #00c853; }
         
-        /* HEADER & TABS */
-        .header { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .status { font-weight: bold; color: #ccc; } .status.on { color: #00c853; }
-        .nav { display: flex; gap: 5px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
-        .nav-btn { flex: 1; padding: 10px; background: white; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-weight: bold; min-width: 90px; }
-        .nav-btn.active { background: #1877f2; color: white; border-color: #1877f2; }
-        .view { display: none; } .view.active { display: block; }
+        /* TABS */
+        .nav { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .nav-btn { flex: 1; padding: 12px; background: white; border: 1px solid #dfe6e9; border-radius: 8px; cursor: pointer; font-weight: 700; color: #636e72; min-width: 100px; white-space: nowrap; transition: 0.2s; }
+        .nav-btn.active { background: #0984e3; color: white; border-color: #0984e3; box-shadow: 0 4px 10px rgba(9, 132, 227, 0.3); }
+        .view { display: none; animation: fadeIn 0.3s; } .view.active { display: block; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 
         /* CARDS */
-        .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; }
-        .card h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; color: #1877f2; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        input { width: 80px; padding: 6px; text-align: center; border: 1px solid #ccc; border-radius: 4px; }
+        .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #dfe6e9; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .card h3 { margin: 0 0 15px 0; font-size: 14px; text-transform: uppercase; color: #0984e3; border-bottom: 2px solid #f1f2f6; padding-bottom: 10px; }
         
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: bold; color: white; cursor: pointer; margin-top: 5px; }
-        .btn-green { background: #42b72a; } .btn-blue { background: #1877f2; } .btn-red { background: #fa3e3e; }
-
-        /* ROCKET PLANNER STYLES */
-        .rk-editor { background: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #90caf9; margin-bottom: 15px; }
-        .rk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-        .rk-full { width: 100%; box-sizing: border-box; text-align: left; }
-        .rk-label { font-size: 11px; color: #555; display: block; margin-bottom: 3px; font-weight: bold; }
+        /* ROCKET PLANNER */
+        .rk-form { display: grid; gap: 10px; }
+        .rk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .rk-label { font-size: 11px; font-weight: 700; color: #636e72; margin-bottom: 4px; display: block; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #b2bec3; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
+        input:focus { outline: 2px solid #0984e3; border-color: transparent; }
         
-        .bonus-item { background: white; border: 1px solid #eee; padding: 10px; border-radius: 6px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
-        .bonus-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: white; }
-        .bg-active { background: #00c853; } .bg-future { background: #ff9800; } .bg-ended { background: #9e9e9e; }
+        .bonus-list { margin-top: 15px; }
+        .bonus-item { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 5px solid #ccc; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .bonus-item.active { border-left-color: #00c853; }
+        .bonus-item.future { border-left-color: #ff9800; }
+        .bonus-item.ended { border-left-color: #b2bec3; opacity: 0.6; }
+        
+        .tag { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; color: white; margin-left: 5px; }
+        .tag.active { background: #00c853; } .tag.future { background: #ff9800; } .tag.ended { background: #b2bec3; }
 
-        /* OTHER STYLES (Simple) */
-        .p-card { background: white; padding: 10px; border-radius: 6px; margin-bottom: 5px; border-left: 4px solid #ccc; cursor: pointer; display: flex; justify-content: space-between; }
-        .p-card.on { border-left-color: #42b72a; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99; justify-content: center; align-items: center; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; margin-top: 10px; font-size: 14px; }
+        .btn-blue { background: #0984e3; } .btn-green { background: #00b894; } .btn-red { background: #d63031; }
+        
+        /* PLAYER LIST */
+        .p-item { background: white; padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border: 1px solid #dfe6e9; }
+        .p-item:hover { border-color: #0984e3; }
+        .p-on { color: #00b894; font-weight: bold; font-size: 10px; }
+        .p-off { color: #b2bec3; font-size: 10px; }
+
+        /* MODAL */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; }
         .modal.open { display: flex; }
-        .modal-box { background: white; width: 90%; max-width: 400px; padding: 20px; border-radius: 10px; max-height: 90vh; overflow-y: auto; }
+        .modal-box { background: white; width: 90%; max-width: 400px; padding: 25px; border-radius: 16px; max-height: 90vh; overflow-y: auto; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2 style="margin:0">GOD MODE <small>v7.0</small></h2>
-    <div id="status" class="status">OFFLINE</div>
+    <h2 style="margin:0">🚀 COMMAND CENTER <span style="font-size:12px; color:#aaa">v8.0</span></h2>
+    <div id="status" class="status">DISCONNECTED</div>
 </div>
 
 <div class="nav">
-    <button class="nav-btn active" onclick="tab('rocket')">🚀 Ракета</button>
+    <button class="nav-btn active" onclick="tab('rocket')">📢 Акции (Ракета)</button>
     <button class="nav-btn" onclick="tab('players')">👥 Игроки</button>
     <button class="nav-btn" onclick="tab('tariffs')">💸 Тарифы</button>
-    <button class="nav-btn" onclick="tab('system')">⚙️ Система</button>
 </div>
 
 <div id="rocket" class="view active">
-    
     <div class="card">
-        <h3>🛠 Создать Акцию</h3>
-        <div class="rk-editor">
-            <div style="margin-bottom:10px">
-                <span class="rk-label">Название акции (Заголовок)</span>
-                <input type="text" id="rk-title" class="rk-full" placeholder='Например: "Вечерний жор"'>
-            </div>
+        <h3>📝 Создать Новую Акцию</h3>
+        <div class="rk-form">
+            <div><span class="rk-label">Заголовок (Что увидят игроки?)</span><input id="rk-title" placeholder="Пример: Утренняя Зарядка"></div>
             
-            <div class="rk-grid">
-                <div>
-                    <span class="rk-label">Тип цели</span>
-                    <select id="rk-type" class="rk-full" style="padding:6px; border-radius:4px; border:1px solid #ccc">
-                        <option value="orders">Сделать заказов</option>
-                        <option value="money">Заработать денег</option>
-                    </select>
-                </div>
-                <div>
-                    <span class="rk-label">Количество (Цель)</span>
-                    <input type="number" id="rk-target" class="rk-full" placeholder="10">
-                </div>
+            <div class="rk-row">
+                <div><span class="rk-label">Цель (Заказы)</span><input type="number" id="rk-target" placeholder="10"></div>
+                <div><span class="rk-label">Награда (PLN)</span><input type="number" id="rk-reward" placeholder="150"></div>
             </div>
 
-            <div style="margin-bottom:10px">
-                <span class="rk-label">Награда (PLN)</span>
-                <input type="number" id="rk-reward" class="rk-full" placeholder="500">
-            </div>
-
-            <div class="rk-grid">
-                <div>
-                    <span class="rk-label">Начало (Дата и Время)</span>
-                    <input type="datetime-local" id="rk-start" class="rk-full">
-                </div>
-                <div>
-                    <span class="rk-label">Конец (Дата и Время)</span>
-                    <input type="datetime-local" id="rk-end" class="rk-full">
-                </div>
+            <div class="rk-row">
+                <div><span class="rk-label">Старт (Дата/Время)</span><input type="datetime-local" id="rk-start"></div>
+                <div><span class="rk-label">Финиш (Дата/Время)</span><input type="datetime-local" id="rk-end"></div>
             </div>
             
             <button class="btn btn-blue" onclick="createBonus()">ДОБАВИТЬ В РАСПИСАНИЕ</button>
@@ -104,46 +88,44 @@
     </div>
 
     <div class="card">
-        <h3>📅 Расписание Бонусов</h3>
-        <div id="bonus-list">Загрузка...</div>
+        <h3>📅 Текущее Расписание</h3>
+        <p style="color:#666; font-size:12px">Здесь список всех акций. Игроки видят их автоматически.</p>
+        <div id="bonus-list" class="bonus-list">Загрузка...</div>
+        <button class="btn btn-red" onclick="if(confirm('Удалить ВСЕ акции?')) db.ref('bonuses/list').remove()">ОЧИСТИТЬ ВСЁ</button>
     </div>
 </div>
 
 <div id="players" class="view">
-    <input type="text" id="search" placeholder="🔍 Поиск..." onkeyup="renderPlayers()" style="width:100%; padding:10px; box-sizing:border-box; margin-bottom:10px">
+    <input type="text" id="p-search" placeholder="🔍 Поиск..." onkeyup="renderPlayers()" style="width:100%; padding:12px; box-sizing:border-box; margin-bottom:15px; border-radius:8px; border:1px solid #ccc">
     <div id="p-list">Loading...</div>
 </div>
 
 <div id="tariffs" class="view">
     <div class="card">
         <h3>Экономика</h3>
-        <div class="row"><label>Базовая подача</label><input type="number" id="basePickupPay"></div>
-        <div class="row"><label>Оплата за КМ</label><input type="number" id="perKmPay"></div>
-        <div class="row"><label>Множитель ТАКСИ</label><input type="number" id="taxiMulti"></div>
-    </div>
-    <button class="btn btn-green" onclick="saveConfig()">СОХРАНИТЬ</button>
-</div>
-
-<div id="system" class="view">
-    <div class="card">
-        <h3>Сброс</h3>
-        <button class="btn btn-red" onclick="if(confirm('Удалить все бонусы?')) db.ref('bonuses/list').remove()">ОЧИСТИТЬ РАСПИСАНИЕ АКЦИЙ</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
+            <div><span class="rk-label">Подача (PLN)</span><input type="number" id="basePay"></div>
+            <div><span class="rk-label">КМ (PLN)</span><input type="number" id="kmPay"></div>
+            <div><span class="rk-label">Такси (x)</span><input type="number" id="taxiMulti"></div>
+            <div><span class="rk-label">Кредит (База)</span><input type="number" id="bankBase"></div>
+        </div>
+        <button class="btn btn-green" onclick="saveConfig()">ПРИМЕНИТЬ НАСТРОЙКИ</button>
     </div>
 </div>
 
 <div id="modal" class="modal">
     <div class="modal-box">
-        <h2 id="m-name">Игрок</h2>
-        <div class="card">
-            <h3>Баланс</h3>
-            <input type="number" id="m-bal" style="width:100%">
+        <h2 id="m-name" style="margin-top:0">Игрок</h2>
+        <div style="margin-bottom:15px">
+            <span class="rk-label">Баланс</span>
+            <input type="number" id="m-bal">
         </div>
-        <div style="display:flex; gap:5px">
+        <div style="display:flex; gap:10px">
             <button class="btn" style="background:#ffc107; color:black" onclick="giveTaxi()">🎁 ДАТЬ ТАКСИ</button>
             <button class="btn btn-red" onclick="banUser()">БАН</button>
         </div>
         <button class="btn btn-green" onclick="saveUser()">СОХРАНИТЬ</button>
-        <button class="btn" style="background:#ccc; color:#333" onclick="closeModal()">ЗАКРЫТЬ</button>
+        <button class="btn" style="background:#b2bec3; color:black" onclick="closeModal()">ЗАКРЫТЬ</button>
     </div>
 </div>
 
@@ -151,99 +133,73 @@
     const fb = { apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk", authDomain: "warszawa-courier.firebaseapp.com", databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app", projectId: "warszawa-courier", storageBucket: "warszawa-courier.firebasestorage.app", messagingSenderId: "295860613508", appId: "1:295860613508:web:86fe8364377d6875612dd1" };
     firebase.initializeApp(fb);
     const db = firebase.database();
-    
-    let players = {}, bonuses = [];
-    let activeId = null;
+    let players={}, bonuses=[], activeId=null;
 
     db.ref('.info/connected').on('value', s => {
         document.getElementById('status').innerText = s.val() ? 'ONLINE' : 'OFFLINE';
         document.getElementById('status').className = s.val() ? 'status on' : 'status';
     });
 
-    // LISTENERS
     db.ref('players').on('value', s => { players = s.val() || {}; renderPlayers(); });
-    db.ref('config').on('value', s => {
-        const c = s.val() || {};
-        const set = (id, v) => { if(document.getElementById(id)) document.getElementById(id).value = v; };
-        set('basePickupPay', c.basePickupPay||4); set('perKmPay', c.perKmPay||1.5); set('taxiMulti', c.taxiMulti||4);
-    });
     
-    // NEW: LISTEN TO BONUS LIST
+    // ROCKET LISTENER
     db.ref('bonuses/list').on('value', s => {
-        const data = s.val() || {};
-        bonuses = Object.entries(data).map(([k,v]) => ({id:k, ...v}));
+        const d = s.val() || {};
+        bonuses = Object.entries(d).map(([k,v]) => ({id:k, ...v}));
         renderBonuses();
     });
 
-    // --- ROCKET LOGIC ---
+    db.ref('config').on('value', s => {
+        const c = s.val() || {};
+        const set = (id, v) => { if(document.getElementById(id)) document.getElementById(id).value = v; };
+        set('basePay', c.basePickupPay||4); set('kmPay', c.perKmPay||1.5); 
+        set('taxiMulti', c.taxiMulti||4); set('bankBase', c.bankLimitBase||1000);
+    });
+
     function createBonus() {
         const title = document.getElementById('rk-title').value;
         const target = parseInt(document.getElementById('rk-target').value);
         const reward = parseFloat(document.getElementById('rk-reward').value);
-        const start = new Date(document.getElementById('rk-start').value).getTime();
-        const end = new Date(document.getElementById('rk-end').value).getTime();
-        const type = document.getElementById('rk-type').value;
+        const startVal = document.getElementById('rk-start').value;
+        const endVal = document.getElementById('rk-end').value;
 
-        if(!title || !target || !reward || !start || !end) {
-            alert("Заполните все поля!"); return;
-        }
-        if(end <= start) {
-            alert("Дата конца должна быть позже начала!"); return;
-        }
+        if(!title || !target || !reward || !startVal || !endVal) return alert('Заполните все поля!');
+        
+        const start = new Date(startVal).getTime();
+        const end = new Date(endVal).getTime();
 
-        const newBonus = {
-            title, target, reward, startTime: start, endTime: end, type
-        };
+        if(end <= start) return alert('Ошибка: Дата конца раньше начала!');
 
-        db.ref('bonuses/list').push(newBonus).then(() => {
-            alert("Акция добавлена в расписание!");
-            // Очистка полей
-            document.getElementById('rk-title').value = '';
-        });
-    }
-
-    function deleteBonus(id) {
-        if(confirm("Удалить эту акцию?")) db.ref('bonuses/list/'+id).remove();
+        db.ref('bonuses/list').push({ title, target, reward, startTime: start, endTime: end });
+        alert('Акция создана!');
     }
 
     function renderBonuses() {
-        const c = document.getElementById('bonus-list');
-        c.innerHTML = '';
+        const c = document.getElementById('bonus-list'); c.innerHTML = '';
         const now = Date.now();
-
-        // Сортировка по времени начала
         bonuses.sort((a,b) => a.startTime - b.startTime);
 
         bonuses.forEach(b => {
-            let status = '';
-            let badgeClass = '';
-            
-            if (now < b.startTime) {
-                status = '⏳ Скоро'; badgeClass = 'bg-future';
-            } else if (now >= b.startTime && now <= b.endTime) {
-                status = '🔥 Активна'; badgeClass = 'bg-active';
-            } else {
-                status = '🏁 Завершена'; badgeClass = 'bg-ended';
-            }
+            let cl = 'future', txt = 'СКОРО';
+            if(now >= b.startTime && now <= b.endTime) { cl = 'active'; txt = 'АКТИВНА'; }
+            if(now > b.endTime) { cl = 'ended'; txt = 'ЗАВЕРШЕНА'; }
 
-            const startStr = new Date(b.startTime).toLocaleString();
-            const endStr = new Date(b.endTime).toLocaleString();
+            const sDate = new Date(b.startTime).toLocaleString('ru-RU', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+            const eDate = new Date(b.endTime).toLocaleString('ru-RU', {hour:'2-digit', minute:'2-digit'});
 
             c.innerHTML += `
-            <div class="bonus-item">
-                <div style="flex:1">
-                    <div style="font-weight:bold; font-size:14px">${b.title} <span class="bonus-badge ${badgeClass}">${status}</span></div>
-                    <div style="font-size:11px; color:#666">Цель: ${b.target} (${b.type==='orders'?'Заказов':'Денег'}) | Награда: ${b.reward} PLN</div>
-                    <div style="font-size:10px; color:#888; margin-top:2px">С: ${startStr} <br>По: ${endStr}</div>
+            <div class="bonus-item ${cl}">
+                <div>
+                    <div style="font-weight:bold; font-size:14px">${b.title} <span class="tag ${cl}">${txt}</span></div>
+                    <div style="font-size:11px; color:#555; margin-top:2px">Цель: ${b.target} зак. | Награда: ${b.reward} PLN</div>
+                    <div style="font-size:10px; color:#888; margin-top:2px">${sDate} - ${eDate}</div>
                 </div>
-                <button onclick="deleteBonus('${b.id}')" style="background:none; border:none; color:red; font-weight:bold; cursor:pointer; font-size:16px">✕</button>
+                <button onclick="db.ref('bonuses/list/${b.id}').remove()" style="border:none; background:none; color:red; font-weight:bold; cursor:pointer">X</button>
             </div>`;
         });
-        
-        if(bonuses.length === 0) c.innerHTML = '<div style="text-align:center; color:#999; padding:20px">Нет запланированных акций</div>';
+        if(bonuses.length===0) c.innerHTML = '<div style="text-align:center; padding:10px">Нет акций</div>';
     }
 
-    // --- PLAYERS & TABS ---
     function tab(id) {
         document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active'));
@@ -252,47 +208,30 @@
     }
 
     function renderPlayers() {
-        const list = document.getElementById('p-list');
-        const term = document.getElementById('search').value.toLowerCase();
-        list.innerHTML = '';
-        
-        const arr = Object.entries(players).map(([k,v]) => ({id:k, ...v}));
-        const filtered = arr.filter(p => (p.name||'Guest').toLowerCase().includes(term));
-        
-        filtered.sort((a,b) => (b.balance||0) - (a.balance||0));
-
-        filtered.forEach(p => {
-            const online = (Date.now() - (p.lastSeen||0) < 15000);
-            list.innerHTML += `<div class="p-card ${online?'on':''}" onclick="edit('${p.id}')">
-                <div><b>${p.name||'Anon'}</b><br><small>${p.id}</small></div>
-                <div style="text-align:right"><b>${(p.balance||0).toFixed(2)}</b><br><small>${online?'ON':'OFF'}</small></div>
+        const c = document.getElementById('p-list'); c.innerHTML = '';
+        const s = document.getElementById('p-search').value.toLowerCase();
+        const arr = Object.entries(players).map(([k,v]) => ({id:k, ...v})).filter(p => (p.name||'').toLowerCase().includes(s));
+        arr.forEach(p => {
+            const on = (Date.now() - (p.lastSeen||0) < 15000);
+            c.innerHTML += `<div class="p-item" onclick="edit('${p.id}')">
+                <div><b>${p.name||'Guest'}</b><br><span class="${on?'p-on':'p-off'}">${on?'● ONLINE':'○ OFFLINE'}</span></div>
+                <div style="font-weight:bold">${(p.balance||0).toFixed(2)} PLN</div>
             </div>`;
         });
     }
 
     function edit(id) {
-        activeId = id; const p = players[id];
-        document.getElementById('modal').classList.add('open');
-        document.getElementById('m-name').innerText = p.name;
-        document.getElementById('m-bal').value = p.balance||0;
+        activeId=id; document.getElementById('modal').classList.add('open');
+        document.getElementById('m-name').innerText = players[id].name;
+        document.getElementById('m-bal').value = players[id].balance;
     }
-    function closeModal() { document.getElementById('modal').classList.remove('open'); activeId = null; }
-    function saveUser() {
-        if(!activeId) return;
-        db.ref('players/'+activeId).update({ balance: parseFloat(document.getElementById('m-bal').value) });
-        closeModal();
-    }
-    function giveTaxi() {
-        if(confirm('Дать такси?')) db.ref('players/'+activeId+'/taxi').update({ unlocked:true, vehicle:'tesla', licenses:{driver:true, insurance:true, taxi:true} });
-    }
-    function banUser() {
-        if(activeId) db.ref('players/'+activeId).update({ isBanned: !players[activeId].isBanned });
-        closeModal();
-    }
-    
+    function closeModal() { document.getElementById('modal').classList.remove('open'); activeId=null; }
+    function saveUser() { db.ref('players/'+activeId).update({balance:parseFloat(document.getElementById('m-bal').value)}); closeModal(); }
+    function giveTaxi() { if(confirm('Выдать такси?')) db.ref('players/'+activeId+'/taxi').update({unlocked:true, vehicle:'tesla', licenses:{driver:true, insurance:true, taxi:true}}); }
+    function banUser() { db.ref('players/'+activeId).update({isBanned: !players[activeId].isBanned}); closeModal(); }
     function saveConfig() {
-        const get = (id) => parseFloat(document.getElementById(id).value);
-        db.ref('config').update({ basePickupPay: get('basePickupPay'), perKmPay: get('perKmPay'), taxiMulti: get('taxiMulti') });
+        const get = i => parseFloat(document.getElementById(i).value);
+        db.ref('config').update({ basePickupPay: get('basePay'), perKmPay: get('kmPay'), taxiMulti: get('taxiMulti'), bankLimitBase: get('bankBase') });
         alert('Сохранено');
     }
 </script>
