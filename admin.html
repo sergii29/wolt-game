@@ -1,177 +1,289 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Админка • GOD MODE (Warsaw Courier)</title>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="database.js"></script>
-
-<style>
-body{background:#0b0e13;color:#e8ecf1;font-family:Arial;padding:12px}
-.section{background:#141922;border-radius:14px;padding:14px;margin-bottom:16px}
-h2{margin:0 0 10px}
-label{font-size:13px;color:#9aa4b2}
-input,select,button{width:100%;padding:10px;margin:6px 0;background:#0f1420;color:#fff;border-radius:10px;border:none}
-button{background:#2a7cff;font-weight:bold}
-.row{display:flex;gap:10px}
-.row>div{flex:1}
-.online{color:#3ddc84}
-.offline{color:#ff5c5c}
-pre{background:#0f1420;padding:10px;border-radius:10px;max-height:200px;overflow:auto}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WARSZAWA GOD PANEL</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #f3f4f6; font-family: sans-serif; padding: 20px; font-size: 13px; color: #111; }
+        .header { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; }
+        .tab { background: white; padding: 10px 20px; border-radius: 8px; cursor: pointer; border: 1px solid #ddd; font-weight: bold; white-space: nowrap; }
+        .tab.active { background: #2563eb; color: white; border-color: #2563eb; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        
+        .card { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card h3 { margin: 0 0 15px 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; color: #2563eb; font-size: 14px; text-transform: uppercase; }
+        
+        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+        .row label { font-weight: 600; color: #444; }
+        .row small { color: #888; display: block; font-size: 10px; }
+        
+        input { text-align: right; padding: 6px; border-radius: 5px; border: 1px solid #ccc; font-weight: bold; width: 100px; }
+        input:focus { border-color: #2563eb; outline: none; }
+        
+        .btn { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn:hover { background: #1d4ed8; }
+        .btn-red { background: #ef4444; }
+        
+        /* Players List */
+        .p-item { background: white; padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-left: 4px solid #ccc; }
+        .p-item.online { border-left-color: #10b981; }
+        .p-item:hover { transform: translateX(5px); transition: 0.2s; }
+        
+        /* Modal */
+        .modal-wrap { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; display: none; justify-content: center; align-items: center; }
+        .modal { background: white; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 20px; border-radius: 15px; }
+    </style>
 </head>
-
 <body>
 
-<!-- ИГРОКИ -->
-<div class="section">
-<h2>👤 Игроки</h2>
-<select id="playerSelect"></select>
-<div id="playerStatus"></div>
-
-<label>Баланс</label>
-<input id="pBalance" type="number">
-
-<label>Энергия</label>
-<input id="pEnergy" type="number">
-
-<label>Настроение</label>
-<input id="pMood" type="number">
-
-<button onclick="savePlayer()">Сохранить игрока</button>
+<div class="header">
+    <h2 style="margin:0">👑 GOD MODE <small style="font-size:12px; color:#888">v6.0</small></h2>
+    <div id="status" style="font-weight:bold; color:orange">CONNECTING...</div>
 </div>
 
-<!-- ИНВЕНТАРЬ -->
-<div class="section">
-<h2>🎒 Инвентарь игрока</h2>
-
-<select id="invItem"></select>
-<input id="invQty" type="number" placeholder="Количество">
-
-<button onclick="addItem()">➕ Добавить</button>
-<button onclick="removeItem()">➖ Убрать</button>
-
-<pre id="invView"></pre>
+<div class="tabs">
+    <div class="tab active" onclick="show('players')">👥 Игроки</div>
+    <div class="tab" onclick="show('eco')">💸 Экономика</div>
+    <div class="tab" onclick="show('shop')">🛒 Магазин</div>
+    <div class="tab" onclick="show('taxi')">🚖 Такси Цены</div>
+    <div class="tab" onclick="show('rocket')">🚀 Ракета</div>
 </div>
 
-<!-- ЭКОНОМИКА / CONFIG -->
-<div class="section">
-<h2>🌍 Экономика (реальная)</h2>
-
-<label>Базовая оплата доставки</label>
-<input id="basePickupPay" type="number" step="0.1">
-
-<label>Оплата за км</label>
-<input id="perKmPay" type="number" step="0.1">
-
-<label>Инфляционный коэффициент</label>
-<input id="inflationRate" type="number" step="0.01">
-
-<button onclick="saveConfig()">Сохранить экономику</button>
+<div id="players" class="panel active">
+    <input type="text" id="p-search" placeholder="🔍 Поиск..." onkeyup="renderPlayers()" style="width:100%; padding:12px; box-sizing:border-box; margin-bottom:15px">
+    <div id="p-list">Загрузка...</div>
 </div>
 
-<!-- ЦЕНЫ ТОВАРОВ -->
-<div class="section">
-<h2>🛒 Магазин (реальные цены)</h2>
+<div id="eco" class="panel">
+    <div class="card">
+        <h3>Доходы</h3>
+        <div class="row"><div><label>Базовая подача</label><small>За старт заказа</small></div><input type="number" id="basePickupPay"></div>
+        <div class="row"><div><label>Оплата за КМ</label><small>Множитель расстояния</small></div><input type="number" id="perKmPay"></div>
+        <div class="row"><div><label>Множитель ТАКСИ</label><small>Во сколько раз такси дороже</small></div><input type="number" id="taxiMulti"></div>
+        <div class="row"><div><label>Разброс цены (+/-)</label><small>Рандомность заработка</small></div><input type="number" id="payVariance"></div>
+    </div>
+    <div class="card">
+        <h3>Банк и Сложность</h3>
+        <div class="row"><div><label>Кредит (Старт)</label><small>Лимит для новичка</small></div><input type="number" id="bankLimitBase"></div>
+        <div class="row"><div><label>Доверие за заказ</label><small>Рост лимита</small></div><input type="number" id="bankLimitMulti"></div>
+        <div class="row"><div><label>Трата Энергии</label><small>За один клик</small></div><input type="number" id="energyDrain" step="0.01"></div>
+        <div class="row"><div><label>Трата Воды</label><small>За один клик</small></div><input type="number" id="waterDrain" step="0.01"></div>
+        <div class="row"><div><label>Инфляция (%)</label><small>Удорожание за поломку</small></div><input type="number" id="inflationRate"></div>
+    </div>
+    <button class="btn" onclick="saveAll()">СОХРАНИТЬ НАСТРОЙКИ</button>
+</div>
 
-<select id="itemKey"></select>
-<input id="itemPrice" type="number" step="0.1">
+<div id="shop" class="panel">
+    <div class="card">
+        <h3>Товары (Базовая цена)</h3>
+        <div class="row"><div><label>Вода</label></div><input type="number" id="price_water"></div>
+        <div class="row"><div><label>Сникерс (Bar)</label></div><input type="number" id="price_bar"></div>
+        <div class="row"><div><label>RedBull</label></div><input type="number" id="price_energy"></div>
+        <div class="row"><div><label>Кофе</label></div><input type="number" id="price_coffee"></div>
+        <div class="row"><div><label>Бензин</label></div><input type="number" id="price_gas"></div>
+    </div>
+    <div class="card">
+        <h3>Сервис (Базовая цена)</h3>
+        <div class="row"><div><label>Ремонт Велосипеда</label></div><input type="number" id="price_rep_bike"></div>
+        <div class="row"><div><label>Ремонт Сумки</label></div><input type="number" id="price_rep_bag"></div>
+        <div class="row"><div><label>Связь (Телефон)</label></div><input type="number" id="price_rep_phone"></div>
+        <div class="row"><div><label>Одежда / Шины</label></div><input type="number" id="price_rep_gear"></div>
+    </div>
+    <button class="btn" onclick="saveAll()">ОБНОВИТЬ ЦЕННИКИ</button>
+</div>
 
-<button onclick="saveItemPrice()">Сохранить цену</button>
+<div id="taxi" class="panel">
+    <div class="card">
+        <h3>Автомобили</h3>
+        <div class="row"><div><label>Skoda Fabia</label></div><input type="number" id="car_skoda"></div>
+        <div class="row"><div><label>Toyota Prius</label></div><input type="number" id="car_toyota"></div>
+        <div class="row"><div><label>Tesla Model 3</label></div><input type="number" id="car_tesla"></div>
+    </div>
+    <div class="card">
+        <h3>Документы</h3>
+        <div class="row"><div><label>Права (B)</label></div><input type="number" id="lic_driver"></div>
+        <div class="row"><div><label>Страховка</label></div><input type="number" id="lic_ins"></div>
+        <div class="row"><div><label>Лицензия</label></div><input type="number" id="lic_taxi"></div>
+    </div>
+    <button class="btn" onclick="saveAll()">СОХРАНИТЬ АВТОСАЛОН</button>
+</div>
+
+<div id="rocket" class="panel">
+    <div class="card">
+        <h3>Активные Цели</h3>
+        <div id="rocket-list"></div>
+        <button class="btn" style="background:#444; margin-top:10px" onclick="addRocket()">+ Добавить</button>
+    </div>
+    <button class="btn" onclick="pushRocket()">🚀 ЗАПУСТИТЬ РАКЕТУ</button>
+</div>
+
+<div class="modal-wrap" id="modal">
+    <div class="modal">
+        <h2 id="pm-name">Игрок</h2>
+        <div class="card">
+            <h3>Баланс</h3>
+            <div class="row"><label>Деньги</label><input type="number" id="pm-bal"></div>
+            <div class="row"><label>Долг</label><input type="number" id="pm-debt"></div>
+        </div>
+        <div class="card">
+            <h3>Инвентарь</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px">
+                <input type="number" id="pm-i-w" placeholder="Вода"><input type="number" id="pm-i-b" placeholder="Еда"><input type="number" id="pm-i-e" placeholder="RedBull">
+                <input type="number" id="pm-i-c" placeholder="Кофе"><input type="number" id="pm-i-g" placeholder="Бенз">
+            </div>
+        </div>
+        <div style="display:flex; gap:10px">
+            <button class="btn" style="background:#f59e0b; color:black" onclick="giveTaxi()">🎁 ДАТЬ ТАКСИ (FREE)</button>
+            <button class="btn btn-red" onclick="banUser()">BAN</button>
+        </div>
+        <button class="btn" onclick="saveUser()">СОХРАНИТЬ</button>
+        <button class="btn" style="background:#ccc; color:#000" onclick="document.getElementById('modal').style.display='none'">ЗАКРЫТЬ</button>
+    </div>
 </div>
 
 <script>
-let currentPlayer=null;
-let currentItem=null;
+    const fb = { apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk", authDomain: "warszawa-courier.firebaseapp.com", databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app", projectId: "warszawa-courier", storageBucket: "warszawa-courier.firebasestorage.app", messagingSenderId: "295860613508", appId: "1:295860613508:web:86fe8364377d6875612dd1" };
+    firebase.initializeApp(fb);
+    const db = firebase.database();
+    
+    let players = {}, activeId = null, rockets = [];
 
-/* === ИГРОКИ === */
-db.ref("players").on("value",s=>{
-  playerSelect.innerHTML="";
-  s.forEach(p=>{
-    const o=document.createElement("option");
-    o.value=p.key;o.textContent=p.key;
-    playerSelect.appendChild(o);
-  });
-  if(playerSelect.value) loadPlayer();
-});
-playerSelect.onchange=loadPlayer;
+    db.ref('.info/connected').on('value', s => document.getElementById('status').innerText = s.val() ? 'ONLINE' : 'OFFLINE');
 
-function loadPlayer(){
-  currentPlayer=playerSelect.value;
-  db.ref("players/"+currentPlayer).once("value").then(s=>{
-    const d=s.val()||{};
-    pBalance.value=d.balance||0;
-    pEnergy.value=d.stats?.energy ?? d.energy ?? 0;
-    pMood.value=d.stats?.mood ?? d.mood ?? 0;
-    playerStatus.innerHTML=d.online
-      ? "<span class='online'>онлайн</span>"
-      : "<span class='offline'>оффлайн</span>";
-    loadInventory();
-  });
-}
-function savePlayer(){
-  db.ref("players/"+currentPlayer).update({
-    balance:+pBalance.value,
-    "stats/energy":+pEnergy.value,
-    "stats/mood":+pMood.value
-  });
-}
+    // Читаем Игроков
+    db.ref('players').on('value', s => { players = s.val() || {}; renderPlayers(); });
 
-/* === ИНВЕНТАРЬ === */
-function loadInventory(){
-  db.ref("players/"+currentPlayer+"/inventory").on("value",s=>{
-    invView.textContent=JSON.stringify(s.val(),null,2);
-  });
-}
-function addItem(){
-  db.ref("players/"+currentPlayer+"/inventory/"+invItem.value)
-    .transaction(q=>(q||0)+(+invQty.value));
-}
-function removeItem(){
-  db.ref("players/"+currentPlayer+"/inventory/"+invItem.value)
-    .transaction(q=>Math.max(0,(q||0)-(+invQty.value)));
-}
+    // Читаем Конфиг
+    db.ref('config').on('value', s => {
+        const c = s.val() || {};
+        const set = (id, v) => { if(document.getElementById(id)) document.getElementById(id).value = v; };
+        
+        // Eco
+        set('basePickupPay', c.basePickupPay||4); set('perKmPay', c.perKmPay||1.5); set('taxiMulti', c.taxiMulti||4);
+        set('bankLimitBase', c.bankLimitBase||1000); set('bankLimitMulti', c.bankLimitMulti||50);
+        set('energyDrain', c.energyDrain||0.15); set('waterDrain', c.waterDrain||0.1); set('inflationRate', (c.inflationRate||0.1)*100);
+        set('payVariance', c.payVariance||2);
 
-/* === CONFIG === */
-db.ref("config").on("value",s=>{
-  const c=s.val()||{};
-  basePickupPay.value=c.basePickupPay ?? 4;
-  perKmPay.value=c.perKmPay ?? 1.5;
-  inflationRate.value=c.inflationRate ?? 0.1;
+        // Shop
+        const p = c.itemPrices || {};
+        set('price_water', p.water||2); set('price_bar', p.bar||4.5); set('price_energy', p.energy_drink||7);
+        set('price_coffee', p.coffee||9); set('price_gas', p.gas||12);
+        set('price_rep_bike', p.repair_bike||5); set('price_rep_bag', p.repair_bag||2);
+        set('price_rep_phone', p.repair_phone||1); set('price_rep_gear', p.repair_gear||3);
 
-  if(c.itemPrices){
-    itemKey.innerHTML="";
-    Object.keys(c.itemPrices).forEach(k=>{
-      const o=document.createElement("option");
-      o.value=k;o.textContent=k;
-      itemKey.appendChild(o);
+        // Cars & Lic
+        set('car_skoda', p.car_skoda||15000); set('car_toyota', p.car_toyota||45000); set('car_tesla', p.car_tesla||120000);
+        set('lic_driver', p.lic_driver||2500); set('lic_ins', p.lic_insurance||1200); set('lic_taxi', p.lic_taxi||5000);
     });
-    currentItem=itemKey.value;
-    itemPrice.value=c.itemPrices[currentItem];
-  }
-});
 
-itemKey.onchange=()=>{
-  currentItem=itemKey.value;
-  db.ref("config/itemPrices/"+currentItem).once("value")
-    .then(s=>itemPrice.value=s.val());
-};
+    // Читаем Ракету
+    db.ref('bonuses/active').on('value', s => { rockets = s.val() || []; renderRockets(); });
 
-function saveConfig(){
-  db.ref("config").update({
-    basePickupPay:+basePickupPay.value,
-    perKmPay:+perKmPay.value,
-    inflationRate:+inflationRate.value
-  });
-}
+    function renderPlayers() {
+        const c = document.getElementById('p-list'); c.innerHTML = '';
+        const search = document.getElementById('p-search').value.toLowerCase();
+        
+        Object.entries(players).forEach(([id, p]) => {
+            if((p.name||'').toLowerCase().includes(search) || id.includes(search)) {
+                const online = (Date.now() - (p.lastSeen||0) < 20000);
+                c.innerHTML += `<div class="p-item ${online?'online':''}" onclick="edit('${id}')">
+                    <div><b>${p.name||'Guest'}</b><br><small>${id}</small></div>
+                    <div style="text-align:right"><b>${(p.balance||0).toFixed(2)} PLN</b><br><small>${online?'ONLINE':'OFFLINE'}</small></div>
+                </div>`;
+            }
+        });
+    }
 
-function saveItemPrice(){
-  db.ref("config/itemPrices/"+currentItem).set(+itemPrice.value);
-}
+    function edit(id) {
+        activeId = id; const p = players[id];
+        document.getElementById('modal').style.display = 'flex';
+        document.getElementById('pm-name').innerText = p.name;
+        document.getElementById('pm-bal').value = p.balance||0;
+        document.getElementById('pm-debt').value = p.debt||0;
+        const i = p.inventory || {};
+        document.getElementById('pm-i-w').value = i.water||0;
+        document.getElementById('pm-i-b').value = i.bar||0;
+        document.getElementById('pm-i-e').value = i.energy_drink||0;
+        document.getElementById('pm-i-c').value = i.coffee||0;
+        document.getElementById('pm-i-g').value = i.gas||0;
+    }
+
+    function saveUser() {
+        if(!activeId) return;
+        db.ref('players/'+activeId).update({
+            balance: parseFloat(document.getElementById('pm-bal').value),
+            debt: parseFloat(document.getElementById('pm-debt').value),
+            'inventory/water': parseInt(document.getElementById('pm-i-w').value),
+            'inventory/bar': parseInt(document.getElementById('pm-i-b').value),
+            'inventory/energy_drink': parseInt(document.getElementById('pm-i-e').value),
+            'inventory/coffee': parseInt(document.getElementById('pm-i-c').value),
+            'inventory/gas': parseInt(document.getElementById('pm-i-g').value),
+        }).then(()=>alert('Сохранено!'));
+    }
+
+    function giveTaxi() {
+        if(confirm('Выдать Tesla и все права бесплатно?')) {
+            db.ref('players/'+activeId+'/taxi').update({ unlocked:true, vehicle:'tesla', licenses:{driver:true, insurance:true, taxi:true} });
+            alert('Выдано!');
+        }
+    }
+
+    function saveAll() {
+        const get = (id) => parseFloat(document.getElementById(id).value);
+        const data = {
+            basePickupPay: get('basePickupPay'), perKmPay: get('perKmPay'), taxiMulti: get('taxiMulti'), payVariance: get('payVariance'),
+            bankLimitBase: get('bankLimitBase'), bankLimitMulti: get('bankLimitMulti'),
+            energyDrain: get('energyDrain'), waterDrain: get('waterDrain'), inflationRate: get('inflationRate')/100,
+            itemPrices: {
+                water: get('price_water'), bar: get('price_bar'), energy_drink: get('price_energy'), coffee: get('price_coffee'), gas: get('price_gas'),
+                repair_bike: get('price_rep_bike'), repair_bag: get('price_rep_bag'), repair_phone: get('price_rep_phone'), repair_gear: get('price_rep_gear'),
+                car_skoda: get('car_skoda'), car_toyota: get('car_toyota'), car_tesla: get('car_tesla'),
+                lic_driver: get('lic_driver'), lic_insurance: get('lic_ins'), lic_taxi: get('lic_taxi')
+            }
+        };
+        db.ref('config').update(data).then(()=>alert('ВСЕ ЦЕНЫ ОБНОВЛЕНЫ!'));
+    }
+
+    // Rocket Logic
+    function renderRockets() {
+        const c = document.getElementById('rocket-list'); c.innerHTML = '';
+        rockets.forEach((r, i) => {
+            c.innerHTML += `<div style="background:#eee; padding:10px; margin-bottom:5px; border-radius:5px; display:flex; gap:5px">
+                <input class="rk-t" value="${r.title}" placeholder="Текст" style="flex:2">
+                <input class="rk-r" value="${r.reward}" placeholder="Награда" type="number">
+                <input class="rk-g" value="${r.target}" placeholder="Цель" type="number">
+                <input class="rk-m" value="${Math.floor((r.endTime-Date.now())/60000)}" placeholder="Мин" type="number">
+                <button onclick="rockets.splice(${i},1);renderRockets()" style="background:red; border:none; color:white; border-radius:5px">X</button>
+            </div>`;
+        });
+    }
+    function addRocket() { rockets.push({title:"Бонус", reward:100, target:10, endTime:Date.now()+3600000}); renderRockets(); }
+    function pushRocket() {
+        const data = [];
+        document.querySelectorAll('#rocket-list > div').forEach((row, i) => {
+            data.push({
+                id: i+1,
+                title: row.querySelector('.rk-t').value,
+                reward: parseFloat(row.querySelector('.rk-r').value),
+                target: parseInt(row.querySelector('.rk-g').value),
+                endTime: Date.now() + (parseInt(row.querySelector('.rk-m').value)*60000)
+            });
+        });
+        db.ref('bonuses/active').set(data).then(()=>alert('Ракета улетела!'));
+    }
+
+    function show(id) {
+        document.querySelectorAll('.panel').forEach(e=>e.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.target.classList.add('active');
+    }
 </script>
-
 </body>
 </html>
