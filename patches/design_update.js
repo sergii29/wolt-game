@@ -458,8 +458,7 @@
     window.wrapGov = function(l, c) { if(window.buyDeflation) window.buyDeflation(l, c); setTimeout(()=>window.renderCustomModal('gov'), 100); };
     window.wrapTaxi = function(id, p) { if(window.buyVehicle) window.buyVehicle(id, p); setTimeout(()=>window.renderCustomModal('taxi'), 100); };
 
-    if(navigator.geolocation) {
-        navigator.geolocation.watchPosition(pos => {
+
             const { latitude, longitude } = pos.coords;
             if(window.map) {
                 let found = false;
