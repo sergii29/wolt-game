@@ -1,44 +1,28 @@
 const firebaseConfig = {
-  apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
-  authDomain: "warszawa-courier.firebaseapp.com",
-  databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "warszawa-courier",
-  storageBucket: "warszawa-courier.firebasestorage.app",
-  messagingSenderId: "295860613508",
-  appId: "1:295860613508:web:86fe8364377d6875612dd1",
-  measurementId: "G-TGSCHBVLX2"
+    apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
+    authDomain: "warszawa-courier.firebaseapp.com",
+    databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "warszawa-courier",
+    storageBucket: "warszawa-courier.firebasestorage.app",
+    messagingSenderId: "295860613508",
+    appId: "1:295860613508:web:86fe8364377d6875612dd1",
+    measurementId: "G-TGSCHBVLX2"
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-window.db = db;
-console.log("Firebase initialized for Warsaw Courier");
+window.db = firebase.database();
 
-// Логика штрафа -1 PLN/сек (зафиксировано намертво)
-setInterval(() => {
-    // Проверяем наличие объекта gameState (или того, как у тебя названы переменные)
-    if (typeof gameState !== 'undefined') {
-        const stats = [
-            gameState.bike, gameState.bag, gameState.phone, 
-            gameState.clothes, gameState.energy, gameState.water, gameState.mood
-        ];
+// Изначальные данные игрока (добавлены все 7 параметров)
+window.gameState = JSON.parse(localStorage.getItem("WARSZAWA_FOREVER")) || {
+    balance: 100,
+    energy: 100,
+    water: 100,
+    bike: 100,
+    bag: 100,
+    phone: 100,
+    clothes: 100,
+    mood: 100,
+    isEnergyDrinkActive: false
+};
 
-        // Если хоть один параметр <= 0 — включаем штраф
-        const isPenalty = stats.some(val => val <= 0);
-
-        if (isPenalty) {
-            gameState.balance -= 1;
-            const pBox = document.getElementById('penalty-box');
-            if (pBox) pBox.style.display = 'block';
-        } else {
-            const pBox = document.getElementById('penalty-box');
-            if (pBox) pBox.style.display = 'none';
-        }
-        
-        // Обновляем отображение, если функция существует
-        if (typeof updateUI === 'function') updateUI();
-        
-        // Сохраняем прогресс под ключом WARSZAWA_FOREVER
-        localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(gameState));
-    }
-}, 1000);
+console.log("Database & Firebase Ready");
