@@ -579,49 +579,42 @@
 
 })();
 
-// Фиксация механики: Штраф за износ и отсутствие ресурсов
+// Фиксация механики: Штраф -1 PLN/сек
 setInterval(() => {
-    // Проверяем, существует ли объект игрока (в твоем коде это обычно gameState)
-    if (typeof gameState !== 'undefined') {
-        
-        // Список твоих 7 показателей
-        const checkList = [
-            gameState.bike,    // вел
-            gameState.bag,     // сумка
-            gameState.phone,   // связь
-            gameState.clothes, // одежда
-            gameState.energy,  // силы
-            gameState.water,   // вода
-            gameState.mood     // настроение
+    // Пытаемся найти объект данных (пробуем разные варианты имен из твоих файлов)
+    let data = window.gameState || window.stats || window.playerData;
+    
+    if (data) {
+        // Список показателей для проверки
+        const v = [
+            data.bike, data.bag, data.phone, data.clothes, 
+            data.energy, data.water, data.mood
         ];
 
-        // Проверка: если хоть один упал в 0 или минус
-        const isBroken = checkList.some(val => val <= 0);
+        // Проверяем, есть ли значение 0 или меньше
+        const isPenaltyActive = v.some(val => val !== undefined && val <= 0);
 
-        // Ищем плашку штрафа в интерфейсе
-        let penaltyLabel = document.getElementById('penalty-status');
+        let box = document.getElementById('penalty-status');
 
-        if (isBroken) {
-            // Снимаем 1 зл в секунду
-            gameState.balance -= 1;
+        if (isPenaltyActive) {
+            // Списываем 1 злотый
+            data.balance -= 1;
             
-            // Если плашки еще нет — создаем её под показателями
-            if (!penaltyLabel) {
-                penaltyLabel = document.createElement('div');
-                penaltyLabel.id = 'penalty-status';
-                penaltyLabel.style.cssText = "background:red; color:white; padding:10px; text-align:center; font-weight:bold; margin:10px; border-radius:8px;";
-                // Вставляем в начало блока app или под статы
-                document.getElementById('app').prepend(penaltyLabel);
+            // Создаем или показываем уведомление
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'penalty-status';
+                box.style.cssText = "position:fixed; top:0; left:0; width:100%; background:red; color:white; z-index:10000; text-align:center; padding:15px; font-weight:bold;";
+                document.body.prepend(box);
             }
-            penaltyLabel.innerHTML = "⚠️ ШТРАФ: -1 PLN/сек! <br> Срочно восстановите снаряжение!";
-            penaltyLabel.style.display = 'block';
+            box.innerHTML = "⚠️ ХАЛЯВА КОНЧИЛАСЬ! <br> Снаряжение на нуле. Штраф: -1 PLN/сек";
+            box.style.display = 'block';
         } else {
-            // Если всё починили — прячем штраф
-            if (penaltyLabel) penaltyLabel.style.display = 'none';
+            if (box) box.style.display = 'none';
         }
 
-        // Обновляем баланс на экране и сохраняем по ключу WARSZAWA_FOREVER
+        // Обновляем баланс на экране и в локальном хранилище
         if (typeof updateUI === 'function') updateUI();
-        localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(gameState));
+        localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(data));
     }
 }, 1000);
