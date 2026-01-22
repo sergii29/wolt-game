@@ -2,128 +2,35 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wolt Courier Simulator</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #00c2e8; color: white; text-align: center; margin: 0; padding: 20px; }
-        .card { background: white; color: #333; border-radius: 15px; padding: 15px; margin: 10px auto; max-width: 400px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .stats { display: flex; justify-content: space-around; font-weight: bold; }
-        button { background-color: #00c2e8; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-size: 16px; margin: 5px; }
-        button:disabled { background-color: #ccc; }
-        .bonus-desc { font-size: 12px; color: #666; margin-top: -5px; margin-bottom: 10px; }
-        .warning { color: #d9534f; font-size: 11px; font-weight: bold; }
+        body { background-color: #00c2e8; font-family: 'WoltHeading-Bold', sans-serif; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        .game-container { background: white; color: #333; border-radius: 20px; padding: 20px; width: 90%; max-width: 400px; margin-top: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .stats-row { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 18px; font-weight: bold; }
+        .btn-wolt { background-color: #00c2e8; color: white; border: none; padding: 12px; border-radius: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .energy-warning { color: #ff9900; font-size: 12px; text-align: center; margin-top: -5px; margin-bottom: 15px; display: block; }
     </style>
 </head>
 <body>
-
-    <div class="card">
-        <h2>Wolt Courier</h2>
-        <div class="stats">
-            <div>⚡ Энергия: <span id="energy-display">100</span>%</div>
-            <div>💧 Вода: <span id="water-display">100</span>%</div>
+    <div class="game-container">
+        <div class="stats-row">
+            <span>⚡ <span id="energy">100</span>%</span>
+            <span>💧 <span id="water">100</span>%</span>
         </div>
-        <h3>Баланс: <span id="balance-display">0.00</span> PLN</h3>
-    </div>
-
-    <div class="card">
-        <h3>Заказы и Бусты</h3>
-        <button id="work-btn" onclick="takeOrder()">🚀 Взять заказ (Ракета)</button>
-        <br>
-        <button id="energy-btn" onclick="useEnergyDrink()">⚡ Выпить Энергетик</button>
-        <p class="warning">* Энергетик временно останавливает расход энергии, но вода продолжает тратиться, даже во время действия буста.</p>
-    </div>
-
-    <div class="card">
-        <h3>Карьера</h3>
-        <button onclick="buyBonus('bike')">Велосипед (200 PLN)</button>
-        <p class="bonus-desc">Бонус: Ускоряет доставку и снижает шанс попасть в пробку.</p>
-
-        <button onclick="buyBonus('auto')">Авто-режим (1000 PLN)</button>
-        <p class="bonus-desc">Бонус: Заказы берутся сами, но вода и энергия тратятся автоматически.</p>
+        <h2 style="text-align:center; margin: 0 0 20px 0;">Баланс: <span id="balance">0.00</span> PLN</h2>
+        
+        <button class="btn-wolt" onclick="takeOrder()">🚀 Взять заказ</button>
+        
+        <button class="btn-wolt" style="background-color: #2c3e50;" onclick="useEnergyDrink()">⚡ Выпить Энергетик</button>
+        <span class="energy-warning">* Энергетик временно останавливает расход энергии, но вода продолжает тратиться.</span>
     </div>
 
     <script>
+        // Твой неизменный ключ сохранения
         const SAVE_KEY = "WARSZAWA_FOREVER";
-        let gameState = {
-            energy: 100,
-            water: 100,
-            balance: 0,
-            hasBike: false,
-            isAuto: false,
-            isEnergyDrinkActive: false
-        };
-
-        // Загрузка
-        const saved = localStorage.getItem(SAVE_KEY);
-        if (saved) gameState = JSON.parse(saved);
-
-        // 1. Исправление спама геолокации
-        let geoPending = false;
-        function checkLocation() {
-            if (geoPending) return;
-            geoPending = true;
-            navigator.geolocation.getCurrentPosition(
-                () => { geoPending = false; },
-                () => { geoPending = false; },
-                { timeout: 5000 }
-            );
-        }
-        setInterval(checkLocation, 30000); // Раз в 30 секунд
-
-        // 2. Логика энергетика
-        function useEnergyDrink() {
-            if (gameState.balance >= 20) {
-                gameState.balance -= 20;
-                gameState.isEnergyDrinkActive = true;
-                updateUI();
-                setTimeout(() => {
-                    gameState.isEnergyDrinkActive = false;
-                    alert("Энергетик перестал действовать!");
-                }, 60000);
-            } else {
-                alert("Недостаточно денег на энергетик!");
-            }
-        }
-
-        // 3. Работа и пробки
-        function takeOrder() {
-            if (gameState.energy <= 10 || gameState.water <= 10) {
-                alert("Вы слишком устали! Попейте воды или отдохните.");
-                return;
-            }
-
-            // Шанс пробки
-            if (Math.random() < 0.3) {
-                alert("Пробка в Варшаве! Задержка заказа...");
-            }
-
-            // Трата ресурсов
-            gameState.water -= 5;
-            if (!gameState.isEnergyDrinkActive) {
-                gameState.energy -= 10;
-            }
-
-            gameState.balance += 15.50;
-            updateUI();
-            saveGame();
-        }
-
-        function updateUI() {
-            document.getElementById('energy-display').innerText = Math.max(0, gameState.energy);
-            document.getElementById('water-display').innerText = Math.max(0, gameState.water);
-            document.getElementById('balance-display').innerText = gameState.balance.toFixed(2);
-        }
-
-        function saveGame() {
-            localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
-        }
-
-        function buyBonus(type) {
-            alert("Бонус " + type + " куплен! Описание бонуса теперь активно.");
-            saveGame();
-        }
-
-        updateUI();
+        
+        // Сюда мы подключим твои патчи, чтобы логика работала отдельно
+        console.log("Wolt Game Initialized with key: " + SAVE_KEY);
     </script>
 </body>
 </html>
