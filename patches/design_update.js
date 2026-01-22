@@ -1,41 +1,50 @@
 (function() {
-    console.log("Wolt Design Patch Loaded");
+    console.log(">>> Penalty & Design Patch Loaded");
 
-    // 1. ФИКСАЦИЯ ШТРАФА (Халява кончилась)
+    // ГЛАВНЫЙ ЦИКЛ: ШТРАФЫ И ОБНОВЛЕНИЕ
     setInterval(() => {
-        let g = window.gameState;
-        if (!g) return;
+        if (!window.state) return;
 
-        // Проверяем 7 параметров на 0 или минус
-        const stats = [g.bike, g.bag, g.phone, g.clothes, g.energy, g.water, g.mood];
-        const hasPenalty = stats.some(s => s <= 0);
+        const s = window.state;
+        // Проверяем все 7 параметров (согласно твоей структуре)
+        const checkPoints = [
+            s.items.bike, s.items.bag, s.items.phone, s.items.gear,
+            s.needs.energy, s.needs.water, s.needs.mood
+        ];
 
-        let alertBox = document.getElementById('penalty-banner');
+        // Есть ли хоть один 0 или минус?
+        const hasPenalty = checkPoints.some(val => val <= 0);
+        let penaltyBox = document.getElementById('global-penalty');
 
         if (hasPenalty) {
-            g.balance -= 1; // Снимаем 1 зл в сек
-            
-            if (!alertBox) {
-                alertBox = document.createElement('div');
-                alertBox.id = 'penalty-banner';
-                alertBox.style.cssText = "position:fixed; top:0; width:100%; background:red; color:white; text-align:center; padding:10px; z-index:9999; font-weight:bold;";
-                document.body.prepend(alertBox);
+            s.balance -= 1; // Списываем 1 PLN
+
+            if (!penaltyBox) {
+                penaltyBox = document.createElement('div');
+                penaltyBox.id = 'global-penalty';
+                penaltyBox.style.cssText = "position:fixed; top:0; left:0; width:100%; background:red; color:white; text-align:center; padding:15px; font-weight:bold; z-index:100000; border-bottom:3px solid black;";
+                document.body.prepend(penaltyBox);
             }
-            alertBox.innerHTML = "⚠️ ХАЛЯВА КОНЧИЛАСЬ! ШТРАФ: -1 PLN/сек! Восстановите предметы!";
-            alertBox.style.display = 'block';
+            penaltyBox.innerHTML = "⚠️ ВНИМАНИЕ: СНАРЯЖЕНИЕ ИЛИ РЕСУРСЫ НА НУЛЕ!<br>ШТРАФ: -1 PLN / СЕК";
+            penaltyBox.style.display = 'block';
         } else {
-            if (alertBox) alertBox.style.display = 'none';
+            if (penaltyBox) penaltyBox.style.display = 'none';
         }
 
-        // Автосохранение
-        localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(g));
-        if (window.updateUI) window.updateUI();
+        // Сохраняем состояние намертво
+        localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(s));
+        
+        // Вызываем обновление интерфейса, если функция есть в index.html
+        if (window.renderUI) window.renderUI();
     }, 1000);
 
-    // 2. ЛОГИКА ЭНЕРГЕТИКА
+    // Логика энергетика (Стоп энергии, Вода тратится)
     window.useEnergyDrink = function() {
-        window.gameState.isEnergyDrinkActive = true;
-        // Энергетик стопит расход энергии, но не воды
-        setTimeout(() => { window.gameState.isEnergyDrinkActive = false; }, 60000);
+        if (window.state.balance >= 30) {
+            window.state.balance -= 30;
+            window.state.isBoostActive = true; 
+            setTimeout(() => { window.state.isBoostActive = false; }, 60000);
+            alert("Энергетик активен! Силы не тратятся 1 минуту.");
+        }
     };
 })();
