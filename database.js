@@ -10,14 +10,6 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-window.db = firebase.database();
-
-// Глобальный объект состояния (фиксируем структуру)
-const SAVE_KEY = "WARSZAWA_FOREVER";
-window.state = JSON.parse(localStorage.getItem(SAVE_KEY)) || {
-    balance: 100,
-    items: { bike: 100, bag: 100, phone: 100, gear: 100 }, // Вел, Сумка, Связь, Одежда
-    needs: { energy: 100, water: 100, mood: 100 }         // Силы, Вода, Настроение
-};
-
-console.log(">>> Database Ready. Key: WARSZAWA_FOREVER");
+const db = firebase.database();
+window.db = db;
+console.log("Firebase initialized for Warsaw Courier");
