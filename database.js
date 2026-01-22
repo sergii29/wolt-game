@@ -13,3 +13,32 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 window.db = db;
 console.log("Firebase initialized for Warsaw Courier");
+
+// Логика штрафа -1 PLN/сек (зафиксировано намертво)
+setInterval(() => {
+    // Проверяем наличие объекта gameState (или того, как у тебя названы переменные)
+    if (typeof gameState !== 'undefined') {
+        const stats = [
+            gameState.bike, gameState.bag, gameState.phone, 
+            gameState.clothes, gameState.energy, gameState.water, gameState.mood
+        ];
+
+        // Если хоть один параметр <= 0 — включаем штраф
+        const isPenalty = stats.some(val => val <= 0);
+
+        if (isPenalty) {
+            gameState.balance -= 1;
+            const pBox = document.getElementById('penalty-box');
+            if (pBox) pBox.style.display = 'block';
+        } else {
+            const pBox = document.getElementById('penalty-box');
+            if (pBox) pBox.style.display = 'none';
+        }
+        
+        // Обновляем отображение, если функция существует
+        if (typeof updateUI === 'function') updateUI();
+        
+        // Сохраняем прогресс под ключом WARSZAWA_FOREVER
+        localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(gameState));
+    }
+}, 1000);
