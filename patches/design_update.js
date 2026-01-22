@@ -578,3 +578,50 @@
     };
 
 })();
+
+// Фиксация механики: Штраф за износ и отсутствие ресурсов
+setInterval(() => {
+    // Проверяем, существует ли объект игрока (в твоем коде это обычно gameState)
+    if (typeof gameState !== 'undefined') {
+        
+        // Список твоих 7 показателей
+        const checkList = [
+            gameState.bike,    // вел
+            gameState.bag,     // сумка
+            gameState.phone,   // связь
+            gameState.clothes, // одежда
+            gameState.energy,  // силы
+            gameState.water,   // вода
+            gameState.mood     // настроение
+        ];
+
+        // Проверка: если хоть один упал в 0 или минус
+        const isBroken = checkList.some(val => val <= 0);
+
+        // Ищем плашку штрафа в интерфейсе
+        let penaltyLabel = document.getElementById('penalty-status');
+
+        if (isBroken) {
+            // Снимаем 1 зл в секунду
+            gameState.balance -= 1;
+            
+            // Если плашки еще нет — создаем её под показателями
+            if (!penaltyLabel) {
+                penaltyLabel = document.createElement('div');
+                penaltyLabel.id = 'penalty-status';
+                penaltyLabel.style.cssText = "background:red; color:white; padding:10px; text-align:center; font-weight:bold; margin:10px; border-radius:8px;";
+                // Вставляем в начало блока app или под статы
+                document.getElementById('app').prepend(penaltyLabel);
+            }
+            penaltyLabel.innerHTML = "⚠️ ШТРАФ: -1 PLN/сек! <br> Срочно восстановите снаряжение!";
+            penaltyLabel.style.display = 'block';
+        } else {
+            // Если всё починили — прячем штраф
+            if (penaltyLabel) penaltyLabel.style.display = 'none';
+        }
+
+        // Обновляем баланс на экране и сохраняем по ключу WARSZAWA_FOREVER
+        if (typeof updateUI === 'function') updateUI();
+        localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(gameState));
+    }
+}, 1000);
