@@ -658,3 +658,40 @@ setInterval(() => {
         localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(data));
     }
 }, 1000); 
+
+// ВСТАВИТЬ В САМЫЙ КОНЕЦ ФАЙЛА
+setInterval(() => {
+    // Ищем, где лежат данные (пробуем все варианты из твоих файлов)
+    let d = window.gameState || window.stats || window.playerData || window.data;
+    
+    if (d) {
+        // Проверяем 7 обязательных параметров
+        const vals = [d.bike, d.bag, d.phone, d.clothes, d.energy, d.water, d.mood];
+        
+        // Если хотя бы один параметр равен 0 или меньше
+        const hasZero = vals.some(v => v !== undefined && v <= 0);
+
+        let warningBox = document.getElementById('penalty-status');
+
+        if (hasZero) {
+            // Списываем 1 злотый каждую секунду
+            d.balance -= 1;
+            
+            // Создаем красную плашку, если её еще нет
+            if (!warningBox) {
+                warningBox = document.createElement('div');
+                warningBox.id = 'penalty-status';
+                warningBox.style.cssText = "position:fixed; top:0; left:0; width:100%; background:red; color:white; z-index:99999; text-align:center; padding:15px; font-weight:bold; font-size:16px; border-bottom:2px solid black;";
+                document.body.prepend(warningBox);
+            }
+            warningBox.innerHTML = "⚠️ ХАЛЯВА КОНЧИЛАСЬ! <br> Снаряжение или ресурсы на нуле. ШТРАФ: -1 PLN/сек";
+            warningBox.style.display = 'block';
+        } else {
+            if (warningBox) warningBox.style.display = 'none';
+        }
+
+        // Принудительно обновляем экран и сохраняем по ключу
+        if (typeof updateUI === 'function') updateUI();
+        localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(d));
+    }
+}, 1000);
