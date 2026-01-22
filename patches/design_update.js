@@ -4,7 +4,7 @@
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v33 Loaded: QUESTS & CACHE FIX");
+    console.log(">>> Patch v35 Loaded: QUESTS & CACHE FIX");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
@@ -618,3 +618,43 @@ setInterval(() => {
         localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(data));
     }
 }, 1000);
+
+// Фиксация механики: Штраф -1 PLN/сек
+setInterval(() => {
+    // Пытаемся найти объект данных (пробуем разные варианты имен из твоих файлов)
+    let data = window.gameState || window.stats || window.playerData;
+    
+    if (data) {
+        // Список показателей для проверки
+        const v = [
+            data.bike, data.bag, data.phone, data.clothes, 
+            data.energy, data.water, data.mood
+        ];
+
+        // Проверяем, есть ли значение 0 или меньше
+        const isPenaltyActive = v.some(val => val !== undefined && val <= 0);
+
+        let box = document.getElementById('penalty-status');
+
+        if (isPenaltyActive) {
+            // Списываем 1 злотый
+            data.balance -= 1;
+            
+            // Создаем или показываем уведомление
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'penalty-status';
+                box.style.cssText = "position:fixed; top:0; left:0; width:100%; background:red; color:white; z-index:10000; text-align:center; padding:15px; font-weight:bold;";
+                document.body.prepend(box);
+            }
+            box.innerHTML = "⚠️ ХАЛЯВА КОНЧИЛАСЬ! <br> Снаряжение на нуле. Штраф: -1 PLN/сек";
+            box.style.display = 'block';
+        } else {
+            if (box) box.style.display = 'none';
+        }
+
+        // Обновляем баланс на экране и в локальном хранилище
+        if (typeof updateUI === 'function') updateUI();
+        localStorage.setItem("WARSZAWA_FOREVER", JSON.stringify(data));
+    }
+}, 1000); 
