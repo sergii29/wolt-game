@@ -434,11 +434,59 @@
             document.getElementById('pedal-btn').addEventListener('click', pedal);
             initSliders();
             setInterval(checkDebt, 1000); 
+            setInterval(checkCriticalStats, 60000); // --- NEW: PENALTY CHECK EVERY 60s ---
             listenToCloud(); syncToCloud(true);
             updateMenuState();
             updateAuthUI(); // NEW: Update button state
             updateUI(); // force initial UI
         }
+
+        // --- NEW FUNCTION: CRITICAL STATS PENALTY ---
+        function checkCriticalStats() {
+            // Stats to check
+            const items = ['bike', 'bag', 'phone', 'gear'];
+            const needs = ['energy', 'water', 'mood'];
+            
+            let isCritical = false;
+            let criticalList = [];
+
+            // Check Items
+            items.forEach(k => {
+                if (state.items[k] <= 0) {
+                    isCritical = true;
+                    // Determine name (Courier vs Taxi mode names handled visually, here we use generic)
+                    let name = ITEMS_DB[k].name;
+                    if(state.taxi.active) {
+                        if(k==='bike') name = ITEMS_DB.car_main.name;
+                        if(k==='bag') name = ITEMS_DB.car_interior.name;
+                        if(k==='gear') name = ITEMS_DB.car_tires.name;
+                    }
+                    criticalList.push(name);
+                }
+            });
+
+            // Check Needs
+            needs.forEach(k => {
+                if (state.needs[k] <= 0) {
+                    isCritical = true;
+                    let name = k;
+                    if(k==='energy') name = state.taxi.active ? 'Бензин' : 'Силы';
+                    if(k==='water') name = 'Вода';
+                    if(k==='mood') name = 'Настроение';
+                    criticalList.push(name);
+                }
+            });
+
+            // Apply Penalty if critical
+            if (isCritical) {
+                state.balance -= 1.0;
+                showToast(`⚠️ ШТРАФ -1 PLN! Критическое состояние: ${criticalList.length} парам.`, 'warn');
+                sendLog(`Штраф за состояние (-1 PLN). Сломано/Пусто: ${criticalList.join(', ')}`, 'PENALTY');
+                saveGame();
+                updateUI();
+            }
+        }
+        // ---------------------------------------------
 
         // AUTH FUNCTIONS
         function openAuthModal() {
@@ -1749,4 +1797,3 @@
 <script src="patches/design_update.js"></script>
 
 </body> </html>
-
