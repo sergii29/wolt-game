@@ -1,10 +1,10 @@
 // ============================================================
-// --- PATCH v33: ULTIMATE QUEST PERSISTENCE ---
+// --- PATCH v34: NO-GEO & PENALTY SUPPORT ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v33 Loaded: QUESTS & CACHE FIX");
+    console.log(">>> Patch v34 Loaded: NO GEO TRACKING");
 
     // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.bonusData = [];
@@ -458,16 +458,7 @@
     window.wrapGov = function(l, c) { if(window.buyDeflation) window.buyDeflation(l, c); setTimeout(()=>window.renderCustomModal('gov'), 100); };
     window.wrapTaxi = function(id, p) { if(window.buyVehicle) window.buyVehicle(id, p); setTimeout(()=>window.renderCustomModal('taxi'), 100); };
 
-    if(navigator.geolocation) {
-        navigator.geolocation.watchPosition(pos => {
-            const { latitude, longitude } = pos.coords;
-            if(window.map) {
-                let found = false;
-                window.map.eachLayer(l => { if(l instanceof L.Marker) { l.setLatLng([latitude, longitude]); found=true; }});
-                if(!found) L.marker([latitude, longitude]).addTo(window.map);
-            }
-        }, err => console.warn("GPS Error", err), { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 });
-    }
+    // --- NO GEOLOCATION BLOCK HERE ---
 
     // --- GAME LOOP ---
     setInterval(() => {
