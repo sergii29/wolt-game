@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -70,11 +71,6 @@
         .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
         
         .pedal-btn.taxi-pedal { background: var(--taxi-black); color: var(--taxi-yellow); box-shadow: 0 4px 0 #444; }
-
-        /* Стили для событий в подъезде */
-        .pedal-btn.action-needed { background: #d500f9; box-shadow: 0 4px 0 #aa00ff; animation: pulseBtn 1s infinite; }
-        .pedal-btn.shop-needed { background: #ff9100; box-shadow: 0 4px 0 #e65100; }
-        @keyframes pulseBtn { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
 
         .bag-btn { width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #333; cursor: pointer; position: relative; }
         .bag-badge { position: absolute; top: -5px; right: -5px; background: var(--accent-red); color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
@@ -273,6 +269,12 @@
                 <span id="status-label">Поиск...</span>
             </div>
 
+            <div class="slider-container" id="online-slider-box">
+                <div class="slider-fill" id="online-slider-fill"></div>
+                <div class="slider-text" id="online-slider-text">СВАЙП ДЛЯ ОФЛАЙНА</div>
+                <div class="slider-knob" id="online-slider-knob"><i class="fa-solid fa-chevron-right"></i></div>
+            </div>
+
             <div class="quick-inv" id="quick-inv"></div>
 
             <div class="controls-row">
@@ -333,7 +335,6 @@
             
             water: { name: 'Вода (0.5л)', type: 'buy', cost: 2.0, icon: 'fa-bottle-water', effect: { water: 35, energy: 5 }, desc: 'Спасает от жажды.', target: 'water' },
             bar: { name: 'Сникерс', type: 'buy', cost: 4.5, icon: 'fa-cookie-bite', effect: { energy: 20, mood: 15 }, desc: 'Баланс энергии.', target: 'energy' },
-            chocolate: { name: 'Шоколадка', type: 'buy', cost: 3.5, icon: 'fa-chocolate', effect: { mood: 10 }, desc: 'Для себя или для злой собаки.', target: 'mood' },
             energy_drink: { name: 'Red Bull', type: 'buy', cost: 7.0, icon: 'fa-bolt', effect: { energy: 50, mood: 5, water: -5 }, desc: 'Энергетик временно останавливает расход энергии!', target: 'energy', special: 'no_drain' },
             coffee: { name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot', effect: { mood: 30, energy: 10 }, desc: 'Для Настроения!', target: 'mood' },
             
@@ -349,7 +350,7 @@
             isOnline: false, isSearching: false, scheduledOffline: false,
             items: { bike: 100, bag: 100, phone: 100, gear: 100 },
             needs: { energy: 100, water: 100, mood: 100 },
-            inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0, gas: 0, chocolate: 0 },
+            inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0, gas: 0 },
             repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
             history: [],
             energyBoostActive: false,
@@ -907,37 +908,26 @@
         function pedal() {
             if (!currentOrder) return;
             if (!currentOrder.accepted) { acceptOrder(); return; }
-
-            // --- НОВОЕ: Если это этап подъезда (этап 3) - решаем проблему ---
-            if (currentOrder.stage === 3) {
-                 resolveEntrance();
-                 return;
-            }
-
-            // --- НОВОЕ: Умный инвентарь (если мало сил - открой меню) ---
-            const quickInv = document.getElementById('quick-inv');
-            const isQuickOpen = quickInv.classList.contains('open');
-            // Если не такси, и какой-то параметр ниже 15, и меню закрыто - открываем
-            if (!state.taxi.active && !isQuickOpen && (state.needs.energy < 15 || state.needs.water < 15 || state.needs.mood < 15)) {
-                 openQuickInv(true);
-            }
-
+            
             let fatigue = Math.max(0.3, state.needs.energy / 100);
             
-            // Логика Такси
+            // Taxi logic
             if(state.taxi.active) {
+                 // Check fuel (energy)
                  if(state.needs.energy <= 0) {
                      showToast('⛽ БЕНЗИН КОНЧИЛСЯ!', 'warn');
-                     openQuickInv(true); 
+                     openQuickInv(true); // Force open inv to buy/use gas
                      return;
                  }
-                 state.needs.energy -= 0.5; 
-                 state.needs.mood -= 0.02; 
-                 state.items.bike -= 0.2; 
-                 state.items.gear -= 0.1; 
-                 currentOrder.progress += 4; 
+                 state.needs.energy -= 0.5; // Fuel burn per click
+                 state.needs.mood -= 0.02; // Driving is less stressful than biking
+                 state.items.bike -= 0.2; // Car suspension wear (mapped to bike)
+                 state.items.gear -= 0.1; // Tires wear (mapped to gear)
+                 
+                 // Progress
+                 currentOrder.progress += 4; // Cars are fast
             } else {
-                // Логика Велика
+                // Bike Logic
                 if (state.needs.energy <= 5 || state.needs.water <= 5) { showToast('Сил нет! Открой рюкзак!', 'warn'); openQuickInv(true); return; }
                 if (!state.energyBoostActive) state.needs.energy -= gameConfig.energyDrain; 
                 state.needs.water -= gameConfig.waterDrain; 
@@ -977,125 +967,34 @@
 
         function nextStage() {
             currentOrder.stage++; currentOrder.progress = 0; updateTrack(0);
-            
-            // --- ЭТАП 3: СОБЫТИЕ В ПОДЪЕЗДЕ ---
-            if (currentOrder.stage === 3) {
-                 startEntranceEvent();
-                 return;
-            }
-
             if (currentOrder.stage === 1) { 
                 const btn = document.getElementById('pedal-btn'); btn.disabled = true; 
+                
                 if(state.taxi.active) {
+                    // Taxi Interaction
                     btn.textContent = 'КЛИЕНТ САДИТСЯ...';
                     document.getElementById('status-label').textContent = 'Посадка...';
-                    showToast(`💬 ${currentOrder.clientName}: "${currentOrder.clientMsg}"`, 'info');
+                    
+                    // Show client greeting
+                    const name = currentOrder.clientName;
+                    const msg = currentOrder.clientMsg;
+                    showToast(`💬 ${name}: "${msg}"`, 'info');
+
                 } else {
                     btn.textContent = 'ЖДЕМ ЗАКАЗ...';
                     document.getElementById('status-label').textContent = 'Ресторан готовит...';
                 }
+
                 setTimeout(() => {
                     btn.disabled = false; btn.textContent = state.taxi.active ? 'ГАЗ В ПОЛ' : 'ЖМИ ГАЗ (PEDAL)';
                     document.getElementById('status-label').textContent = 'В пути';
                     currentOrder.stage = 2;
                 }, 2000);
-            } 
-        }
-
-        function startEntranceEvent() {
-            const problems = ['NONE', 'LIFT', 'INTERCOM', 'DOG'];
-            const p = problems[Math.floor(Math.random() * problems.length)];
-            currentOrder.entranceProblem = p;
-            
-            const btn = document.getElementById('pedal-btn');
-            const status = document.getElementById('status-label');
-            
-            btn.className = 'pedal-btn'; // Сброс классов
-
-            if (p === 'NONE') {
-                completeOrder();
-                return;
-            }
-            
-            btn.classList.add('action-needed');
-            
-            if (p === 'LIFT') {
-                status.textContent = '🏢 СЛОМАН ЛИФТ!';
-                btn.textContent = 'БЕЖАТЬ НА 5 ЭТАЖ (-20 EN)';
-                showToast('Лифт не работает!', 'warn');
-            } else if (p === 'INTERCOM') {
-                status.textContent = '🔇 ДОМОФОН МОЛЧИТ!';
-                btn.textContent = 'ЗВОНИТЬ КЛИЕНТУ (-5 TEL)';
-                showToast('Домофон сломан!', 'warn');
-            } else if (p === 'DOG') {
-                status.textContent = '🐕 ЗЛАЯ СОБАКА!';
-                const choco = state.inventory.chocolate || 0;
-                if (choco > 0) {
-                    btn.textContent = `ДАТЬ ШОКОЛАДКУ (Ост: ${choco})`;
-                    showToast('Есть шоколад! Жми!', 'success');
-                } else {
-                    btn.textContent = 'КУПИТЬ ШОКОЛАДКУ (В МАГАЗИН)';
-                    btn.classList.remove('action-needed');
-                    btn.classList.add('shop-needed');
-                    showToast('Нужна шоколадка! Купи в магазине.', 'warn');
-                }
-            }
-        }
-
-        function resolveEntrance() {
-            const problem = currentOrder.entranceProblem;
-            
-            if(document.getElementById('pedal-btn').classList.contains('shop-needed')) {
-                openModal('shop');
-                // Проверка после покупки
-                if((state.inventory.chocolate || 0) > 0) {
-                     startEntranceEvent(); 
-                }
-                return;
-            }
-
-            if (problem === 'LIFT') {
-                if (state.needs.energy < 20 || state.needs.water < 10) {
-                    showToast('🥵 Нет сил на 5 этаж! Нужна еда/вода!', 'warn');
-                    openQuickInv(true);
-                    return;
-                }
-                state.needs.energy -= 20;
-                state.needs.water -= 10;
-                showToast('🏃 Фух... Забежал!', 'success');
-            } 
-            else if (problem === 'INTERCOM') {
-                if (state.items.phone < 5 || state.needs.mood < 5) {
-                     showToast('📱 Нет связи или настроения звонить!', 'warn');
-                     openQuickInv(true);
-                     return;
-                }
-                state.items.phone -= 5;
-                state.needs.mood -= 5;
-                showToast('📞 Клиент открыл дверь', 'success');
-            }
-            else if (problem === 'DOG') {
-                if ((state.inventory.chocolate || 0) > 0) {
-                    state.inventory.chocolate--;
-                    showToast('🍫 Собака съела шоколадку и виляет хвостом!', 'success');
-                } else {
-                    if (state.needs.mood < 20) {
-                        showToast('😱 Страшно! Скушай сникерс для храбрости!', 'warn');
-                        openQuickInv(true);
-                        return;
-                    }
-                    state.needs.mood -= 20;
-                    showToast('😱 Еле убежал, стресс!', 'warn');
-                }
-            }
-            
-            completeOrder();
+            } else if (currentOrder.stage === 3) { completeOrder(); }
         }
 
         function completeOrder() {
             stopOrderLoop();
-            
-            document.getElementById('pedal-btn').className = 'pedal-btn'; 
             
             let pay = currentOrder.offerPrice; 
             const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
@@ -1510,10 +1409,10 @@
             
             // Consumables (Show Gas only in Taxi Mode)
             html += '<div class="shop-section"><h3>🎒 Расходники</h3>';
-            ['chocolate', 'gas', 'water', 'bar', 'energy_drink', 'coffee'].forEach(k => {
+            ['gas', 'water', 'bar', 'energy_drink', 'coffee'].forEach(k => {
                 // If Taxi mode, show GAS. If Courier mode, hide GAS.
                 if(state.taxi.active) {
-                    if(k !== 'gas' && k !== 'coffee' && k !== 'water' && k !== 'bar' && k !== 'energy_drink' && k !== 'chocolate') return; // Show all for now, maybe filtered?
+                    if(k !== 'gas' && k !== 'coffee' && k !== 'water' && k !== 'bar' && k !== 'energy_drink') return; // Show all for now, maybe filtered?
                 } else {
                     if(k === 'gas') return; // Hide gas in bike mode
                 }
