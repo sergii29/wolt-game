@@ -2,333 +2,215 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>WOLT :: ADMIN GOD PANEL</title>
+    <title>WOLT :: SERVER ADMIN (WARSAW)</title>
     <style>
-        :root { --main: #00ff00; --bg: #050505; --panel: #111; --danger: #ff3333; }
-        body { background: var(--bg); color: var(--main); font-family: 'Consolas', monospace; padding: 20px; font-size: 13px; }
+        :root { --bg: #121212; --panel: #1e1e1e; --border: #333; --accent: #00bcd4; --text: #e0e0e0; --danger: #f44336; --success: #4caf50; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; font-size: 13px; }
         
-        /* СЕТКА */
-        .container { display: grid; grid-template-columns: 300px 1fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
+        .sidebar { width: 250px; background: #000; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .brand { padding: 20px; font-weight: 900; font-size: 18px; color: var(--accent); border-bottom: 1px solid var(--border); letter-spacing: 1px; }
+        .menu-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #111; transition: 0.2s; color: #888; }
+        .menu-item:hover, .menu-item.active { background: var(--panel); color: #fff; border-left: 3px solid var(--accent); }
         
-        /* БЛОКИ */
-        .panel { background: var(--panel); border: 1px solid #333; padding: 15px; margin-bottom: 20px; }
-        h2 { margin: 0 0 15px 0; border-bottom: 1px solid #333; padding-bottom: 5px; font-size: 16px; color: #fff; text-transform: uppercase; }
+        .content { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        h1 { margin: 0; font-size: 24px; font-weight: 300; }
         
-        /* ТАБЛИЦА ИГРОКОВ */
-        table { width: 100%; border-collapse: collapse; color: #ccc; }
-        th { text-align: left; border-bottom: 1px solid #555; padding: 5px; color: var(--main); }
-        td { border-bottom: 1px solid #222; padding: 8px 5px; }
-        tr:hover { background: #1a1a1a; cursor: pointer; }
-        .status-dot { height: 8px; width: 8px; background: #555; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .online { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
-
-        /* ЭЛЕМЕНТЫ УПРАВЛЕНИЯ */
-        .control-group { margin-bottom: 15px; border-bottom: 1px dashed #333; padding-bottom: 10px; }
-        label { display: block; color: #888; margin-bottom: 3px; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 4px; overflow: hidden; }
+        th { text-align: left; padding: 15px; background: #252525; color: #aaa; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+        td { padding: 15px; border-bottom: 1px solid var(--border); }
+        tr:hover { background: #2a2a2a; }
         
-        input[type="number"], input[type="text"] { 
-            background: #000; border: 1px solid #444; color: #fff; padding: 5px; width: 100%; box-sizing: border-box; 
-        }
-        input[type="range"] { width: 100%; }
-
-        button {
-            background: #004400; color: #fff; border: 1px solid var(--main); padding: 8px 12px; 
-            cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; transition: 0.2s;
-        }
-        button:hover { background: var(--main); color: #000; }
-        button.danger { border-color: var(--danger); background: #330000; color: var(--danger); }
-        button.danger:hover { background: var(--danger); color: #fff; }
-        button.small { width: auto; font-size: 11px; padding: 4px 8px; }
-
-        .value-display { float: right; color: #fff; font-weight: bold; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
+        .b-online { background: rgba(76, 175, 80, 0.2); color: var(--success); }
+        .b-offline { background: rgba(244, 67, 54, 0.2); color: var(--danger); }
+        
+        .card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 20px; }
+        .card h3 { margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; font-size: 14px; color: var(--accent); }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; color: #888; font-size: 11px; }
+        input, select { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 8px; border-radius: 4px; box-sizing: border-box; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 11px; }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-success { background: var(--success); color: #fff; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    
     <div class="sidebar">
-        <div class="panel">
-            <h2>User Database (Local)</h2>
-            <div id="player-list">
+        <div class="brand">WARSZAWA ADMIN</div>
+        <div class="menu-item active" onclick="showTab('users')">👥 ИГРОКИ</div>
+        <div class="menu-item" onclick="showTab('gameplay')">🎮 УПРАВЛЕНИЕ</div>
+        <div class="menu-item" onclick="showTab('security')">🔐 БЕЗОПАСНОСТЬ</div>
+        <div class="menu-item" onclick="showTab('logs')">📜 ЛОГИ</div>
+    </div>
+
+    <div class="content">
+        
+        <div id="users" class="tab-content active">
+            <div class="header"><h1>Список Игроков (PLN)</h1> <button class="btn btn-success" onclick="refreshData()">ОБНОВИТЬ</button></div>
+            <table>
+                <thead><tr><th>ID</th><th>Статус</th><th>Имя</th><th>Баланс (PLN)</th><th>Система</th><th>Действие</th></tr></thead>
+                <tbody id="users-table"></tbody>
+            </table>
+        </div>
+
+        <div id="gameplay" class="tab-content">
+            <div class="header"><h1>Редактор профиля (ID: LOCAL_01)</h1> <button class="btn btn-primary" onclick="saveAll()">СОХРАНИТЬ</button></div>
+
+            <div class="form-grid">
+                <div class="card">
+                    <h3>💰 Финансы</h3>
+                    <div class="form-group"><label>Баланс (zł)</label><input type="number" id="inp-balance"></div>
+                    <div class="form-group"><label>Рейтинг (0-5)</label><input type="number" id="inp-rating" step="0.1" max="5"></div>
+                    <div class="form-group"><label>Опыт (Заказы)</label><input type="number" id="inp-xp"></div>
                 </div>
-            <div style="margin-top: 10px; font-size: 11px; color: #666;">
-                * Система работает с LocalStorage браузера. <br>Отображается текущий активный сейв.
+
+                <div class="card">
+                    <h3>❤️ Показатели</h3>
+                    <div class="form-group"><label>Энергия (%)</label><input type="range" id="inp-energy" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>0</output></div>
+                    <div class="form-group"><label>Вода (%)</label><input type="range" id="inp-water" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>0</output></div>
+                    <div class="form-group"><label>Настроение (%)</label><input type="range" id="inp-mood" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>0</output></div>
+                </div>
+
+                <div class="card">
+                    <h3>🚖 Такси и Инвентарь</h3>
+                    <div class="form-group"><label>Лицензия</label><select id="inp-license"><option value="false">Нет</option><option value="true">Есть</option></select></div>
+                    <div class="form-group"><label>Машина</label><select id="inp-vehicle"><option value="null">Нет</option><option value="cyber_taxi">Cyber Taxi</option></select></div>
+                    <div class="form-group"><label>Детали (Чип/Двиг/Сплав)</label><div style="display:flex;gap:5px"><input type="number" id="inp-part1"><input type="number" id="inp-part2"><input type="number" id="inp-part3"></div></div>
+                </div>
+                
+                <div class="card">
+                    <h3>🌍 Мир (Варшава)</h3>
+                    <div class="form-group"><label>Инфляция (Цена x)</label><input type="number" id="inp-inf" step="0.1"></div>
+                    <button class="btn btn-primary" onclick="setInflation()">Применить</button>
+                </div>
             </div>
         </div>
 
-        <div class="panel">
-            <h2>World Settings</h2>
-            <div class="control-group">
-                <label>GLOBAL INFLATION (X)</label>
-                <input type="number" id="world-inflation" step="0.1" value="1.0" onchange="applyWorld()">
-                <small style="color:#666">Множитель цен на доставку</small>
+        <div id="security" class="tab-content">
+            <div class="header"><h1>Безопасность</h1></div>
+            <div class="card" style="max-width:500px">
+                <h3>🔑 Сброс пароля</h3>
+                <div class="form-group"><label>Текущий пароль:</label><input type="text" id="sec-status" disabled></div>
+                <div class="form-group"><label>Новый пароль:</label><input type="text" id="new-pass"></div>
+                <div style="display:flex;gap:10px"><button class="btn btn-primary" onclick="resetPassword()">УСТАНОВИТЬ</button><button class="btn btn-danger" onclick="removePassword()">УДАЛИТЬ</button></div>
             </div>
-            <button onclick="applyWorld()">UPDATE SERVER CONFIG</button>
+            <div class="card" style="border-color:var(--danger)">
+                <h3>☠️ Wipe Data</h3>
+                <button class="btn btn-danger" onclick="wipeUser()">УДАЛИТЬ АККАУНТ</button>
+            </div>
         </div>
         
-        <div class="panel" style="border-color: var(--danger)">
-            <h2 style="color: var(--danger)">Server Actions</h2>
-            <button class="danger" onclick="wipeSave()">WIPE PLAYER DATA</button>
+        <div id="logs" class="tab-content">
+            <div class="header"><h1>Логи</h1></div>
+            <div style="background:#000;padding:15px;border:1px solid #333;font-family:monospace;color:#00e676;height:400px;overflow-y:auto" id="log-output">
+                [SYSTEM] Admin Panel Loaded. Currency: PLN<br>
+            </div>
         </div>
     </div>
-
-    <div class="main-content">
-        <div class="panel" id="editor-panel" style="opacity: 0.5; pointer-events: none;">
-            <h2>Player Editor <span id="current-player-id" style="float:right; color:#666">ID: ---</span></h2>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                
-                <div>
-                    <h3>Finance & Stats</h3>
-                    <div class="control-group">
-                        <label>BALANCE (₽)</label>
-                        <input type="number" id="p-balance">
-                    </div>
-                    <div class="control-group">
-                        <label>RATING (0.0 - 5.0)</label>
-                        <input type="number" id="p-rating" step="0.1" max="5.0">
-                    </div>
-                    <div class="control-group">
-                        <label>TOTAL DELIVERIES (XP)</label>
-                        <input type="number" id="p-xp">
-                    </div>
-                </div>
-
-                <div>
-                    <h3>Vitals & Needs</h3>
-                    <div class="control-group">
-                        <label>ENERGY (%) <span id="val-energy" class="value-display">0</span></label>
-                        <input type="range" id="p-energy" min="0" max="100" oninput="updVal('energy')">
-                    </div>
-                    <div class="control-group">
-                        <label>WATER (%) <span id="val-water" class="value-display">0</span></label>
-                        <input type="range" id="p-water" min="0" max="100" oninput="updVal('water')">
-                    </div>
-                    <div class="control-group">
-                        <label>MOOD (%) <span id="val-mood" class="value-display">0</span></label>
-                        <input type="range" id="p-mood" min="0" max="100" oninput="updVal('mood')">
-                    </div>
-                    <button class="small" onclick="maxVitals()">MAX ALL</button>
-                </div>
-
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
-                
-                <div>
-                    <h3>Equipment Durability</h3>
-                    <div class="control-group">
-                        <label>BIKE STATUS (%) <span id="val-bike" class="value-display">0</span></label>
-                        <input type="range" id="p-bike" min="0" max="100" oninput="updVal('bike')">
-                    </div>
-                    <div class="control-group">
-                        <label>BAG STATUS (%) <span id="val-bag" class="value-display">0</span></label>
-                        <input type="range" id="p-bag" min="0" max="100" oninput="updVal('bag')">
-                    </div>
-                    <div class="control-group">
-                        <label>PHONE STATUS (%) <span id="val-phone" class="value-display">0</span></label>
-                        <input type="range" id="p-phone" min="0" max="100" oninput="updVal('phone')">
-                    </div>
-                    <button class="small" onclick="repairAll()">REPAIR ALL</button>
-                </div>
-
-                <div>
-                    <h3>Inventory & Taxi</h3>
-                    <div class="control-group">
-                        <label>TAXI LICENSE</label>
-                        <select id="p-license" style="width:100%; background:#000; color:#fff; padding:5px; border:1px solid #555">
-                            <option value="false">❌ NO LICENSE</option>
-                            <option value="true">✅ ACTIVE</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label>VEHICLE</label>
-                        <select id="p-vehicle" style="width:100%; background:#000; color:#fff; padding:5px; border:1px solid #555">
-                            <option value="null">🚲 BICYCLE ONLY</option>
-                            <option value="cyber_taxi">🚖 CYBER TAXI 2077</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label>CRAFT PARTS (Qty)</label>
-                        <div style="display:flex; gap:5px">
-                            <input type="number" id="p-chip" placeholder="Chip" title="Chip">
-                            <input type="number" id="p-engine" placeholder="Eng" title="Engine">
-                            <input type="number" id="p-alloy" placeholder="Alloy" title="Alloy">
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <br>
-            <button onclick="saveChanges()" style="font-size: 16px; padding: 15px;">💾 SAVE CHANGES TO PLAYER</button>
-
-        </div>
-    </div>
-</div>
 
 <script>
     const SAVE_KEY = 'wolt_game_save_v1';
     const CFG_KEY = 'wolt_admin_config';
-    let currentPlayer = null;
 
-    // --- 1. ЗАГРУЗКА СПИСКА ИГРОКОВ (СИМУЛЯЦИЯ БД) ---
-    function loadUserTable() {
-        const raw = localStorage.getItem(SAVE_KEY);
-        const list = document.getElementById('player-list');
-        list.innerHTML = `
-            <table>
-                <thead><tr><th>Status</th><th>Name</th><th>Balance</th><th>Action</th></tr></thead>
-                <tbody id="user-rows"></tbody>
-            </table>
-        `;
+    function showTab(id) {
+        document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+        document.querySelectorAll('.menu-item').forEach(el=>el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(id==='users') refreshData();
+        if(id==='gameplay'||id==='security') loadEditor();
+    }
 
-        const tbody = document.getElementById('user-rows');
-        
-        if (raw) {
-            const data = JSON.parse(raw);
-            currentPlayer = data; // Кэшируем
-            
-            // Создаем строку игрока
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><span class="status-dot online"></span>Active</td>
-                <td>Courier_Local</td>
-                <td style="color:#fff">${Math.floor(data.balance)} ₽</td>
-                <td><button class="small" onclick="selectPlayer()">EDIT</button></td>
-            `;
-            tbody.appendChild(tr);
-            
-            // Автоматически выбираем его
-            selectPlayer(); 
+    function getDB() { const r=localStorage.getItem(SAVE_KEY); return r?JSON.parse(r):null; }
+    function setDB(d) { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); log(`Data saved. Balance: ${d.balance} PLN`); }
+    function log(m) { document.getElementById('log-output').innerHTML+=`[LOG] ${m}<br>`; }
+
+    function refreshData() {
+        const u = getDB();
+        const t = document.getElementById('users-table');
+        t.innerHTML = '';
+        if(u) {
+            t.innerHTML += `<tr><td>#001</td><td><span class="badge b-online">ONLINE</span></td><td>Courier_WAW</td><td>${Math.floor(u.balance)} PLN</td><td>Android/Web</td><td><button class="btn btn-primary" onclick="showTab('gameplay')">EDIT</button></td></tr>`;
         } else {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px; color:#555">NO PLAYERS FOUND IN DATABASE</td></tr>`;
-            disableEditor();
+            t.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px">БАЗА ПУСТА</td></tr>`;
         }
-
-        // Загрузка конфига мира
-        const cfg = localStorage.getItem(CFG_KEY);
-        if(cfg) document.getElementById('world-inflation').value = JSON.parse(cfg).inflation;
+        t.innerHTML += `<tr style="opacity:0.5"><td>#002</td><td><span class="badge b-offline">OFFLINE</span></td><td>Uber_Pl</td><td>450 PLN</td><td>iOS</td><td><button class="btn" disabled>LOCKED</button></td></tr>`;
     }
 
-    // --- 2. ВЫБОР ИГРОКА (ЗАПОЛНЕНИЕ ПОЛЕЙ) ---
-    function selectPlayer() {
-        if (!currentPlayer) return;
+    function loadEditor() {
+        const u = getDB(); if(!u) return;
+        document.getElementById('inp-balance').value = u.balance;
+        document.getElementById('inp-rating').value = u.stats.rating;
+        document.getElementById('inp-xp').value = u.stats.total_deliveries;
+        document.getElementById('inp-energy').value = u.needs.energy;
+        document.getElementById('inp-water').value = u.needs.water;
+        document.getElementById('inp-mood').value = u.needs.mood;
+        document.querySelectorAll('input[type=range]').forEach(el=>el.nextElementSibling.value=el.value);
+        if(!u.taxi) u.taxi={license:false,vehicle:null};
+        document.getElementById('inp-license').value = u.taxi.license.toString();
+        document.getElementById('inp-vehicle').value = u.taxi.vehicle||"null";
+        if(!u.inventory) u.inventory={};
+        document.getElementById('inp-part1').value = u.inventory.part_chip||0;
+        document.getElementById('inp-part2').value = u.inventory.part_engine||0;
+        document.getElementById('inp-part3').value = u.inventory.part_alloy||0;
+        
+        const c = localStorage.getItem(CFG_KEY);
+        if(c) document.getElementById('inp-inf').value = JSON.parse(c).inflation;
 
-        const p = document.getElementById('editor-panel');
-        p.style.opacity = '1';
-        p.style.pointerEvents = 'all';
-        document.getElementById('current-player-id').innerText = "ID: LOCAL_USER_01";
-
-        // Финансы
-        document.getElementById('p-balance').value = currentPlayer.balance;
-        document.getElementById('p-rating').value = currentPlayer.stats.rating;
-        document.getElementById('p-xp').value = currentPlayer.stats.total_deliveries;
-
-        // Needs
-        setRange('p-energy', currentPlayer.needs.energy);
-        setRange('p-water', currentPlayer.needs.water);
-        setRange('p-mood', currentPlayer.needs.mood);
-
-        // Items
-        if(!currentPlayer.items) currentPlayer.items = {bike:100, bag:100, phone:100, gear:100};
-        setRange('p-bike', currentPlayer.items.bike);
-        setRange('p-bag', currentPlayer.items.bag);
-        setRange('p-phone', currentPlayer.items.phone);
-
-        // Taxi & Inventory
-        if(!currentPlayer.taxi) currentPlayer.taxi = {license:false, vehicle:null};
-        document.getElementById('p-license').value = currentPlayer.taxi.license.toString();
-        document.getElementById('p-vehicle').value = currentPlayer.taxi.vehicle || "null";
-
-        if(!currentPlayer.inventory) currentPlayer.inventory = {};
-        document.getElementById('p-chip').value = currentPlayer.inventory.part_chip || 0;
-        document.getElementById('p-engine').value = currentPlayer.inventory.part_engine || 0;
-        document.getElementById('p-alloy').value = currentPlayer.inventory.part_alloy || 0;
+        const ss = document.getElementById('sec-status');
+        if(u.password) { ss.value=u.password; ss.style.color='#4caf50'; } 
+        else { ss.value="НЕТ"; ss.style.color='#f44336'; }
     }
 
-    // --- 3. СОХРАНЕНИЕ (SAVE) ---
-    function saveChanges() {
-        if (!currentPlayer) return;
-
-        // Читаем значения из полей
-        currentPlayer.balance = parseFloat(document.getElementById('p-balance').value);
-        currentPlayer.stats.rating = parseFloat(document.getElementById('p-rating').value);
-        currentPlayer.stats.total_deliveries = parseInt(document.getElementById('p-xp').value);
-
-        currentPlayer.needs.energy = parseInt(document.getElementById('p-energy').value);
-        currentPlayer.needs.water = parseInt(document.getElementById('p-water').value);
-        currentPlayer.needs.mood = parseInt(document.getElementById('p-mood').value);
-
-        currentPlayer.items.bike = parseInt(document.getElementById('p-bike').value);
-        currentPlayer.items.bag = parseInt(document.getElementById('p-bag').value);
-        currentPlayer.items.phone = parseInt(document.getElementById('p-phone').value);
-
-        currentPlayer.taxi.license = (document.getElementById('p-license').value === 'true');
-        const veh = document.getElementById('p-vehicle').value;
-        currentPlayer.taxi.vehicle = (veh === 'null') ? null : veh;
-
-        currentPlayer.inventory.part_chip = parseInt(document.getElementById('p-chip').value);
-        currentPlayer.inventory.part_engine = parseInt(document.getElementById('p-engine').value);
-        currentPlayer.inventory.part_alloy = parseInt(document.getElementById('p-alloy').value);
-
-        // Пишем в базу
-        localStorage.setItem(SAVE_KEY, JSON.stringify(currentPlayer));
-        alert('✅ PLAYER DATA SAVED SUCCESSFULLY');
-        loadUserTable(); // Обновить таблицу
+    function saveAll() {
+        const u = getDB(); if(!u) return;
+        u.balance = parseFloat(document.getElementById('inp-balance').value);
+        u.stats.rating = parseFloat(document.getElementById('inp-rating').value);
+        u.stats.total_deliveries = parseInt(document.getElementById('inp-xp').value);
+        u.needs.energy = parseInt(document.getElementById('inp-energy').value);
+        u.needs.water = parseInt(document.getElementById('inp-water').value);
+        u.needs.mood = parseInt(document.getElementById('inp-mood').value);
+        u.taxi.license = (document.getElementById('inp-license').value==='true');
+        const v = document.getElementById('inp-vehicle').value;
+        u.taxi.vehicle = (v==='null')?null:v;
+        u.inventory.part_chip = parseInt(document.getElementById('inp-part1').value);
+        u.inventory.part_engine = parseInt(document.getElementById('inp-part2').value);
+        u.inventory.part_alloy = parseInt(document.getElementById('inp-part3').value);
+        setDB(u); alert('Сохранено!');
     }
 
-    // --- 4. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
-    
-    function setRange(id, val) {
-        const el = document.getElementById(id);
-        el.value = val;
-        // Обновить цифру рядом
-        const type = id.split('-')[1];
-        document.getElementById('val-'+type).innerText = val;
+    function setInflation() {
+        const v = parseFloat(document.getElementById('inp-inf').value);
+        localStorage.setItem(CFG_KEY, JSON.stringify({inflation:v}));
+        alert(`Инфляция: x${v}`);
     }
 
-    function updVal(type) {
-        const val = document.getElementById('p-'+type).value;
-        document.getElementById('val-'+type).innerText = val;
-    }
-
-    function maxVitals() {
-        setRange('p-energy', 100); setRange('p-water', 100); setRange('p-mood', 100);
+    function resetPassword() {
+        const p = document.getElementById('new-pass').value;
+        if(!p) return alert('Введите пароль!');
+        const u = getDB(); u.password = p; setDB(u);
+        alert(`Пароль установлен: ${p}`); loadEditor();
     }
     
-    function repairAll() {
-        setRange('p-bike', 100); setRange('p-bag', 100); setRange('p-phone', 100);
+    function removePassword() {
+        if(!confirm('Снять пароль?')) return;
+        const u = getDB(); delete u.password; setDB(u);
+        alert('Пароль удален'); loadEditor();
     }
 
-    function applyWorld() {
-        const inf = document.getElementById('world-inflation').value;
-        localStorage.setItem(CFG_KEY, JSON.stringify({ inflation: parseFloat(inf) }));
-        alert('🌍 WORLD CONFIG UPDATED');
+    function wipeUser() {
+        if(confirm('УДАЛИТЬ?')) { localStorage.removeItem(SAVE_KEY); location.reload(); }
     }
 
-    function wipeSave() {
-        if(confirm('CRITICAL: WIPE PLAYER DATA PERMANENTLY?')) {
-            localStorage.removeItem(SAVE_KEY);
-            location.reload();
-        }
-    }
-
-    function disableEditor() {
-        const p = document.getElementById('editor-panel');
-        p.style.opacity = '0.3';
-        p.style.pointerEvents = 'none';
-    }
-
-    // Автостарт
-    loadUserTable();
-    // Обновлять данные каждые 3 сек (на случай если игра запущена в другом окне и меняет их)
-    setInterval(() => {
-        // Здесь можно добавить проверку изменений, но для простоты не будем перерисовывать, если мы редактируем
-    }, 3000);
-
+    refreshData();
 </script>
-
 </body>
 </html>
