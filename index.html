@@ -1720,12 +1720,40 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v48: HARDCORE MODE & VISUAL FIXES");
+    console.log(">>> Patch v49: VISUAL POLISH & MAP NUKE");
 
-    // 1. НАСТРОЙКИ МИРА
+    // 1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.gameWorld = { mode: 'day', isRaining: false, tariff: 1.0 };
 
-    // 2. ВОЗВРАЩАЕМ ЦИФРЫ ПРОЦЕНТОВ (Включая минусовые!)
+    // 2. ИСПРАВЛЕНИЕ ИНТЕРФЕЙСА (Разносим текст и цифры)
+    const styleFix = document.createElement('style');
+    styleFix.innerHTML = `
+        /* Поднимаем цифры на полоску */
+        .tiny-stat { 
+            position: absolute; 
+            top: -12px; /* Выше */
+            left: 0; right: 0; 
+            text-align: center; 
+            font-size: 9px; 
+            font-weight: 900; 
+            color: #fff; 
+            text-shadow: 0 1px 2px black; 
+            z-index: 20; 
+        }
+        /* Опускаем подписи ниже */
+        .equip-label {
+            margin-top: 5px !important;
+            display: block;
+            position: relative;
+            z-index: 10;
+        }
+        .equip-item {
+            overflow: visible !important; /* Чтобы цифры не обрезались */
+            margin-bottom: 5px;
+        }
+    `;
+    document.head.appendChild(styleFix);
+
     function updateVisualStats() {
         if(typeof state === 'undefined' || !state.items) return;
         
@@ -1737,56 +1765,64 @@
         for (let [key, val] of Object.entries(stats)) {
             const bar = document.getElementById(`bar-${key}`);
             if(bar) {
-                const parent = bar.parentElement.parentElement;
+                const parent = bar.parentElement.parentElement; // .equip-item
                 let num = parent.querySelector('.tiny-stat');
                 
-                // Если цифры нет - создаем
                 if(!num) { 
                     num = document.createElement('div'); 
                     num.className = 'tiny-stat'; 
-                    num.style.cssText = "position:absolute; bottom:2px; left:0; right:0; text-align:center; font-size:9px; font-weight:800; color:#fff; text-shadow:0 1px 2px black; z-index:10";
-                    parent.style.position = "relative";
                     parent.appendChild(num); 
                 }
                 
-                // ПОКАЗЫВАЕМ РЕАЛЬНОЕ ЧИСЛО (даже минус)
-                num.textContent = Math.floor(val) + '%';
-                
-                // Если минус - красим в красный
+                // Текст цифр
                 if(val < 0) {
                     num.style.color = '#ff3d00';
                     num.innerHTML = '⚠️ ' + Math.floor(val) + '%';
                 } else {
-                    num.style.color = val < 20 ? '#ff9100' : '#fff';
+                    num.style.color = '#fff';
+                    num.textContent = Math.floor(val) + '%';
                 }
             }
         }
     }
 
-    // 3. ЖЕСТКАЯ ФИКСАЦИЯ КАРТЫ (ДЕНЬ = БЕЛАЯ)
-    function forceMapStyle(mode) {
+    // 3. ЯДЕРНАЯ СМЕНА КАРТЫ (Удаление и создание слоя заново)
+    function nukeMapStyle(mode) {
         let m = window.map;
         if (!m && typeof map !== 'undefined') m = map;
 
         if (m) {
-            let found = false;
+            const lightUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+            const darkUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+            const targetUrl = (mode === 'day') ? lightUrl : darkUrl;
+
+            // 1. Удаляем ВСЕ старые слои тайлов
+            let layersRemoved = false;
             m.eachLayer(l => {
-                // Ищем слой тайлов и меняем URL
                 if (l instanceof L.TileLayer) {
-                    // Если режим ДЕНЬ -> Ставим светлую карту
-                    if(mode === 'day') {
-                        l.setUrl('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png');
-                        if(l._container) l._container.style.filter = 'brightness(1.05) contrast(1)';
-                    } else {
-                        l.setUrl('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
-                        if(l._container) l._container.style.filter = 'brightness(0.7) contrast(1.2)';
+                    // Проверяем, не тот ли это слой, который нам нужен
+                    if (l._url !== targetUrl) {
+                        m.removeLayer(l);
+                        layersRemoved = true;
                     }
-                    found = true;
                 }
             });
-            // Если слой не найден, добавляем принудительно
-            if(!found) {
-                L.tileLayer(`https://{s}.basemaps.cartocdn.com/${mode==='day'?'light':'dark'}_all/{z}/{x}/{y}{r}.png`).addTo(m);
+
+            // 2. Добавляем новый слой, если его нет
+            let hasCorrectLayer = false;
+            m.eachLayer(l => { if(l instanceof L.TileLayer && l._url === targetUrl) hasCorrectLayer = true; });
+            
+            if (!hasCorrectLayer) {
+                L.tileLayer(targetUrl, { maxZoom: 19, zIndex: 1 }).addTo(m);
+            }
+
+            // 3. Сбрасываем CSS фильтры
+            const el = document.getElementById('map');
+            if(el) {
+                // Если ДЕНЬ - убираем фильтры полностью
+                if(mode === 'day') el.style.filter = 'none'; 
+                // Если НОЧЬ - затемняем
+                else el.style.filter = 'brightness(0.7) contrast(1.2)';
             }
         }
 
@@ -1855,12 +1891,13 @@
         w.innerHTML = html;
     }
 
-    // 6. ГЛАВНЫЙ ЦИКЛ (1 сек) - Проценты и Карта
+    // 6. ГЛАВНЫЙ ЦИКЛ (1 сек) - Визуал + Принуждение карты
     setInterval(() => {
         updateVisualStats(); // Обновляем цифры %
         
-        // Принудительно держим карту в нужном состоянии
-        forceMapStyle(window.gameWorld.mode);
+        // Каждую секунду проверяем, соответствует ли карта режиму
+        // Если нет - меняем
+        nukeMapStyle(window.gameWorld.mode);
     }, 1000);
 
     // 7. ЦИКЛ ВРЕМЕНИ (2 мин)
@@ -1873,7 +1910,7 @@
         if(window.gameWorld.isRaining) t += 0.3;
         window.gameWorld.tariff = parseFloat(t.toFixed(1));
 
-        forceMapStyle(window.gameWorld.mode);
+        nukeMapStyle(window.gameWorld.mode);
         updateWidget();
         
         const c = canvas;
@@ -1893,7 +1930,7 @@
             window.gameWorld.isRaining = false;
             
             updateWidget();
-            forceMapStyle('day'); 
+            nukeMapStyle('day'); 
             updateVisualStats();
             
             setInterval(gameTick, 120000); // Таймер 2 минуты
