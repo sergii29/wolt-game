@@ -1720,136 +1720,199 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v38: SAFE ATMOSPHERE STARTED");
+    console.log(">>> Patch v39: REAL RAIN ENGINE STARTED");
 
-    // 1. СТИЛИ (CSS) - добавляем сразу, это безопасно
-    const style = document.createElement("style");
-    style.innerText = `
-        .rain-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 9999; display: none;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.4));
-            background-size: 1px 40px; animation: rainFall 0.3s linear infinite;
+    // ==========================================
+    // 1. ГЕНЕРАТОР ДОЖДЯ (CANVAS) - Реалистичная физика
+    // ==========================================
+    const canvas = document.createElement('canvas');
+    canvas.id = 'rain-canvas';
+    canvas.style.position = 'fixed';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.zIndex = '9999';
+    canvas.style.pointerEvents = 'none'; // Чтобы клики проходили сквозь дождь
+    canvas.style.display = 'none'; // Скрыт по умолчанию
+    document.body.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    let w, h;
+    const drops = [];
+    const maxDrops = 500; // Количество капель
+
+    function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function initRain() {
+        for (let i = 0; i < maxDrops; i++) {
+            drops.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                l: Math.random() * 20 + 10, // Длина капли
+                xs: -4 + Math.random() * 4 + 2, // Снос ветром
+                ys: Math.random() * 10 + 10 // Скорость падения
+            });
         }
-        .rain-layer.active { display: block; }
-        @keyframes rainFall { 0% { background-position: 0 0; } 100% { background-position: 0 40px; } }
+    }
 
-        .atm-btn-group {
-            margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.05);
-            border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);
+    function drawRain() {
+        if (!window.weather.isRaining) return;
+        
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(174, 194, 224, 0.5)'; // Цвет воды
+        ctx.lineWidth = 1;
+        ctx.lineCap = 'round';
+
+        for (let i = 0; i < maxDrops; i++) {
+            const p = drops[i];
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(p.x + p.xs, p.y + p.ys);
+            ctx.stroke();
+
+            // Движение
+            p.x += p.xs;
+            p.y += p.ys;
+
+            // Если улетела за экран - респаун сверху
+            if (p.x > w || p.y > h) {
+                p.x = Math.random() * w;
+                p.y = -20;
+            }
         }
-        .atm-row { display: flex; gap: 5px; margin-top: 5px; }
-        .atm-btn { flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; font-weight: bold; }
-    `;
-    document.head.appendChild(style);
+        requestAnimationFrame(drawRain);
+    }
+    initRain();
 
-    // 2. ЭЛЕМЕНТЫ (Дождь)
-    const rainDiv = document.createElement('div'); 
-    rainDiv.className = 'rain-layer'; 
-    document.body.appendChild(rainDiv);
+    // ==========================================
+    // 2. УПРАВЛЕНИЕ МИРОМ
+    // ==========================================
+    window.weather = {
+        isRaining: false,
+        mode: 'dark',
+        auto: true
+    };
 
-    // 3. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-    window.gameWorld = { isRaining: false, mode: 'dark' };
+    window.toggleRain = function(forceState) {
+        const newState = (forceState !== undefined) ? forceState : !window.weather.isRaining;
+        window.weather.isRaining = newState;
+        
+        const canvasEl = document.getElementById('rain-canvas');
+        if (newState) {
+            canvasEl.style.display = 'block';
+            drawRain(); // Запускаем анимацию
+            if(window.showToast) window.showToast('🌧 Начался ливень', 'info');
+        } else {
+            canvasEl.style.display = 'none';
+        }
+        updatePanel();
+    };
 
-    // --- ФУНКЦИЯ: СМЕНА РЕЖИМА ---
     window.setTheme = function(mode) {
-        window.gameWorld.mode = mode;
-        console.log("SETTING THEME:", mode);
-
-        // 1. Ищем карту (Упорно)
+        window.weather.mode = mode;
+        
+        // Жесткий поиск карты
         let m = window.map;
-        if(!m && typeof map !== 'undefined') m = map;
+        if (!m && typeof map !== 'undefined') m = map;
 
-        if(m) {
-            // Меняем тайлы
+        if (m) {
             m.eachLayer(l => {
-                if(l._url && l._url.includes('cartocdn')) {
+                if (l._url && l._url.includes('cartocdn')) {
                     l.setUrl(`https://{s}.basemaps.cartocdn.com/${mode}_all/{z}/{x}/{y}{r}.png`);
                 }
             });
-            // Яркость
-            const el = document.getElementById('map');
-            if(el) el.style.filter = (mode === 'light') ? 'brightness(1) contrast(1)' : 'brightness(0.7) contrast(1.2)';
+            const mapEl = document.getElementById('map');
+            if(mapEl) mapEl.style.filter = (mode === 'light') ? 'brightness(1) contrast(1)' : 'brightness(0.7) contrast(1.2)';
         }
 
-        // 2. Цвета сайта
-        document.body.style.setProperty('--bg-dark', mode==='light' ? '#f5f5f5' : '#1a1a1a');
-        document.body.style.setProperty('--text-primary', mode==='light' ? '#222' : '#fff');
+        // Цвета интерфейса
+        document.body.style.setProperty('--bg-dark', mode === 'light' ? '#f5f5f5' : '#1a1a1a');
+        document.body.style.setProperty('--text-primary', mode === 'light' ? '#111' : '#fff');
         
         const menu = document.getElementById('side-menu');
         if(menu) {
-            menu.style.background = mode==='light' ? '#ffffff' : '#1e1e1e';
-            menu.style.color = mode==='light' ? '#000000' : '#ffffff';
-        }
-    };
-
-    // --- ФУНКЦИЯ: ДОЖДЬ ---
-    window.toggleRain = function() {
-        window.gameWorld.isRaining = !window.gameWorld.isRaining;
-        if(window.gameWorld.isRaining) {
-            rainDiv.classList.add('active');
-            if(window.showToast) window.showToast('🌧 Пошел дождь', 'info');
-        } else {
-            rainDiv.classList.remove('active');
-        }
-    };
-
-    // --- ГЛАВНЫЙ ЦИКЛ ПРОВЕРКИ (ЖДЕМ ЗАГРУЗКУ) ---
-    // Это сердце патча. Оно проверяет, готово ли меню, каждые 0.5 сек.
-    let initAttempts = 0;
-    const initInterval = setInterval(() => {
-        initAttempts++;
-        const menu = document.getElementById('side-menu');
-        
-        // Если меню нашлось!
-        if(menu) {
-            // Проверяем, не добавили ли мы уже кнопки
-            if(!document.getElementById('atm-controls-box')) {
-                console.log(">>> MENU FOUND! Injecting controls...");
-                
-                const div = document.createElement('div');
-                div.id = 'atm-controls-box';
-                div.className = 'menu-item atm-btn-group';
-                div.innerHTML = `
-                    <div style="font-size:11px; opacity:0.7; font-weight:bold">ПОГОДА И ВРЕМЯ</div>
-                    <div class="atm-row">
-                        <button class="atm-btn" onclick="window.setTheme('light')" style="background:#fff; color:#f57f17">☀️ День</button>
-                        <button class="atm-btn" onclick="window.setTheme('dark')" style="background:#333; color:#fff">🌙 Ночь</button>
-                    </div>
-                    <div class="atm-row">
-                        <button class="atm-btn" onclick="window.toggleRain()" style="background:#e1f5fe; color:#0288d1; width:100%">🌧 Дождь вкл/выкл</button>
-                    </div>
-                `;
-
-                // Вставляем в САМОЕ НАЧАЛО меню (чтобы точно было видно)
-                menu.prepend(div);
-                
-                // Включаем светлую тему один раз при старте
-                setTimeout(() => window.setTheme('light'), 500);
-                
-                if(window.showToast) window.showToast('✅ АТМОСФЕРА ПОДКЛЮЧЕНА', 'success');
-                
-                // Останавливаем проверку, мы победили
-                clearInterval(initInterval);
-            }
+            menu.style.background = mode === 'light' ? '#fff' : '#1e1e1e';
+            menu.style.color = mode === 'light' ? '#000' : '#fff';
         }
         
-        // Если прошло 10 секунд, а меню нет - пробуем аварийно найти карту
-        if(initAttempts > 20) {
-           // Просто пытаемся включить тему, даже если меню нет
-           window.setTheme('light');
-        }
-    }, 500); // Проверять каждые полсекунды
+        updatePanel();
+        if(window.showToast) window.showToast(mode === 'light' ? '☀️ ДЕНЬ' : '🌙 НОЧЬ', 'success');
+    };
 
-    // АВТО-СМЕНА ДНЯ И НОЧИ (Раз в 3 минуты)
+    // ==========================================
+    // 3. АВТОМАТИКА (День/Ночь + Погода)
+    // ==========================================
+    
+    // Цикл времени суток (2 минуты)
     setInterval(() => {
-        const next = (window.gameWorld.mode === 'light') ? 'dark' : 'light';
+        if(!window.weather.auto) return;
+        const next = window.weather.mode === 'light' ? 'dark' : 'light';
         window.setTheme(next);
-        if(window.showToast) window.showToast(next==='light' ? '🌅 Настал ДЕНЬ' : '🌃 Настала НОЧЬ', 'info');
-    }, 180000);
+    }, 120000); 
+
+    // Цикл погоды (Раз в 45 сек проверка)
+    setInterval(() => {
+        if(!window.weather.auto) return;
+        // 40% шанс дождя
+        if(Math.random() < 0.4) {
+            if(!window.weather.isRaining) window.toggleRain(true);
+        } else {
+            if(window.weather.isRaining) window.toggleRain(false);
+        }
+    }, 45000);
+
+    // ==========================================
+    // 4. ИНТЕРФЕЙС
+    // ==========================================
+    function updatePanel() {
+        const btnDay = document.getElementById('btn-day');
+        const btnNight = document.getElementById('btn-night');
+        const btnRain = document.getElementById('btn-rain');
+        
+        if(btnDay) {
+            btnDay.style.border = window.weather.mode === 'light' ? '2px solid orange' : '1px solid #ccc';
+            btnNight.style.border = window.weather.mode === 'dark' ? '2px solid orange' : '1px solid #ccc';
+            btnRain.style.background = window.weather.isRaining ? '#0288d1' : '#e1f5fe';
+            btnRain.style.color = window.weather.isRaining ? 'white' : '#0288d1';
+        }
+    }
+
+    // Внедрение кнопок в меню (безопасное)
+    const checkMenu = setInterval(() => {
+        const menu = document.getElementById('side-menu');
+        if (menu && !document.getElementById('real-atm-panel')) {
+            const div = document.createElement('div');
+            div.id = 'real-atm-panel';
+            div.className = 'menu-item';
+            div.style.background = 'rgba(0,0,0,0.05)';
+            div.innerHTML = `
+                <div style="font-size:10px; font-weight:bold; margin-bottom:5px">АВТО-АТМОСФЕРА v2.0</div>
+                <div style="display:flex; gap:5px">
+                    <button id="btn-day" onclick="window.setTheme('light')" style="flex:1; padding:8px; border-radius:5px; background:white; cursor:pointer">☀️</button>
+                    <button id="btn-night" onclick="window.setTheme('dark')" style="flex:1; padding:8px; border-radius:5px; background:#333; color:white; cursor:pointer">🌙</button>
+                    <button id="btn-rain" onclick="window.toggleRain()" style="flex:1; padding:8px; border-radius:5px; background:#e1f5fe; color:#0288d1; cursor:pointer">🌧</button>
+                </div>
+                <div style="font-size:9px; color:#888; margin-top:5px; text-align:center">День/Ночь: каждые 2 мин</div>
+            `;
+            menu.prepend(div);
+            clearInterval(checkMenu);
+            
+            // СТАРТ: Включаем день и дождь для теста сразу
+            setTimeout(() => {
+                window.setTheme('light');
+                window.toggleRain(true); 
+            }, 1000);
+        }
+    }, 500);
 
 })();
 </script>
-
+    
 </script>
 </body> </html>
