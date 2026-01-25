@@ -1720,95 +1720,69 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v50: FINAL FIXES");
+    console.log(">>> Patch v51: TIMER ADDED");
 
     // 1. НАСТРОЙКИ
-    window.gameWorld = { mode: 'day', isRaining: false, tariff: 1.0 };
+    window.gameWorld = { 
+        mode: 'day', 
+        isRaining: false, 
+        tariff: 1.0,
+        timeToNextEvent: 120 // Секунды до смены (2 минуты)
+    };
 
-    // 2. CSS ДЛЯ ПРОЦЕНТОВ (СТРОГО ПО ЦЕНТРУ)
+    // 2. CSS (Центрирование процентов + Таймер)
     const style = document.createElement('style');
     style.innerHTML = `
         .tiny-stat { 
-            position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            transform: translate(-50%, -50%); /* Центрирование */
-            font-size: 10px; 
-            font-weight: 900; 
-            color: #fff; 
-            text-shadow: 0 0 3px #000; /* Черная обводка для читаемости */
-            z-index: 50;
-            pointer-events: none;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 10px; font-weight: 900; color: #fff; text-shadow: 0 0 3px #000;
+            z-index: 50; pointer-events: none;
         }
         .equip-item { position: relative; }
-        /* Гарантируем, что подписи не наедут */
         .equip-label { margin-top: 5px; display: block; }
+        .cycle-timer { font-size: 10px; opacity: 0.8; margin-top: 5px; font-weight: normal; }
     `;
     document.head.appendChild(style);
 
-    // 3. ОБНОВЛЕНИЕ ЦИФР
+    // 3. ОБНОВЛЕНИЕ ЦИФР %
     function updateVisualStats() {
         if(typeof state === 'undefined' || !state.items) return;
-        
-        const stats = { 
-            'bike': state.items.bike, 'bag': state.items.bag, 'phone': state.items.phone, 'gear': state.items.gear, 
-            'energy': state.needs.energy, 'water': state.needs.water, 'mood': state.needs.mood 
-        };
+        const stats = { 'bike': state.items.bike, 'bag': state.items.bag, 'phone': state.items.phone, 'gear': state.items.gear, 'energy': state.needs.energy, 'water': state.needs.water, 'mood': state.needs.mood };
         
         for (let [key, val] of Object.entries(stats)) {
             const bar = document.getElementById(`bar-${key}`);
             if(bar) {
-                // Ищем родителя (иконку)
                 const parent = bar.closest('.equip-item') || bar.parentElement.parentElement;
                 let num = parent.querySelector('.tiny-stat');
+                if(!num) { num = document.createElement('div'); num.className = 'tiny-stat'; parent.appendChild(num); }
                 
-                if(!num) { 
-                    num = document.createElement('div'); 
-                    num.className = 'tiny-stat'; 
-                    parent.appendChild(num); 
-                }
-                
-                // Текст
-                if(val < 0) {
-                    num.style.color = '#ff3d00'; // Красный при минусе
-                    num.textContent = Math.floor(val) + '%';
-                } else {
-                    num.style.color = '#fff';
-                    num.textContent = Math.floor(val) + '%';
-                }
+                num.style.color = (val < 0) ? '#ff3d00' : '#fff';
+                num.textContent = Math.floor(val) + '%';
             }
         }
     }
 
-    // 4. КАРТА (АБСОЛЮТНО БЕЛАЯ ДНЕМ)
-    function forceMapWhite(mode) {
+    // 4. КАРТА (СВЕТЛАЯ/ТЕМНАЯ)
+    function forceMapStyle(mode) {
         let m = window.map;
         if (!m && typeof map !== 'undefined') m = map;
-
         const mapEl = document.getElementById('map');
 
         if (mode === 'day') {
-            // 1. УБИРАЕМ ВСЕ ФИЛЬТРЫ (Делаем яркой)
-            if(mapEl) {
-                mapEl.style.filter = 'none'; 
-                mapEl.style.opacity = '1';
-            }
-            // 2. СТАВИМ СВЕТЛУЮ ПЛИТКУ
+            // ДЕНЬ: Убираем фильтры, ставим светлую карту
+            if(mapEl) { mapEl.style.filter = 'none'; mapEl.style.opacity = '1'; }
             if (m) {
                 m.eachLayer(l => {
                     if (l instanceof L.TileLayer) {
-                        // Используем Carto Voyager (самая светлая карта)
-                        const whiteUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+                        const whiteUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'; // Самая светлая
                         if (l._url !== whiteUrl) l.setUrl(whiteUrl);
                     }
                 });
             }
-            // Светлый фон тела
             document.body.style.background = '#ffffff';
         } else {
-            // НОЧЬ
+            // НОЧЬ: Темный фильтр + темная карта
             if(mapEl) mapEl.style.filter = 'brightness(0.6) contrast(1.2)';
-            
             if (m) {
                 m.eachLayer(l => {
                     if (l instanceof L.TileLayer) {
@@ -1827,7 +1801,7 @@
         }
     }
 
-    // 5. ВИДЖЕТ
+    // 5. ВИДЖЕТ ТАРИФА (С ТАЙМЕРОМ)
     function updateWidget() {
         const menu = document.getElementById('side-menu');
         if (!menu) return;
@@ -1839,17 +1813,28 @@
         }
         
         const t = window.gameWorld.tariff;
+        // Формат времени ММ:СС
+        const mins = Math.floor(window.gameWorld.timeToNextEvent / 60);
+        const secs = window.gameWorld.timeToNextEvent % 60;
+        const timerStr = `${mins}:${secs < 10 ? '0'+secs : secs}`;
+
         let html, bg, border, color;
         
         if (t >= 1.3) {
             bg = '#e1f5fe'; border = '#0288d1'; color = '#01579b';
-            html = `<div style="font-size:12px; font-weight:900;">⛈ ЛИВЕНЬ</div><div style="font-size:24px; font-weight:bold">x${t}</div>`;
+            html = `<div style="font-size:12px; font-weight:900;">⛈ ЛИВЕНЬ</div>
+                    <div style="font-size:24px; font-weight:bold">x${t}</div>
+                    <div class="cycle-timer">⏱ Смена через ${timerStr}</div>`;
         } else if (t > 1.0) {
             bg = '#212121'; border = '#424242'; color = '#ffffff';
-            html = `<div style="font-size:12px; font-weight:900;">🌙 НОЧЬ</div><div style="font-size:24px; font-weight:bold">x${t}</div>`;
+            html = `<div style="font-size:12px; font-weight:900;">🌙 НОЧЬ</div>
+                    <div style="font-size:24px; font-weight:bold">x${t}</div>
+                    <div class="cycle-timer">⏱ Рассвет через ${timerStr}</div>`;
         } else {
             bg = '#fff3e0'; border = '#ffa000'; color = '#e65100';
-            html = `<div style="font-size:12px; font-weight:900;">☀️ ДЕНЬ</div><div style="font-size:24px; font-weight:bold">x${t}</div>`;
+            html = `<div style="font-size:12px; font-weight:900;">☀️ ДЕНЬ</div>
+                    <div style="font-size:24px; font-weight:bold">x${t}</div>
+                    <div class="cycle-timer" style="color:#e65100">⏱ Закат через ${timerStr}</div>`;
         }
         w.style.background = bg; w.style.borderColor = border; w.style.color = color;
         w.innerHTML = html;
@@ -1878,29 +1863,50 @@
         requestAnimationFrame(animate);
     }
 
-    // 7. ЦИКЛЫ
-    setInterval(() => {
-        updateVisualStats();
-        // Принудительно держим карту
-        forceMapWhite(window.gameWorld.mode);
-    }, 500);
-
-    function gameTick() {
+    // 7. ЛОГИКА ЦИКЛА (Смена фазы)
+    function switchPhase() {
+        // Меняем время суток
         window.gameWorld.mode = (window.gameWorld.mode === 'day') ? 'night' : 'day';
+        // Шанс дождя 50%
         window.gameWorld.isRaining = (Math.random() > 0.5);
         
+        // Тариф
         let t = 1.0;
         if(window.gameWorld.mode === 'night') t += 0.2;
         if(window.gameWorld.isRaining) t += 0.3;
         window.gameWorld.tariff = parseFloat(t.toFixed(1));
 
-        forceMapWhite(window.gameWorld.mode);
+        // Сброс таймера
+        window.gameWorld.timeToNextEvent = 120; // 2 минуты
+        
+        // Звуковой/Текстовый сигнал
+        if(window.showToast) window.showToast('Смена погоды!', 'info');
+    }
+
+    // 8. ГЛАВНЫЙ ТАЙМЕР (Каждую секунду)
+    setInterval(() => {
+        // 1. Обновляем проценты
+        updateVisualStats();
+        // 2. Держим карту
+        forceMapStyle(window.gameWorld.mode);
+        
+        // 3. Тикаем таймером
+        window.gameWorld.timeToNextEvent--;
+        
+        // Если время вышло - меняем фазу
+        if (window.gameWorld.timeToNextEvent <= 0) {
+            switchPhase();
+        }
+        
+        // 4. Обновляем виджет (с новым временем)
         updateWidget();
         
+        // 5. Анимация дождя (вкл/выкл)
         const c = canvas;
         if(window.gameWorld.isRaining) { c.style.display='block'; animate(); } 
         else { c.style.display='none'; }
-    }
+        
+    }, 1000);
 
     // ЗАПУСК
     const boot = setInterval(() => {
@@ -1909,11 +1915,11 @@
             // Старт
             window.gameWorld.mode = 'day';
             window.gameWorld.tariff = 1.0;
-            updateWidget();
-            forceMapWhite('day'); // <-- БЕЛАЯ КАРТА
-            updateVisualStats();
+            window.gameWorld.timeToNextEvent = 60; // ПЕРВЫЙ РАЗ - СМЕНА ЧЕРЕЗ 60 СЕКУНД (чтобы ты быстро проверил)
             
-            setInterval(gameTick, 120000);
+            updateWidget();
+            forceMapStyle('day'); 
+            
             clearInterval(boot);
         }
     }, 200);
