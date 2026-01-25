@@ -1718,14 +1718,33 @@
   </script>
 <script src="patches/design_update.js"></script>
 
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
+<style>
+    /* ОКНО ВХОДА */
+    #auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: monospace; }
+    .auth-box { width: 300px; padding: 20px; border: 2px solid #00e676; border-radius: 10px; background: #111; text-align: center; }
+    .auth-inp { width: 90%; padding: 10px; margin: 10px 0; background: #222; border: 1px solid #444; color: #fff; text-align: center; border-radius: 5px; font-size:16px; }
+    .auth-btn { width: 100%; padding: 12px; background: #00e676; color: #000; font-weight: bold; border: none; cursor: pointer; border-radius: 5px; margin-top:10px; }
+</style>
+
+<div id="auth-overlay">
+    <div class="auth-box">
+        <h2 style="color:#00e676; margin:0 0 15px 0">WOLT LOGIN</h2>
+        <input type="text" id="login-field" class="auth-inp" placeholder="Логин (Никнейм)">
+        <input type="text" id="pass-field" class="auth-inp" placeholder="Пароль">
+        <button class="auth-btn" onclick="tryLogin()">ВОЙТИ / СОЗДАТЬ</button>
+        <div id="auth-msg" style="color:red; margin-top:10px; font-size:12px"></div>
+    </div>
+</div>
+
 <script>
 (function() {
-    console.log(">>> Patch v62: ONLINE CONNECTED");
+    console.log(">>> SYSTEM: AUTH READY");
 
-    // 1. НАСТРОЙКИ FIREBASE (ТВОИ)
+    // 1. ПОДКЛЮЧЕНИЕ К БАЗЕ
     const firebaseConfig = {
         apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
         authDomain: "warszawa-courier.firebaseapp.com",
@@ -1736,166 +1755,139 @@
         appId: "1:295860613508:web:86fe8364377d6875612dd1",
         measurementId: "G-TGSCHBVLX2"
     };
-
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2. АВТОРИЗАЦИЯ И ЗАГРУЗКА
-    let myId = localStorage.getItem('wolt_player_id');
-    if (!myId) {
-        myId = 'courier_' + Math.random().toString(36).substr(2, 6);
-        localStorage.setItem('wolt_player_id', myId);
+    // 2. ВХОД В ИГРУ
+    try {
+        const tg = window.Telegram.WebApp; tg.ready();
+        if(tg.initDataUnsafe?.user) document.getElementById('login-field').value = tg.initDataUnsafe.user.username;
+    } catch(e){}
+
+    if(localStorage.getItem('w_login')) {
+        document.getElementById('login-field').value = localStorage.getItem('w_login');
+        document.getElementById('pass-field').value = localStorage.getItem('w_pass');
     }
 
-    const userRef = db.ref('users/' + myId);
-    
-    // Загружаем данные при старте
-    userRef.once('value').then((snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-            // Проверка пароля (Безопасность)
-            if(data.password && data.password.length > 0) {
-                const input = prompt("🔐 ВВЕДИТЕ ПАРОЛЬ:");
-                if(input !== data.password) {
-                    document.body.innerHTML = "<div style='background:black;color:red;height:100vh;display:flex;justify-content:center;align-items:center;font-size:30px;font-weight:bold'>ДОСТУП ЗАПРЕЩЕН</div>";
-                    return;
-                }
-            }
-            // Применяем сохранение из облака
-            window.state = data;
-            if(window.updateUI) window.updateUI();
-        } else {
-            // Новый игрок -> сохраняем текущее состояние в облако
-            window.saveGame();
-        }
-    });
+    window.tryLogin = function() {
+        const login = document.getElementById('login-field').value.trim();
+        const pass = document.getElementById('pass-field').value.trim();
+        const msg = document.getElementById('auth-msg');
 
-    // 3. ФУНКЦИЯ СОХРАНЕНИЯ (В ОБЛАКО)
-    window.saveGame = function() {
-        if(!window.state) return;
-        window.state._last_seen = Date.now();
-        window.state._device = navigator.userAgent; // Инфо об устройстве для админа
-        userRef.set(window.state);
+        if(login.length < 3 || pass.length < 3) return msg.innerText = "Слишком коротко!";
+
+        msg.innerText = "Загрузка...";
+        const ref = db.ref('users/' + login);
+
+        ref.once('value').then(snap => {
+            const data = snap.val();
+            if(data) {
+                // Вход
+                if(data.password == pass) startGame(login, data, pass);
+                else msg.innerText = "Неверный пароль!";
+            } else {
+                // Регистрация
+                if(confirm(`Создать аккаунт ${login}?`)) {
+                    const fresh = { balance:0, password:pass, stats:{rating:5.0, total_deliveries:0, distance:0}, needs:{energy:100,water:100,mood:100}, items:{bike:100,bag:100,phone:100}, taxi:{license:false,vehicle:null}, inventory:{part_chip:0,part_engine:0,part_alloy:0} };
+                    ref.set(fresh).then(()=> startGame(login, fresh, pass));
+                } else msg.innerText = "Отмена.";
+            }
+        });
     };
-    
-    // Автосохранение каждые 3 секунды
-    setInterval(window.saveGame, 3000);
 
-    // 4. ГЛОБАЛЬНАЯ ИНФЛЯЦИЯ (Слушаем Админа)
-    db.ref('config/inflation').on('value', (snap) => {
-        window.clientInflation = snap.val() || 1.0;
-        // Пересчет цены активного заказа
-        if(state.activeOrder && !state.activeOrder.inflated) {
-            state.activeOrder.price = Math.floor(state.activeOrder.price * window.clientInflation);
-            state.activeOrder.inflated = true;
-        }
-    });
-
-    // 5. ВИЗУАЛ (ПРОЦЕНТЫ ПО ЦЕНТРУ)
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .tiny-stat { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 10px; font-weight: 900; color: #fff; text-shadow: 0 0 3px #000; 
-            z-index: 50; pointer-events: none;
-        }
-        .equip-item { position: relative; }
-        .equip-label { margin-top: 5px; display: block; }
-    `;
-    document.head.appendChild(style);
-
-    function updateVisualStats() {
-        if(typeof state === 'undefined' || !state.items) return;
-        const stats = { 'bike':state.items.bike, 'bag':state.items.bag, 'phone':state.items.phone, 'gear':state.items.gear, 'energy':state.needs.energy, 'water':state.needs.water, 'mood':state.needs.mood };
+    function startGame(login, data, pass) {
+        window.myLogin = login;
+        window.userRef = db.ref('users/' + login);
+        localStorage.setItem('w_login', login); localStorage.setItem('w_pass', pass);
+        document.getElementById('auth-overlay').style.display = 'none';
         
-        for (let [key, val] of Object.entries(stats)) {
-            const bar = document.getElementById(`bar-${key}`);
-            if(bar) {
-                const parent = bar.closest('.equip-item') || bar.parentElement.parentElement;
-                let num = parent.querySelector('.tiny-stat');
-                if(!num) { num = document.createElement('div'); num.className = 'tiny-stat'; parent.appendChild(num); }
-                const clean = Math.floor(val);
-                num.textContent = clean + '%';
-                num.style.color = (clean < 0) ? '#ff3d00' : '#fff';
+        window.state = data;
+        if(window.updateUI) window.updateUI();
+
+        // СЛУШАЕМ СЕРВЕР (МГНОВЕННОЕ ОБНОВЛЕНИЕ ОТ АДМИНА)
+        window.userRef.on('value', snap => {
+            const val = snap.val();
+            if(val) {
+                window.state = val;
+                if(window.updateUI) window.updateUI();
             }
+        });
+
+        // АВТОСОХРАНЕНИЕ
+        setInterval(() => {
+            if(window.state && window.userRef) {
+                window.state._last_seen = Date.now();
+                window.state._device = navigator.platform;
+                window.userRef.update(window.state);
+            }
+        }, 3000);
+    }
+
+    // ЛОГИ ИСТОРИИ
+    window.addHistory = function(amt, reason) {
+        if(window.myLogin) {
+            db.ref('history/' + window.myLogin).push({ amount: amt, reason: reason, time: Date.now() });
         }
     }
-    setInterval(updateVisualStats, 1000);
 
-    // 6. МАГАЗИН И МАШИНА (PLN + КРАФТ)
+    // 3. МАГАЗИН И ФУНКЦИИ
     const CYBER_CAR = { id: 'cyber_taxi' };
+    
+    // Инфляция
+    db.ref('config/inflation').on('value', s => { window.clientInflation = s.val() || 1.0; });
 
+    // Визуал (Центр)
+    const st = document.createElement('style');
+    st.innerHTML = `.tiny-stat { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; font-weight: 900; color: #fff; text-shadow: 0 0 3px #000; z-index: 50; pointer-events: none; } .equip-item { position: relative; } .equip-label { margin-top: 5px; display: block; }`;
+    document.head.appendChild(st);
+
+    setInterval(() => {
+        if(!state.items) return;
+        ['bike','bag','phone','gear','energy','water','mood'].forEach(k => {
+            const b = document.getElementById(`bar-${k}`);
+            if(b) {
+                const p = b.closest('.equip-item')||b.parentElement.parentElement;
+                let n = p.querySelector('.tiny-stat');
+                if(!n) { n=document.createElement('div'); n.className='tiny-stat'; p.appendChild(n); }
+                n.innerText = Math.floor(state.items[k] || state.needs[k] || 0) + '%';
+            }
+        });
+    }, 1000);
+
+    // Магазин
     window.craftCyber = function() {
         if(state.inventory.part_chip > 0 && state.inventory.part_engine > 0 && state.inventory.part_alloy > 0) {
             state.inventory.part_chip--; state.inventory.part_engine--; state.inventory.part_alloy--;
             state.taxi.vehicle = CYBER_CAR.id;
-            window.saveGame(); window.updateMenuState();
-            if(window.showToast) window.showToast('🤖 CYBER TAXI ГОТОВО!', 'success');
+            window.userRef.update(state);
+            window.addHistory(0, "Крафт машины");
             const b = document.getElementById('modal-body'); if(b) window.renderTaxiShop(b);
-        } else {
-            if(window.showToast) window.showToast('❌ Не хватает деталей (ищи в заказах)', 'error');
-        }
+        } else if(window.showToast) window.showToast('Нет деталей', 'error');
     };
 
-    // Перехват отрисовки магазина
-    const originalRenderShop = window.renderTaxiShop;
-    window.renderTaxiShop = function(container) {
-        container.innerHTML = '';
-        
-        // Блок 1: Лицензия
-        const hasLicense = state.taxi.license;
-        const divL = document.createElement('div');
-        divL.style.cssText = "padding:10px; background:#fff; border-radius:8px; margin-bottom:10px; border:1px solid #ddd; text-align:center";
-        
-        if(hasLicense) {
-            divL.innerHTML = `<div style="color:#00c853; font-weight:bold">✅ ЛИЦЕНЗИЯ АКТИВНА</div>`;
-        } else {
-            const price = 500; // ЦЕНА 500 PLN
-            const canBuy = state.balance >= price;
-            const unlocked = state.stats.total_deliveries >= 5; 
-            
-            if(unlocked) {
-                divL.innerHTML = `
-                    <div style="font-weight:bold; color:#000">🚕 Лицензия Такси</div>
-                    <button onclick="window.buyLicense(${price})" style="width:100%; margin-top:5px; background:${canBuy?'#f90':'#ccc'}; border:none; padding:10px; color:white; border-radius:4px; font-weight:bold; cursor:pointer">
-                        КУПИТЬ (${price} PLN)
-                    </button>
-                `;
-            } else {
-                divL.innerHTML = `<div style="color:#999; font-size:11px">🔒 Выполни 5 заказов, чтобы открыть.</div>`;
-            }
+    window.renderTaxiShop = function(cont) {
+        cont.innerHTML = '';
+        const hasLic = state.taxi.license;
+        const d1 = document.createElement('div');
+        d1.style.cssText = "padding:10px; background:#fff; border-radius:8px; margin-bottom:10px; border:1px solid #ddd; text-align:center";
+        if(hasLic) d1.innerHTML = `<b style="color:#00c853">✅ ЛИЦЕНЗИЯ ЕСТЬ</b>`;
+        else {
+             if(state.stats.total_deliveries>=5) d1.innerHTML = `<div>🚕 Лицензия</div><button onclick="window.buyL(500)" style="width:100%;margin-top:5px;background:#f90;border:none;padding:8px;color:white">КУПИТЬ (500 PLN)</button>`;
+             else d1.innerHTML = `<span style="color:#999">🔒 Нужно 5 заказов</span>`;
         }
-        container.appendChild(divL);
+        cont.appendChild(d1);
 
-        // Функция покупки
-        window.buyLicense = function(cost) {
-            if(state.balance >= cost) { 
-                state.balance -= cost; 
-                state.taxi.license = true; 
-                window.saveGame(); window.updateUI(); 
-                window.renderTaxiShop(container); 
-            }
+        window.buyL = function(c) {
+            if(state.balance>=c) { state.balance-=c; state.taxi.license=true; window.userRef.update(state); window.addHistory(-c, "Покупка Лицензии"); window.renderTaxiShop(cont); }
         };
 
-        // Блок 2: Мастерская
-        const divM = document.createElement('div');
-        divM.style.cssText = "padding:10px; background:rgba(0,0,0,0.05); border-radius:8px; border:1px solid #d500f9; text-align:center";
-        const hasParts = (state.inventory.part_chip>0 && state.inventory.part_engine>0 && state.inventory.part_alloy>0);
-        const hasCar = (state.taxi.vehicle === CYBER_CAR.id);
-        
-        divM.innerHTML = `
-            <div style="color:#d500f9; font-weight:bold; font-size:12px; margin-bottom:5px">🔧 CYBER-X WORKSHOP</div>
-            <div style="font-size:11px; margin-bottom:10px; display:flex; gap:5px; justify-content:center">
-                <span style="color:${state.inventory.part_chip?'#0a0':'#f00'}">🔋 Чип: ${state.inventory.part_chip||0}</span>
-                <span style="color:${state.inventory.part_engine?'#0a0':'#f00'}">⚙️ Двиг: ${state.inventory.part_engine||0}</span>
-                <span style="color:${state.inventory.part_alloy?'#0a0':'#f00'}">🔩 Сплав: ${state.inventory.part_alloy||0}</span>
-            </div>
-            ${hasCar ? '<div style="background:#0a0; color:white; padding:5px; border-radius:4px">✅ СОБРАНО</div>' :
-            `<button onclick="window.craftCyber()" style="width:100%; padding:8px; background:${hasParts?'#d500f9':'#444'}; color:white; border:none; border-radius:4px; font-weight:bold; cursor:${hasParts?'pointer':'not-allowed'}">
-                ${hasParts ? 'СОБРАТЬ МАШИНУ' : 'НЕТ ДЕТАЛЕЙ'}
-            </button>`}
-        `;
-        container.appendChild(divM);
+        const d2 = document.createElement('div');
+        d2.style.cssText = "padding:10px; background:rgba(0,0,0,0.05); border-radius:8px; border:1px solid #d500f9; text-align:center";
+        const parts = (state.inventory.part_chip>0 && state.inventory.part_engine>0 && state.inventory.part_alloy>0);
+        d2.innerHTML = `<div style="color:#d500f9;font-weight:bold;font-size:12px">🔧 CYBER WORKSHOP</div>
+        <div style="font-size:11px;margin:5px 0">🔋${state.inventory.part_chip||0} ⚙️${state.inventory.part_engine||0} 🔩${state.inventory.part_alloy||0}</div>
+        ${state.taxi.vehicle==='cyber_taxi'?'<b style="color:green">✅ СОБРАНО</b>':`<button onclick="window.craftCyber()" style="width:100%;padding:8px;background:${parts?'#d500f9':'#444'};color:white;border:none">${parts?'СОБРАТЬ':'НЕТ ДЕТАЛЕЙ'}</button>`}`;
+        cont.appendChild(d2);
     };
 
 })();
