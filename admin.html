@@ -2,105 +2,33 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>WOLT ADMIN PANEL</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOLT ADMIN</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
-        body { background: #111; color: #eee; font-family: 'Segoe UI', monospace; display: flex; height: 100vh; margin: 0; }
-        
-        /* SIDEBAR */
-        .sidebar { width: 300px; background: #000; border-right: 1px solid #333; display: flex; flex-direction: column; }
-        .head { padding: 15px; background: #1a1a1a; border-bottom: 2px solid #00e676; font-weight: bold; color: #00e676; }
-        .list { flex: 1; overflow-y: auto; }
-        .user-row { padding: 15px; border-bottom: 1px solid #222; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .user-row:hover { background: #222; }
-        .user-row.active { background: #003300; border-left: 4px solid #00e676; }
-        .dot { width: 8px; height: 8px; background: #555; border-radius: 50%; }
-        .dot.on { background: #00e676; box-shadow: 0 0 5px #00e676; }
-
-        /* MAIN */
-        .main { flex: 1; padding: 20px; overflow-y: auto; background: #141414; display: flex; flex-direction: column; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        
-        .card { background: #1e1e1e; padding: 20px; border: 1px solid #333; border-radius: 5px; }
-        .card h3 { margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; color: #aaa; font-size: 14px; }
-        
-        label { display: block; color: #666; font-size: 11px; margin-top: 10px; }
-        input, select { width: 100%; padding: 8px; background: #000; border: 1px solid #444; color: #fff; box-sizing: border-box; }
-        
-        .pass-view { font-size: 22px; color: #ff3d00; border: 1px dashed #ff3d00; padding: 10px; text-align: center; font-weight: bold; background: #220000; }
-        
-        .history-box { height: 200px; overflow-y: auto; background: #000; border: 1px solid #333; padding: 5px; font-size: 11px; }
-        .log-row { padding: 4px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; }
-        .plus { color: #00e676; } .minus { color: #ff3d00; }
-
-        button { width: 100%; padding: 10px; margin-top: 5px; cursor: pointer; border: none; font-weight: bold; border-radius: 3px; }
-        .btn-green { background: #00c853; color: #000; }
-        .btn-red { background: #d32f2f; color: #fff; }
-        .btn-act { background: #333; color: #fff; border: 1px solid #555; }
-        .btn-act:hover { background: #555; }
+        body { background: #121212; color: white; font-family: monospace; display: flex; height: 100vh; margin: 0; }
+        .sidebar { width: 300px; border-right: 1px solid #333; overflow-y: auto; }
+        .main { flex: 1; padding: 20px; overflow-y: auto; }
+        .player-row { padding: 10px; border-bottom: 1px solid #333; cursor: pointer; display: flex; justify-content: space-between; }
+        .player-row:hover { background: #222; }
+        .player-row.active { background: #004d40; border-left: 5px solid #00e676; }
+        .online-dot { color: #00e676; } .offline-dot { color: #555; }
+        .card { background: #1e1e1e; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; }
+        h3 { margin-top: 0; color: #aaa; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        button { padding: 10px; background: #333; color: white; border: none; cursor: pointer; margin-right: 5px; border-radius: 4px; }
+        button:hover { background: #555; }
+        .btn-green { background: #1b5e20; }
+        .btn-red { background: #b71c1c; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <div class="head">ИГРОКИ (DATABASE)</div>
-        <div class="list" id="u-list">Загрузка...</div>
-    </div>
+<div class="sidebar" id="list">Загрузка...</div>
 
-    <div class="main" id="panel" style="opacity:0.2; pointer-events:none">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
-            <h1 id="u-name" style="margin:0; color:#fff">USER</h1>
-            <button class="btn-green" style="width:auto; padding:10px 30px" onclick="saveAll()">СОХРАНИТЬ ВСЁ</button>
-        </div>
-
-        <div class="grid">
-            <div class="card" style="border-top: 2px solid #ff3d00">
-                <h3>🔐 БЕЗОПАСНОСТЬ</h3>
-                <label>ТЕКУЩИЙ ПАРОЛЬ</label>
-                <div class="pass-view" id="v-pass">---</div>
-                <label>СМЕНИТЬ ПАРОЛЬ</label>
-                <input type="text" id="i-pass" placeholder="Новый пароль...">
-                <button class="btn-act" onclick="setPass()">УСТАНОВИТЬ</button>
-                <div style="margin-top:20px; border-top:1px solid #333; padding-top:10px">
-                    <button class="btn-red" onclick="wipe()">☠️ УДАЛИТЬ ИГРОКА</button>
-                </div>
-            </div>
-
-            <div class="card" style="border-top: 2px solid #ffd700">
-                <h3>💰 ФИНАНСЫ (PLN)</h3>
-                <label>БАЛАНС</label>
-                <input type="number" id="v-bal" style="font-size:20px; font-weight:bold; color:#ffd700">
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:10px">
-                    <button class="btn-act" onclick="bonus(1000)">+1000</button>
-                    <button class="btn-act" onclick="bonus(5000)">+5000</button>
-                    <button class="btn-act" style="color:red" onclick="bonus(-500)">-500</button>
-                    <button class="btn-act" style="color:red" onclick="bonus(-1000)">-1000</button>
-                </div>
-            </div>
-
-            <div class="card" style="border-top: 2px solid #00e676">
-                <h3>🎮 СТАТЫ И УСЛУГИ</h3>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-                    <div><label>РЕЙТИНГ</label><input type="number" id="v-rate"></div>
-                    <div><label>ОПЫТ</label><input type="number" id="v-xp"></div>
-                </div>
-                <label>ЛИЦЕНЗИЯ ТАКСИ</label>
-                <select id="v-lic"><option value="false">НЕТ</option><option value="true">ЕСТЬ</option></select>
-                <label>МАШИНА</label>
-                <select id="v-car"><option value="null">ВЕЛОСИПЕД</option><option value="cyber_taxi">CYBER TAXI</option></select>
-                <label>ДЕТАЛИ (Чип/Двиг/Сплав)</label>
-                <div style="display:flex; gap:5px">
-                    <input type="number" id="p1"><input type="number" id="p2"><input type="number" id="p3">
-                </div>
-            </div>
-
-            <div class="card" style="grid-column: 1 / -1">
-                <h3>📜 ИСТОРИЯ ДЕЙСТВИЙ (LOGS)</h3>
-                <div class="history-box" id="h-box"></div>
-            </div>
-        </div>
-    </div>
+<div class="main" id="details">
+    <h1>Выберите игрока</h1>
+</div>
 
 <script>
     const firebaseConfig = {
@@ -110,128 +38,105 @@
         projectId: "warszawa-courier",
         storageBucket: "warszawa-courier.firebasestorage.app",
         messagingSenderId: "295860613508",
-        appId: "1:295860613508:web:86fe8364377d6875612dd1",
-        measurementId: "G-TGSCHBVLX2"
+        appId: "1:295860613508:web:86fe8364377d6875612dd1"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let users = {};
-    let cur = null;
+    let players = {};
+    let users = {}; // Тут пароли
+    let currentId = null;
 
-    // 1. СПИСОК ИГРОКОВ
-    db.ref('users').on('value', snap => {
-        users = snap.val() || {};
-        const list = document.getElementById('u-list');
-        list.innerHTML = '';
-        const now = Date.now();
-
-        Object.keys(users).forEach(id => {
-            const u = users[id];
-            const online = (now - (u._last_seen || 0)) < 15000;
-            const div = document.createElement('div');
-            div.className = `user-row ${id===cur?'active':''}`;
-            div.onclick = () => selectUser(id);
-            div.innerHTML = `
-                <div><b>${id}</b><div style="font-size:10px; color:#888">${Math.floor(u.balance)} PLN</div></div>
-                <div class="dot ${online?'on':''}"></div>
-            `;
-            list.appendChild(div);
-        });
-        
-        if(cur && users[cur]) updateForm(users[cur]);
+    // Читаем игроков
+    db.ref('players').on('value', s => {
+        players = s.val() || {};
+        renderList();
+        if(currentId) renderDetails(currentId);
     });
 
-    // 2. ВЫБОР ИГРОКА
-    function selectUser(id) {
-        cur = id;
-        document.getElementById('panel').style.opacity = '1';
-        document.getElementById('panel').style.pointerEvents = 'all';
-        document.getElementById('u-name').innerText = id;
-        
-        // История
-        db.ref('history/'+id).limitToLast(50).on('value', snap => {
-            const box = document.getElementById('h-box');
-            box.innerHTML = '';
-            const data = snap.val();
-            if(data) {
-                Object.values(data).reverse().forEach(log => {
-                    const cls = log.amount >= 0 ? 'plus' : 'minus';
-                    const sign = log.amount > 0 ? '+' : '';
-                    box.innerHTML += `
-                        <div class="log-row">
-                            <span>${new Date(log.time).toLocaleTimeString()} - ${log.reason}</span>
-                            <span class="${cls}">${sign}${log.amount}</span>
-                        </div>`;
-                });
-            } else box.innerHTML = '<div style="padding:10px; color:#666">Нет записей</div>';
+    // Читаем пароли
+    db.ref('users_lookup').on('value', s => {
+        users = s.val() || {};
+        if(currentId) renderDetails(currentId);
+    });
+
+    function renderList() {
+        let html = '';
+        const now = Date.now();
+        // Сортировка: Сначала онлайн
+        Object.keys(players).sort((a,b) => (players[b].lastSeen||0) - (players[a].lastSeen||0)).forEach(id => {
+            const p = players[id];
+            const isOnline = (now - (p.lastSeen || 0)) < 60000;
+            html += `
+                <div class="player-row ${id===currentId?'active':''}" onclick="currentId='${id}'; renderDetails('${id}'); renderList()">
+                    <div>
+                        <span class="${isOnline?'online-dot':'offline-dot'}">●</span> 
+                        ${p.name || 'No Name'}
+                    </div>
+                    <div>${Math.floor(p.balance||0)}</div>
+                </div>
+            `;
         });
-
-        updateForm(users[id]);
+        document.getElementById('list').innerHTML = html;
     }
 
-    function updateForm(u) {
-        document.getElementById('v-pass').innerText = u.password;
-        document.getElementById('v-bal').value = u.balance;
-        document.getElementById('v-rate').value = u.stats?.rating || 0;
-        document.getElementById('v-xp').value = u.stats?.total_deliveries || 0;
-        document.getElementById('v-lic').value = (u.taxi?.license||false).toString();
-        document.getElementById('v-car').value = u.taxi?.vehicle || "null";
-        
-        document.getElementById('p1').value = u.inventory?.part_chip || 0;
-        document.getElementById('p2').value = u.inventory?.part_engine || 0;
-        document.getElementById('p3').value = u.inventory?.part_alloy || 0;
-    }
+    function renderDetails(id) {
+        const p = players[id];
+        if(!p) return;
 
-    // 3. ДЕЙСТВИЯ
-    function saveAll() {
-        if(!cur) return;
-        const u = users[cur];
-        const updates = {
-            balance: parseFloat(document.getElementById('v-bal').value),
-            'stats/rating': parseFloat(document.getElementById('v-rate').value),
-            'stats/total_deliveries': parseInt(document.getElementById('v-xp').value),
-            'taxi/license': (document.getElementById('v-lic').value === 'true'),
-            'taxi/vehicle': document.getElementById('v-car').value === 'null' ? null : 'cyber_taxi',
-            'inventory/part_chip': parseInt(document.getElementById('p1').value),
-            'inventory/part_engine': parseInt(document.getElementById('p2').value),
-            'inventory/part_alloy': parseInt(document.getElementById('p3').value)
-        };
-        db.ref('users/'+cur).update(updates);
-        alert('Сохранено!');
-    }
-
-    function bonus(amt) {
-        if(!cur) return;
-        const bal = parseFloat(document.getElementById('v-bal').value);
-        const newBal = bal + amt;
-        
-        db.ref('users/'+cur).update({balance: newBal});
-        db.ref('history/'+cur).push({
-            amount: amt, 
-            reason: amt > 0 ? "Бонус от Админа" : "Штраф от Админа", 
-            time: Date.now()
-        });
-    }
-
-    function setPass() {
-        const p = document.getElementById('i-pass').value;
-        if(p) {
-            db.ref('users/'+cur).update({password: p});
-            document.getElementById('i-pass').value = '';
-            alert('Пароль изменен');
+        // Поиск пароля
+        let authInfo = '<span style="color:#888">Авторизация через Telegram</span>';
+        const userEntry = Object.values(users).find(u => u.playerId === id);
+        if(userEntry) {
+            authInfo = `
+                <div style="background:#000; padding:10px; border:1px solid #333; font-family:monospace">
+                    LOGIN: <b style="color:#fff">${userEntry.login}</b><br>
+                    PASS:  <b style="color:#00e676">${userEntry.pass}</b>
+                </div>`;
         }
+
+        document.getElementById('details').innerHTML = `
+            <h2>${p.name} <span style="font-size:12px; color:#666">${id}</span></h2>
+            
+            <div class="card">
+                <h3>🔑 Данные входа (Android/Web)</h3>
+                ${authInfo}
+            </div>
+
+            <div class="card">
+                <h3>💰 Баланс: ${p.balance} PLN</h3>
+                <button class="btn-green" onclick="send('${id}', 'balance', ${(p.balance||0)+1000})">+1000</button>
+                <button class="btn-green" onclick="send('${id}', 'balance', ${(p.balance||0)+50000})">+50K</button>
+                <button class="btn-red" onclick="send('${id}', 'balance', 0)">Обнулить</button>
+            </div>
+
+            <div class="card">
+                <h3>⚡ Действия</h3>
+                <button class="btn-green" onclick="giveCyber('${id}')">Выдать Cyber-X</button>
+                <button class="btn-green" onclick="heal('${id}')">Вылечить</button>
+                <button class="btn-red" onclick="send('${id}', 'isBanned', ${!p.isBanned})">${p.isBanned?'РАЗБАНИТЬ':'ЗАБАНИТЬ'}</button>
+            </div>
+        `;
     }
 
-    function wipe() {
-        if(confirm('Удалить игрока навсегда?')) {
-            db.ref('users/'+cur).remove();
-            db.ref('history/'+cur).remove();
-            document.getElementById('panel').style.opacity = '0.2';
-            document.getElementById('panel').style.pointerEvents = 'none';
-            cur = null;
-        }
-    }
+    // Отправка команд
+    window.send = function(id, path, val) {
+        db.ref('players/'+id+'/adminInbox').push({ type: 'SET_VAR', path: path, value: val });
+    };
+
+    window.giveCyber = function(id) {
+        send(id, 'taxi.vehicle', 'cyber_x');
+        send(id, 'taxi.active', true);
+        alert('Машина выдана!');
+    };
+    
+    window.heal = function(id) {
+        send(id, 'needs.energy', 100);
+        send(id, 'needs.water', 100);
+        send(id, 'needs.mood', 100);
+        alert('Вылечен!');
+    };
+
 </script>
 </body>
 </html>
