@@ -1718,7 +1718,153 @@
   </script>
 <script src="patches/design_update.js"></script>
 
+<script>
+(function() {
+    console.log(">>> Patch v53: GAMEPLAY RESTORED");
 
+    // 1. CSS ДЛЯ ПРОЦЕНТОВ (Красиво по центру)
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .tiny-stat { 
+            position: absolute; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%);
+            font-size: 10px; font-weight: 900; 
+            color: #fff; text-shadow: 0 0 3px #000; 
+            z-index: 50; pointer-events: none;
+        }
+        .equip-item { position: relative; }
+        .equip-label { margin-top: 5px; display: block; }
+    `;
+    document.head.appendChild(style);
+
+    // 2. ФУНКЦИЯ: ОТОБРАЖЕНИЕ ПРОЦЕНТОВ
+    function updateVisualStats() {
+        // Если игра еще не загрузилась - выходим
+        if(typeof state === 'undefined' || !state.items) return;
+
+        const stats = { 
+            'bike': state.items.bike, 
+            'bag': state.items.bag, 
+            'phone': state.items.phone, 
+            'gear': state.items.gear, 
+            'energy': state.needs.energy, 
+            'water': state.needs.water, 
+            'mood': state.needs.mood 
+        };
+        
+        for (let [key, val] of Object.entries(stats)) {
+            const bar = document.getElementById(`bar-${key}`);
+            if(bar) {
+                // Ищем родителя (иконку)
+                const parent = bar.closest('.equip-item') || bar.parentElement.parentElement;
+                let num = parent.querySelector('.tiny-stat');
+                
+                // Создаем цифру, если нет
+                if(!num) { 
+                    num = document.createElement('div'); 
+                    num.className = 'tiny-stat'; 
+                    parent.appendChild(num); 
+                }
+                
+                // Обновляем текст
+                const cleanVal = Math.floor(val);
+                num.textContent = cleanVal + '%';
+
+                // Красим в красный, если минус
+                if(cleanVal < 0) {
+                    num.style.color = '#ff3d00';
+                    num.textContent = '⚠️ ' + cleanVal + '%';
+                } else {
+                    num.style.color = '#fff';
+                }
+            }
+        }
+    }
+
+    // 3. ЛОГИКА СБОРКИ МАШИНЫ (CYBER CAR)
+    // ID машины
+    const CYBER_CAR = { id: 'cyber_taxi', name: 'Cyber Taxi 2077' };
+
+    // Функция крафта (вызывается кнопкой)
+    window.craftCyber = function() {
+        if(!state.inventory) return;
+        
+        // Проверка ресурсов
+        if(state.inventory['part_chip'] > 0 && 
+           state.inventory['part_engine'] > 0 && 
+           state.inventory['part_alloy'] > 0) {
+            
+            // Списываем детали
+            state.inventory['part_chip']--; 
+            state.inventory['part_engine']--; 
+            state.inventory['part_alloy']--;
+            
+            // Выдаем машину
+            state.taxi.vehicle = CYBER_CAR.id;
+            
+            // Сохраняем
+            window.saveGame(); 
+            if(window.syncToCloud) window.syncToCloud(true);
+            
+            // Уведомление
+            if(window.showToast) window.showToast('🤖 CYBER-X СОБРАН!', 'success');
+            
+            // Обновляем магазин (если открыт)
+            const b = document.getElementById('modal-body');
+            if(b) window.renderTaxiShop(b);
+            
+            window.updateMenuState();
+        } else {
+            if(window.showToast) window.showToast('❌ Не хватает деталей!', 'error');
+        }
+    };
+
+    // Внедрение кнопки в магазин (автоматически)
+    // Мы перехватываем функцию отрисовки магазина
+    const originalRenderShop = window.renderTaxiShop;
+    window.renderTaxiShop = function(container) {
+        // Сначала рисуем обычный магазин
+        if(originalRenderShop) originalRenderShop(container);
+        
+        // Добавляем секцию крафта
+        const div = document.createElement('div');
+        div.style.marginTop = '15px';
+        div.style.padding = '10px';
+        div.style.background = 'rgba(0,0,0,0.05)';
+        div.style.borderRadius = '8px';
+        div.style.border = '1px solid #d500f9';
+        
+        const hasParts = (state.inventory['part_chip']>0 && state.inventory['part_engine']>0 && state.inventory['part_alloy']>0);
+        const hasCar = (state.taxi.vehicle === CYBER_CAR.id);
+        
+        div.innerHTML = `
+            <div style="color:#d500f9; font-weight:bold; margin-bottom:5px">🔧 МАСТЕРСКАЯ CYBER-X</div>
+            <div style="font-size:11px; margin-bottom:10px; display:flex; gap:5px; justify-content:center">
+                <span>🔋 Чип: ${state.inventory['part_chip']||0}</span>
+                <span>⚙️ Двиг: ${state.inventory['part_engine']||0}</span>
+                <span>🔩 Сплав: ${state.inventory['part_alloy']||0}</span>
+            </div>
+            ${hasCar ? 
+                '<div style="color:#00c853; font-weight:bold; text-align:center">✅ МАШИНА СОБРАНА</div>' :
+                `<button onclick="window.craftCyber()" style="width:100%; padding:8px; background:${hasParts?'#d500f9':'#555'}; color:white; border:none; border-radius:4px; font-weight:bold; cursor:${hasParts?'pointer':'not-allowed'}">
+                    ${hasParts ? 'СОБРАТЬ МАШИНУ' : 'НЕТ ДЕТАЛЕЙ'}
+                </button>`
+            }
+        `;
+        container.appendChild(div);
+    };
+
+    // 4. ГЛАВНЫЙ ЦИКЛ (Обновляет проценты каждую секунду)
+    setInterval(() => {
+        updateVisualStats();
+    }, 1000);
+
+    // Запускаем сразу один раз
+    setTimeout(updateVisualStats, 500);
+
+})();
+</script>
     
 </script>
 </body> </html>
