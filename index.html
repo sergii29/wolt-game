@@ -1718,4 +1718,124 @@
   </script>
 <script src="patches/design_update.js"></script>
 
+<script>
+(function() {
+    console.log(">>> Patch v35 Loaded: CYBER COLLECTOR FORCE INJECTED");
+
+    // 1. КОНФИГУРАЦИЯ
+    const DROP_CHANCE = 0.03; // 3% шанс
+    const RARE_ITEMS = {
+        'part_chip': { name: 'Квантовый Чип', icon: 'fa-microchip', desc: 'Редкая электроника.', rarity: 'legendary' },
+        'part_engine': { name: 'Ядро Реактора', icon: 'fa-radiation', desc: 'Нестабильная энергия.', rarity: 'legendary' },
+        'part_alloy': { name: 'Титан-X', icon: 'fa-cube', desc: 'Сплав из космоса.', rarity: 'legendary' }
+    };
+    const CYBER_CAR = { id: 'cyber_x', name: 'Cyber-X Prototype', icon: 'fa-rocket', desc: 'Собран из деталей. Бонус к энергии.', bonus: 'Energy Saver' };
+
+    // 2. БАЗА ПРЕДМЕТОВ
+    setTimeout(() => {
+        if(window.ITEMS_DB) {
+            Object.assign(window.ITEMS_DB, {
+                part_chip: { name: 'Квантовый Чип', type: 'part', icon: 'fa-microchip', desc: 'Деталь Cyber-X' },
+                part_engine: { name: 'Ядро Реактора', type: 'part', icon: 'fa-radiation', desc: 'Деталь Cyber-X' },
+                part_alloy: { name: 'Титан-X', type: 'part', icon: 'fa-cube', desc: 'Деталь Cyber-X' }
+            });
+        }
+    }, 1000);
+
+    // 3. СТИЛИ
+    const s = document.createElement("style");
+    s.innerText = `
+        .legendary-toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: linear-gradient(135deg, #222, #000); border: 2px solid #d500f9; box-shadow: 0 0 30px #d500f9; color: #fff; padding: 20px; border-radius: 16px; text-align: center; z-index: 10000; animation: popInLeg 0.5s; min-width: 250px; }
+        .leg-icon { font-size: 50px; color: #d500f9; margin-bottom: 10px; }
+        .leg-btn { background: #d500f9; color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; font-weight: bold; margin-top: 10px; cursor: pointer; }
+        .craft-zone { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-top: 20px; border: 1px dashed #d500f9; }
+        .part-slot { width: 50px; height: 50px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #444; position: relative; }
+        .part-slot.filled { border-color: #d500f9; color: #d500f9; background: #2a0030; box-shadow: 0 0 10px #d500f9; }
+        .part-count { position: absolute; bottom: -5px; right: -5px; background: #d500f9; color: white; font-size: 9px; padding: 2px 4px; border-radius: 4px; }
+        @keyframes popInLeg { from { opacity:0; transform:translate(-50%,-40%) scale(0.8); } to { opacity:1; transform:translate(-50%,-50%) scale(1); } }
+    `;
+    document.head.appendChild(s);
+
+    // 4. ЛОВИМ ЗАВЕРШЕНИЕ ЗАКАЗА
+    const oldComplete = window.completeOrder;
+    window.completeOrder = function() {
+        if(oldComplete) oldComplete.apply(this, arguments);
+        // ШАНС ВЫПАДЕНИЯ
+        if(Math.random() <= DROP_CHANCE) {
+            const keys = Object.keys(RARE_ITEMS);
+            const key = keys[Math.floor(Math.random() * keys.length)];
+            const item = RARE_ITEMS[key];
+            if(!state.inventory[key]) state.inventory[key] = 0;
+            state.inventory[key]++;
+            window.saveGame(); window.syncToCloud(true);
+            
+            // POPUP
+            const d = document.createElement('div');
+            d.className = 'legendary-toast';
+            d.innerHTML = `<div class="leg-icon"><i class="fa-solid ${item.icon}"></i></div><div style="font-size:20px;font-weight:800;color:#e040fb">РЕДКОСТЬ!</div><div style="color:#aaa;margin-bottom:10px">Найдено: ${item.name}</div><button class="leg-btn" onclick="this.parentElement.remove()">ЗАБРАТЬ</button>`;
+            document.body.appendChild(d);
+        }
+    };
+
+    // 5. ВСТРАИВАЕМСЯ В МАГАЗИН ТАКСИ
+    const oldTaxiRender = window.renderTaxiShop;
+    window.renderTaxiShop = function(c) {
+        if(oldTaxiRender) oldTaxiRender(c);
+        
+        const c1 = state.inventory['part_chip']||0;
+        const c2 = state.inventory['part_engine']||0;
+        const c3 = state.inventory['part_alloy']||0;
+        const ready = (c1>0 && c2>0 && c3>0);
+        const owned = (state.taxi.vehicle === CYBER_CAR.id);
+
+        const html = `
+        <div class="craft-zone">
+            <div style="color:#d500f9;font-weight:bold;margin-bottom:10px;display:flex;justify-content:space-between">
+                <span><i class="fa-solid fa-microchip"></i> СБОРКА CYBER-X</span>
+                ${owned ? '✅' : ''}
+            </div>
+            <div style="display:flex;justify-content:space-around;margin-bottom:15px">
+                <div class="part-slot ${c1?'filled':''}"><i class="fa-solid fa-microchip"></i>${c1?`<div class="part-count">${c1}</div>`:''}</div>
+                <div class="part-slot ${c2?'filled':''}"><i class="fa-solid fa-radiation"></i>${c2?`<div class="part-count">${c2}</div>`:''}</div>
+                <div class="part-slot ${c3?'filled':''}"><i class="fa-solid fa-cube"></i>${c3?`<div class="part-count">${c3}</div>`:''}</div>
+            </div>
+            ${!owned ? 
+                `<button class="shop-btn" style="width:100%;background:${ready?'#d500f9':'#333'};color:${ready?'white':'#666'};border:1px solid #d500f9" ${ready?'onclick="window.craftCyber()"':'disabled'}>${ready?'СОБРАТЬ МАШИНУ':'НУЖНЫ ДЕТАЛИ'}</button>` 
+                : `<div style="text-align:center;color:#00c853;font-weight:bold">МАШИНА В ГАРАЖЕ</div>`
+            }
+        </div>`;
+        
+        const d = document.createElement('div');
+        d.innerHTML = html;
+        c.appendChild(d);
+    };
+
+    // 6. ФУНКЦИЯ КРАФТА
+    window.craftCyber = function() {
+        if(state.inventory['part_chip']>0 && state.inventory['part_engine']>0 && state.inventory['part_alloy']>0) {
+            state.inventory['part_chip']--; state.inventory['part_engine']--; state.inventory['part_alloy']--;
+            state.taxi.vehicle = CYBER_CAR.id;
+            window.saveGame(); window.syncToCloud(true);
+            window.showToast('🤖 CYBER-X СОБРАН!', 'success');
+            const b = document.getElementById('modal-body');
+            if(b) window.renderTaxiShop(b);
+            window.updateMenuState();
+        }
+    };
+
+    // 7. НАЗВАНИЕ В МЕНЮ
+    setInterval(() => {
+        if(state.taxi.active && state.taxi.vehicle === CYBER_CAR.id) {
+            const l = document.getElementById('city-label');
+            if(l && !l.innerHTML.includes('CYBER')) l.innerHTML = 'Night City <span style="font-size:10px;color:#d500f9;border:1px solid #d500f9;padding:0 3px">CYBER</span>';
+            const p = document.getElementById('pedal-btn');
+            if(p && !p.style.background.includes('d500f9')) { p.style.background='#d500f9'; p.style.color='white'; p.style.boxShadow='0 4px 0 #4a148c'; }
+            if(state.needs.energy < 100) state.needs.energy += 0.45; // Бонус энергии
+        }
+    }, 1000);
+
+})();
+</script>
+
 </body> </html>
+
