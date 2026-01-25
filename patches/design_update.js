@@ -781,35 +781,4 @@
             // Обновляем главное меню (чтобы название машины обновилось, если нужно)
             if(window.updateMenuState) window.updateMenuState();
         }
-    };
-
-    // 8. ПОДДЕРЖКА НОВОЙ МАШИНЫ В ГЛАВНОМ МЕНЮ
-    // Если игрок выберет Cyber-X, нам нужно чтобы в меню отображалось правильное название,
-    // а не "undefined", так как в оригинальном массиве cars этой машины нет.
-    // Мы перехватываем обновление UI, если активно такси и машина - наша кастомная.
-    setInterval(() => {
-        if(state && state.taxi && state.taxi.active && state.taxi.vehicle === CYBER_CAR.id) {
-            const label = document.getElementById('city-label');
-            if(label && !label.innerHTML.includes('CYBER')) {
-                label.innerHTML = 'Night City <span style="font-size:10px; color:#d500f9; border:1px solid #d500f9; padding:0 3px; border-radius:3px">CYBER</span>';
-            }
-            
-            // Если нужно поменять иконку на педали
-            const pedal = document.getElementById('pedal-btn');
-            if(pedal && !pedal.classList.contains('cyber-pedal')) {
-                pedal.classList.add('cyber-pedal');
-                pedal.style.boxShadow = "0 4px 0 #4a148c";
-                pedal.style.background = "#d500f9";
-                pedal.style.color = "white";
-            }
-            
-            // Бонус: Cyber-X не тратит бензин (энергию) так быстро или вообще
-            // Это можно реализовать, сбрасывая потребление, но мы обещали не менять код.
-            // Поэтому мы просто будем чуть-чуть подлечивать энергию, компенсируя трату.
-            // Это "Cheat-less" способ реализации бонуса.
-            if(state.needs.energy < 100) state.needs.energy += 0.45; // Компенсация расхода 0.5
-        }
-    }, 1000);
-
-})();
-
+    
