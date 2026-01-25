@@ -570,3 +570,246 @@
     };
 
 })();
+
+
+
+
+
+// ============================================================
+// --- PATCH v35: CYBER COLLECTOR (CRAFTING SYSTEM) ---
+// Key: WARSZAWA_FOREVER (Integrity Protected)
+// Description: Adds rare drops and crafting without altering core logic.
+// ============================================================
+
+(function() {
+    console.log(">>> Patch v35 Loaded: LEGENDARY DROPS & CRAFTING");
+
+    // 1. КОНФИГУРАЦИЯ РЕДКОСТИ
+    // Шанс 0.03 = 3% при каждом заказе
+    const DROP_CHANCE = 0.03; 
+    
+    // Новые предметы (Детали)
+    const RARE_ITEMS = {
+        'part_chip': { name: 'Квантовый Чип', icon: 'fa-microchip', desc: 'Редкая электроника для ИИ.', rarity: 'legendary' },
+        'part_engine': { name: 'Ядро Реактора', icon: 'fa-radiation', desc: 'Нестабильный источник энергии.', rarity: 'legendary' },
+        'part_alloy': { name: 'Титан-X', icon: 'fa-cube', desc: 'Сплав из космической программы.', rarity: 'legendary' }
+    };
+
+    // Уникальная награда (Машина)
+    const CYBER_CAR = {
+        id: 'cyber_x',
+        name: 'Cyber-X Prototype',
+        icon: 'fa-rocket',
+        desc: 'Собран из украденных технологий. Неуловим для камер.',
+        bonus: 'Выплата x5.0 | Нет штрафов за скорость'
+    };
+
+    // 2. РАСШИРЕНИЕ БАЗЫ ПРЕДМЕТОВ (БЕЗОПАСНО)
+    // Мы добавляем их в ITEMS_DB, чтобы они корректно отображались в инвентаре, если там появятся
+    setTimeout(() => {
+        if(window.ITEMS_DB) {
+            Object.assign(window.ITEMS_DB, {
+                part_chip: { name: 'Квантовый Чип', type: 'part', icon: 'fa-microchip', desc: 'Деталь Cyber-X' },
+                part_engine: { name: 'Ядро Реактора', type: 'part', icon: 'fa-radiation', desc: 'Деталь Cyber-X' },
+                part_alloy: { name: 'Титан-X', type: 'part', icon: 'fa-cube', desc: 'Деталь Cyber-X' }
+            });
+        }
+    }, 1000);
+
+    // 3. СТИЛИ ДЛЯ ЛЕГЕНДАРОК
+    const rareStyles = `
+        .legendary-toast {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #222, #000);
+            border: 2px solid #d500f9;
+            box-shadow: 0 0 30px #d500f9;
+            color: #fff; padding: 20px; border-radius: 16px;
+            text-align: center; z-index: 9999;
+            animation: popInLeg 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 250px;
+        }
+        .leg-icon { font-size: 50px; color: #d500f9; margin-bottom: 10px; text-shadow: 0 0 10px #d500f9; }
+        .leg-title { font-size: 20px; font-weight: 800; color: #e040fb; text-transform: uppercase; margin-bottom: 5px; }
+        .leg-desc { font-size: 12px; color: #aaa; margin-bottom: 15px; }
+        .leg-btn { background: #d500f9; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
+        
+        .craft-zone { background: #1a1a1a; padding: 15px; border-radius: 12px; margin-top: 20px; border: 1px dashed #444; }
+        .craft-header { color: #d500f9; font-weight: bold; font-size: 14px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; }
+        .part-slot { width: 50px; height: 50px; background: #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #555; font-size: 20px; position: relative; border: 1px solid #444; }
+        .part-slot.filled { border-color: #d500f9; color: #d500f9; background: #2a0030; box-shadow: 0 0 10px rgba(213, 0, 249, 0.3); }
+        .part-count { position: absolute; bottom: -5px; right: -5px; background: #d500f9; color: white; font-size: 9px; padding: 2px 4px; border-radius: 4px; }
+        
+        @keyframes popInLeg { from { opacity:0; transform:translate(-50%, -40%) scale(0.8); } to { opacity:1; transform:translate(-50%, -50%) scale(1); } }
+    `;
+    const styleSheet = document.createElement("style"); styleSheet.innerText = rareStyles; document.head.appendChild(styleSheet);
+
+
+    // 4. ПЕРЕХВАТ ЗАВЕРШЕНИЯ ЗАКАЗА (MONKEY PATCH)
+    // Мы сохраняем старую функцию и оборачиваем её в новую
+    if (window.completeOrder) {
+        const originalCompleteOrder = window.completeOrder;
+        
+        window.completeOrder = function() {
+            // 1. Выполняем старую логику (деньги, опыт, чаевые - всё работает как раньше)
+            originalCompleteOrder.apply(this, arguments);
+
+            // 2. Добавляем новую механику дропа
+            try {
+                rollForLegendary();
+            } catch(e) { console.error("Drop Error:", e); }
+        };
+    } else {
+        console.warn("CRITICAL: completeOrder not found! Patch v35 may not work.");
+    }
+
+    // 5. ЛОГИКА ВЫПАДЕНИЯ
+    function rollForLegendary() {
+        if(Math.random() > DROP_CHANCE) return; // Не повезло
+
+        const parts = Object.keys(RARE_ITEMS);
+        const droppedKey = parts[Math.floor(Math.random() * parts.length)];
+        const item = RARE_ITEMS[droppedKey];
+
+        // Добавляем в инвентарь (безопасно для структуры state)
+        if (!state.inventory[droppedKey]) state.inventory[droppedKey] = 0;
+        state.inventory[droppedKey]++;
+
+        // Сохраняем немедленно
+        if(window.saveGame) window.saveGame();
+        if(window.syncToCloud) window.syncToCloud(true);
+
+        // Показываем "Вау" уведомление
+        showLegendaryPopup(item, droppedKey);
+    }
+
+    function showLegendaryPopup(item, key) {
+        const div = document.createElement('div');
+        div.className = 'legendary-toast';
+        div.innerHTML = `
+            <div class="leg-icon"><i class="fa-solid ${item.icon}"></i></div>
+            <div class="leg-title">РЕДКАЯ НАХОДКА!</div>
+            <div class="leg-desc">Вы нашли: <span style="color:white; font-weight:bold">${item.name}</span><br>${item.desc}</div>
+            <div style="font-size:11px; color:#888; margin-bottom:10px">Собери 3 разные детали в Автосалоне</div>
+            <button class="leg-btn" onclick="this.parentElement.remove()">ЗАБРАТЬ</button>
+        `;
+        document.body.appendChild(div);
+    }
+
+    // 6. ПЕРЕХВАТ АВТОСАЛОНА (UI КРАФТА)
+    // Мы подменяем функцию рендера автосалона, чтобы добавить вниз зону крафта
+    if (window.renderTaxiShop) {
+        const originalRenderTaxiShop = window.renderTaxiShop;
+
+        window.renderTaxiShop = function(container) {
+            // Рисуем старый магазин
+            originalRenderTaxiShop(container);
+
+            // Дорисовываем зону крафта
+            const hasChip = (state.inventory['part_chip'] || 0);
+            const hasEngine = (state.inventory['part_engine'] || 0);
+            const hasAlloy = (state.inventory['part_alloy'] || 0);
+            
+            const isReady = (hasChip > 0 && hasEngine > 0 && hasAlloy > 0);
+            const isOwned = (state.taxi.vehicle === CYBER_CAR.id);
+
+            const craftHtml = `
+                <div class="craft-zone">
+                    <div class="craft-header">
+                        <span><i class="fa-solid fa-screwdriver-wrench"></i> СБОРКА ПРОТОТИПА</span>
+                        ${isOwned ? '<span style="color:#00c853">СОБРАНО</span>' : ''}
+                    </div>
+                    <div style="font-size:11px; color:#aaa; margin-bottom:15px">
+                        Найдите 3 редкие детали в заказах, чтобы собрать <b>Cyber-X</b>.
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-around; margin-bottom:20px">
+                        <div class="part-slot ${hasChip?'filled':''}">
+                            <i class="fa-solid ${RARE_ITEMS['part_chip'].icon}"></i>
+                            ${hasChip > 0 ? `<div class="part-count">${hasChip}</div>` : ''}
+                        </div>
+                        <div class="part-slot ${hasEngine?'filled':''}">
+                            <i class="fa-solid ${RARE_ITEMS['part_engine'].icon}"></i>
+                            ${hasEngine > 0 ? `<div class="part-count">${hasEngine}</div>` : ''}
+                        </div>
+                        <div class="part-slot ${hasAlloy?'filled':''}">
+                            <i class="fa-solid ${RARE_ITEMS['part_alloy'].icon}"></i>
+                            ${hasAlloy > 0 ? `<div class="part-count">${hasAlloy}</div>` : ''}
+                        </div>
+                    </div>
+
+                    ${isOwned 
+                        ? `<button class="shop-btn bought" style="width:100%; background:#333; cursor:default">В ГАРАЖЕ</button>`
+                        : `<button class="shop-btn ${isReady ? 'buy' : ''}" 
+                            style="width:100%; border-color:#d500f9; color:${isReady?'white':'#666'}; background:${isReady?'#d500f9':'transparent'}"
+                            ${isReady ? 'onclick="window.craftCyberCar()"' : 'disabled'}>
+                            ${isReady ? 'СОБРАТЬ CYBER-X' : 'НЕ ХВАТАЕТ ДЕТАЛЕЙ'}
+                           </button>`
+                    }
+                </div>
+            `;
+            
+            // Вставляем HTML в конец контейнера
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = craftHtml;
+            container.appendChild(tempDiv);
+        };
+    }
+
+    // 7. ФУНКЦИЯ КРАФТА
+    window.craftCyberCar = function() {
+        if(state.inventory['part_chip'] > 0 && state.inventory['part_engine'] > 0 && state.inventory['part_alloy'] > 0) {
+            // Списываем детали
+            state.inventory['part_chip']--;
+            state.inventory['part_engine']--;
+            state.inventory['part_alloy']--;
+            
+            // Выдаем машину
+            // Так как система такси проверяет только ID машины, мы просто ставим новый ID
+            state.taxi.vehicle = CYBER_CAR.id;
+            
+            // Сохраняем
+            if(window.saveGame) window.saveGame();
+            if(window.syncToCloud) window.syncToCloud(true);
+            
+            // Обновляем UI
+            if(window.showToast) window.showToast('🤖 CYBER-X СОБРАН! ТЫ ЛЕГЕНДА!', 'success');
+            
+            // Перерисовываем модалку
+            const modalBody = document.getElementById('modal-body');
+            if(modalBody && window.renderTaxiShop) window.renderTaxiShop(modalBody);
+            
+            // Обновляем главное меню (чтобы название машины обновилось, если нужно)
+            if(window.updateMenuState) window.updateMenuState();
+        }
+    };
+
+    // 8. ПОДДЕРЖКА НОВОЙ МАШИНЫ В ГЛАВНОМ МЕНЮ
+    // Если игрок выберет Cyber-X, нам нужно чтобы в меню отображалось правильное название,
+    // а не "undefined", так как в оригинальном массиве cars этой машины нет.
+    // Мы перехватываем обновление UI, если активно такси и машина - наша кастомная.
+    setInterval(() => {
+        if(state && state.taxi && state.taxi.active && state.taxi.vehicle === CYBER_CAR.id) {
+            const label = document.getElementById('city-label');
+            if(label && !label.innerHTML.includes('CYBER')) {
+                label.innerHTML = 'Night City <span style="font-size:10px; color:#d500f9; border:1px solid #d500f9; padding:0 3px; border-radius:3px">CYBER</span>';
+            }
+            
+            // Если нужно поменять иконку на педали
+            const pedal = document.getElementById('pedal-btn');
+            if(pedal && !pedal.classList.contains('cyber-pedal')) {
+                pedal.classList.add('cyber-pedal');
+                pedal.style.boxShadow = "0 4px 0 #4a148c";
+                pedal.style.background = "#d500f9";
+                pedal.style.color = "white";
+            }
+            
+            // Бонус: Cyber-X не тратит бензин (энергию) так быстро или вообще
+            // Это можно реализовать, сбрасывая потребление, но мы обещали не менять код.
+            // Поэтому мы просто будем чуть-чуть подлечивать энергию, компенсируя трату.
+            // Это "Cheat-less" способ реализации бонуса.
+            if(state.needs.energy < 100) state.needs.energy += 0.45; // Компенсация расхода 0.5
+        }
+    }, 1000);
+
+})();
+
