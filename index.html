@@ -1,31 +1,37 @@
 
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Warsaw Courier Sim</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <style>
-        :root {
-            --bg-dark: #1a1a1a;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --accent-blue: #00ccff;
-            --accent-green: #00e676;
-            --accent-orange: #ff9100;
-            --accent-red: #ff3d00;
-            --accent-purple: #d500f9;
-            --brand-blue: #0088cc; 
-            --taxi-yellow: #ffcc00;
-            --taxi-black: #222;
+▶                return `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center">
+▶                    <div><b>${h.rest}</b>${tipStr}</div>
+▶                    <span style="font-weight:bold">+${amount.toFixed(2)}</span>
+▶                </div>`;
+            }).join(''); 
         }
 
-        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-dark); color: var(--text-primary); overflow: hidden; user-select: none; }
-        #map { height: 100%; width: 100%; z-index: 1; filter: brightness(0.8) contrast(1.2); }
+        function updateTrack(p) { document.getElementById('track-fill').style.width=p+'%'; document.getElementById('track-icon').style.left=p+'%'; }
+        
+        function resetGame(penalty = 0) {
+            let msg = 'Сбросить прогресс?';
+            if (penalty > 0) msg += ` С вас будет списано ${penalty} PLN на старте новой игры.`;
+            if(confirm(msg)) {
+                localStorage.removeItem(SAVE_KEY);
+                const newState = {
+                    id: state.id, 
+                    name: null,
+                    balance: 0, debt: (7000 + penalty), debtTimer: Date.now(), debtOverdue: true,
+                    loanStreak: 0, 
+                    isOnline: false, isSearching: false, scheduledOffline: false,
+                    items: { bike: 100, bag: 100, phone: 100, gear: 100 },
+                    needs: { energy: 100, water: 100, mood: 100 },
+                    inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0 },
+                    repairs: { bike: 0, bag: 0, phone: 0, gear: 0 },
+                    history: []
+                };
+                localStorage.setItem(SAVE_KEY, JSON.stringify(newState));
+                location.reload();
+            }
+        }
 
-        .top-bar { position: absolute; top: 0; left: 0; right: 0; padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 1000; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); pointer-events: none; }
+    init();
+▶  </script>
+
+
+▶</body> </html>
