@@ -1720,73 +1720,57 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v45: INSTANT UI FIX");
+    console.log(">>> Patch v46: AGGRESSIVE MAP SWAP LOADED");
 
-    // 1. НАСТРОЙКИ (По умолчанию - ДЕНЬ)
+    // ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
     window.gameWorld = { mode: 'day', isRaining: false, tariff: 1.0 };
 
-    // 2. ФУНКЦИЯ ОТРИСОВКИ ВИДЖЕТА (БЕЗ ЗАДЕРЖЕК)
-    function drawWidget() {
-        const menu = document.getElementById('side-menu');
-        if (!menu) return;
-
-        let w = document.getElementById('tariff-widget');
-        
-        // Если виджета нет - создаем СРАЗУ ЗАПОЛНЕННЫМ
-        if (!w) {
-            w = document.createElement('div');
-            w.id = 'tariff-widget';
-            w.className = 'menu-item';
-            // Стили, чтобы он не схлопывался
-            w.style.cssText = "margin-bottom: 15px; padding: 10px; border-radius: 12px; text-align: center; border: 2px solid #ccc; min-height: 60px; display: flex; flex-direction: column; justify-content: center;";
-            menu.prepend(w);
-        }
-
-        // Данные
-        const t = window.gameWorld.tariff;
-        let html, bg, border, color;
-
-        // Логика цветов
-        if (t >= 1.3) {
-            // Ливень
-            bg = '#e1f5fe'; border = '#0288d1'; color = '#01579b';
-            html = `<div style="font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:1px">⛈ ЛИВЕНЬ</div>
-                    <div style="font-size:24px; font-weight:bold; line-height:1.2">x${t}</div>`;
-        } else if (t > 1.0) {
-            // Ночь
-            bg = '#263238'; border = '#455a64'; color = '#eceff1';
-            html = `<div style="font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:1px">🌙 НОЧЬ</div>
-                    <div style="font-size:24px; font-weight:bold; line-height:1.2">x${t}</div>`;
-        } else {
-            // День (Дефолт)
-            bg = '#fff3e0'; border = '#ffa000'; color = '#e65100';
-            html = `<div style="font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:1px">☀️ ДЕНЬ</div>
-                    <div style="font-size:24px; font-weight:bold; line-height:1.2">x${t}</div>`;
-        }
-
-        // Применяем стили
-        w.style.background = bg;
-        w.style.borderColor = border;
-        w.style.color = color;
-        w.innerHTML = html;
-    }
-
-    // 3. ОБНОВЛЕНИЕ КАРТЫ
-    function updateMap(mode) {
+    // ==========================================
+    // 1. ФУНКЦИЯ ЖЕСТКОЙ СМЕНЫ КАРТЫ (FIX)
+    // ==========================================
+    function setMapTexture(mode) {
+        // Ищем объект карты любым способом
         let m = window.map;
         if (!m && typeof map !== 'undefined') m = map;
-        if (m) {
-            m.eachLayer(l => {
-                if (l._url && l._url.includes('cartocdn')) {
-                    l.setUrl(`https://{s}.basemaps.cartocdn.com/${mode}_all/{z}/{x}/{y}{r}.png`);
-                }
-            });
-            const el = document.getElementById('map');
-            if(el) el.style.filter = (mode === 'day') ? 'brightness(1.05) contrast(1)' : 'brightness(0.7) contrast(1.2)';
+
+        if (!m) {
+            console.warn("Map not found yet...");
+            return; 
         }
-        // Цвета меню
-        const bg = mode==='day'?'#ffffff':'#1a1a1a';
-        const txt = mode==='day'?'#222':'#fff';
+
+        const lightUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+        const darkUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        const targetUrl = (mode === 'day') ? lightUrl : darkUrl;
+
+        // ПЕРЕБИРАЕМ СЛОИ И МЕНЯЕМ ИСТОЧНИК
+        let layerFound = false;
+        m.eachLayer(function(layer) {
+            // Если это слой с тайлами (картинками)
+            if (layer instanceof L.TileLayer) {
+                // Принудительно меняем URL
+                layer.setUrl(targetUrl);
+                layerFound = true;
+            }
+        });
+
+        // Если слой не найден (странный баг), добавляем новый
+        if (!layerFound) {
+            L.tileLayer(targetUrl, { maxZoom: 19 }).addTo(m);
+        }
+
+        // CSS КОРРЕКЦИЯ (Контрастность)
+        const mapDiv = document.getElementById('map');
+        if(mapDiv) {
+            if(mode === 'day') {
+                mapDiv.style.filter = 'brightness(1) contrast(1) grayscale(0)';
+            } else {
+                mapDiv.style.filter = 'brightness(0.7) contrast(1.2) grayscale(0.2)';
+            }
+        }
+
+        // ЦВЕТА ИНТЕРФЕЙСА
+        const bg = mode==='day'?'#ffffff':'#121212';
+        const txt = mode==='day'?'#222222':'#ffffff';
         document.body.style.setProperty('--bg-dark', bg);
         document.body.style.setProperty('--text-primary', txt);
         
@@ -1794,7 +1778,9 @@
         if(menu) { menu.style.background = bg; menu.style.color = txt; }
     }
 
-    // 4. ДОЖДЬ (Canvas)
+    // ==========================================
+    // 2. ВИЗУАЛ (ДОЖДЬ)
+    // ==========================================
     const canvas = document.createElement('canvas');
     canvas.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; z-index:9000; pointer-events:none; display:none;';
     document.body.appendChild(canvas);
@@ -1806,14 +1792,14 @@
     
     function initRain() {
         drops = [];
-        for(let i=0; i<450; i++) drops.push({x:Math.random()*w_w, y:Math.random()*h_h, s:Math.random()*15+5});
+        for(let i=0; i<500; i++) drops.push({x:Math.random()*w_w, y:Math.random()*h_h, s:Math.random()*15+5});
     }
     initRain();
 
     function animate() {
         if(!window.gameWorld.isRaining) return;
         ctx.clearRect(0,0,w_w,h_h);
-        ctx.strokeStyle = 'rgba(160,190,255,0.6)'; ctx.lineWidth=1.5;
+        ctx.strokeStyle = 'rgba(120,160,255,0.5)'; ctx.lineWidth=1.5;
         ctx.beginPath();
         for(let p of drops) {
             ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y+15);
@@ -1823,43 +1809,94 @@
         requestAnimationFrame(animate);
     }
 
-    // 5. ЛОГИКА АВТОМАТИКИ (Раз в 2 минуты)
+    // ==========================================
+    // 3. ВИДЖЕТ (ИНТЕРФЕЙС)
+    // ==========================================
+    function updateWidget() {
+        const menu = document.getElementById('side-menu');
+        if (!menu) return;
+
+        let w = document.getElementById('tariff-widget');
+        if (!w) {
+            w = document.createElement('div');
+            w.id = 'tariff-widget';
+            w.className = 'menu-item';
+            w.style.cssText = "margin-bottom: 15px; padding: 10px; border-radius: 12px; text-align: center; border: 2px solid #ccc; min-height: 60px; display: flex; flex-direction: column; justify-content: center;";
+            menu.prepend(w);
+        }
+
+        const t = window.gameWorld.tariff;
+        let html, bg, border, color;
+
+        if (t >= 1.3) {
+            bg = '#e1f5fe'; border = '#0288d1'; color = '#01579b';
+            html = `<div style="font-size:12px; font-weight:900; text-transform:uppercase;">⛈ ЛИВЕНЬ</div><div style="font-size:24px; font-weight:bold">x${t}</div>`;
+        } else if (t > 1.0) {
+            bg = '#212121'; border = '#424242'; color = '#ffffff';
+            html = `<div style="font-size:12px; font-weight:900; text-transform:uppercase;">🌙 НОЧЬ</div><div style="font-size:24px; font-weight:bold">x${t}</div>`;
+        } else {
+            bg = '#fff3e0'; border = '#ffa000'; color = '#e65100';
+            html = `<div style="font-size:12px; font-weight:900; text-transform:uppercase;">☀️ ДЕНЬ</div><div style="font-size:24px; font-weight:bold">x${t}</div>`;
+        }
+        w.style.background = bg; w.style.borderColor = border; w.style.color = color;
+        w.innerHTML = html;
+    }
+
+    // ==========================================
+    // 4. ЛОГИКА (ТИК КАЖДЫЕ 2 МИН)
+    // ==========================================
     function gameTick() {
+        // Переключение
         window.gameWorld.mode = (window.gameWorld.mode === 'day') ? 'night' : 'day';
-        window.gameWorld.isRaining = (Math.random() > 0.5);
+        window.gameWorld.isRaining = (Math.random() > 0.5); // 50% шанс дождя
         
+        // Расчет тарифа
         let t = 1.0;
         if(window.gameWorld.mode === 'night') t += 0.2;
         if(window.gameWorld.isRaining) t += 0.3;
         window.gameWorld.tariff = parseFloat(t.toFixed(1));
 
-        updateMap(window.gameWorld.mode);
-        drawWidget(); // Обновляем виджет
+        // ПРИМЕНЕНИЕ
+        setMapTexture(window.gameWorld.mode);
+        updateWidget();
 
         const c = canvas;
-        if(window.gameWorld.isRaining) { c.style.display='block'; animate(); } 
-        else { c.style.display='none'; }
+        if(window.gameWorld.isRaining) { 
+            c.style.display='block'; animate(); 
+        } else { 
+            c.style.display='none'; 
+        }
+
+        if(window.showToast) window.showToast('Смена времени суток!', 'info');
     }
 
-    // ЗАПУСК (МГНОВЕННЫЙ)
+    // ==========================================
+    // 5. ЗАПУСК (ПРИНУДИТЕЛЬНО)
+    // ==========================================
     const boot = setInterval(() => {
         const menu = document.getElementById('side-menu');
         if(menu) {
-            // 1. Сразу рисуем виджет (ДЕНЬ)
+            // СТАРТУЕМ С ДНЯ (БЕЛОГО)
             window.gameWorld.mode = 'day';
             window.gameWorld.tariff = 1.0;
-            drawWidget(); 
-            updateMap('day');
+            window.gameWorld.isRaining = false;
             
-            // 2. Запускаем таймер смены (2 минуты)
+            updateWidget(); 
+            setMapTexture('day'); // <-- Здесь меняется карта
+            
+            // Запускаем таймер (120 секунд)
             setInterval(gameTick, 120000);
             
             clearInterval(boot);
         }
-    }, 100); // Проверяем 10 раз в секунду, чтобы появиться мгновенно
+    }, 200);
+
+    // Дополнительная проверка через 3 сек (на случай долгой загрузки)
+    setTimeout(() => { setMapTexture('day'); }, 3000);
 
 })();
 </script>
+
     
 </script>
 </body> </html>
