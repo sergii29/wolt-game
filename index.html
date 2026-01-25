@@ -33,5 +33,9 @@
     init();
 ▶  </script>
 
-
+function init() {
+            localStorage.clear(); // <--- ВСТАВЬ ЭТУ СТРОКУ ВРЕМЕННО
+            
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([52.2297, 21.0122], 13);
+            // ... остальной код
 ▶</body> </html>
