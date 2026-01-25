@@ -2,233 +2,364 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>АДМИН ПУЛЬТ</title>
+    <title>WOLT :: GOD CONTROL PANEL</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
     <style>
-        body {
-            background-color: #1a1a1a;
-            color: white;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
-        }
-
-        /* ОГРОМНЫЙ СТАТУС */
-        #status-box {
-            background: #333;
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            border: 3px solid #555;
-            font-size: 20px;
-            font-weight: bold;
-        }
-        .online { border-color: #00ff00 !important; color: #00ff00; }
-        .offline { border-color: #ff0000 !important; color: #ff0000; }
-
-        /* КАРТОЧКИ УСЛУГ */
-        .card {
-            background: #252525;
-            border: 1px solid #444;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-
-        h2 { margin-top: 0; color: #ffa500; text-transform: uppercase; }
-        p { color: #aaa; font-size: 14px; margin-bottom: 15px; }
-
-        /* КНОПКИ ДЛЯ ДЕБИЛОВ (БОЛЬШИЕ) */
-        button {
-            display: block;
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            font-size: 18px;
-            font-weight: bold;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            color: white;
-            transition: 0.2s;
-        }
+        /* СТИЛИ: ТЕМНЫЙ КИБЕРПАНК */
+        body { background: #0f0f0f; color: #e0e0e0; font-family: 'Segoe UI', monospace; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        .btn-money { background: linear-gradient(45deg, #00c853, #00e676); color: black; }
-        .btn-heal { background: linear-gradient(45deg, #2196f3, #64b5f6); }
-        .btn-parts { background: linear-gradient(45deg, #9c27b0, #ba68c8); }
-        .btn-pass { background: linear-gradient(45deg, #ff9800, #ffb74d); color: black; }
-        .btn-danger { background: linear-gradient(45deg, #d32f2f, #ef5350); }
-
-        button:active { transform: scale(0.95); }
+        /* ЛЕВОЕ МЕНЮ (СПИСОК) */
+        .sidebar { width: 320px; background: #050505; border-right: 1px solid #333; display: flex; flex-direction: column; }
+        .sidebar-head { padding: 20px; background: #111; border-bottom: 2px solid #00e676; font-size: 18px; font-weight: bold; color: #00e676; letter-spacing: 1px; }
+        .user-list { flex: 1; overflow-y: auto; }
         
-        input {
-            width: 80%; padding: 10px; font-size: 18px; text-align: center;
-            border-radius: 5px; border: none; margin-bottom: 10px;
-        }
+        .user-row { padding: 15px; border-bottom: 1px solid #222; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .user-row:hover { background: #1a1a1a; }
+        .user-row.active { background: #002200; border-left: 4px solid #00e676; }
+        
+        .u-info { font-size: 12px; color: #888; margin-top: 4px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #444; }
+        .status-dot.on { background: #00e676; box-shadow: 0 0 8px #00e676; }
 
-        .balance-display { font-size: 30px; font-weight: bold; color: #fff; margin: 10px 0; }
+        /* ПРАВАЯ ЧАСТЬ (РЕДАКТОР) */
+        .main { flex: 1; display: flex; flex-direction: column; background: #141414; }
+        .toolbar { padding: 15px 30px; background: #111; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .content { flex: 1; overflow-y: auto; padding: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-content: start; }
+
+        /* КАРТОЧКИ */
+        .card { background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 20px; height: fit-content; }
+        .card h3 { margin-top: 0; font-size: 14px; text-transform: uppercase; color: #aaa; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; }
+        
+        /* ЭЛЕМЕНТЫ ФОРМЫ */
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 11px; color: #777; margin-bottom: 4px; }
+        input[type="number"], input[type="text"], select { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; box-sizing: border-box; font-family: monospace; }
+        input:focus { border-color: #00e676; outline: none; }
+        
+        input[type="range"] { width: 100%; margin: 5px 0; }
+        .range-val { float: right; font-weight: bold; color: #fff; }
+
+        /* КНОПКИ */
+        button { border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; text-transform: uppercase; transition: 0.2s; }
+        .btn-save { background: #00e676; color: #000; padding: 10px 30px; font-size: 14px; }
+        .btn-save:hover { background: #00c853; box-shadow: 0 0 15px rgba(0,230,118,0.3); }
+        
+        .btn-act { width: 100%; margin-top: 5px; background: #333; color: #fff; border: 1px solid #555; }
+        .btn-act:hover { background: #444; border-color: #fff; }
+        
+        .btn-danger { background: #d32f2f; color: #fff; width: 100%; }
+        .btn-danger:hover { background: #b71c1c; }
+
+        /* ЗАГЛУШКА */
+        #empty-state { display: flex; justify-content: center; align-items: center; height: 100%; color: #444; font-size: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="status-box" class="offline">
-        ПОИСК ИГРОКА...<br>
-        <span style="font-size:12px; color:#ccc; font-weight:normal">(Открой админку в том же браузере, где играешь!)</span>
+    <div class="sidebar">
+        <div class="sidebar-head">ONLINE DATABASE</div>
+        <div class="user-list" id="userList">
+            <div style="padding:20px; color:#666">Загрузка игроков...</div>
+        </div>
     </div>
 
-    <div class="card">
-        <h2>💰 Деньги (PLN)</h2>
-        <p>Нажми, чтобы добавить денег игроку.</p>
-        <div class="balance-display" id="bal-text">0 PLN</div>
-        <button class="btn-money" onclick="addMoney(1000)">+1,000 PLN</button>
-        <button class="btn-money" onclick="addMoney(50000)">+50,000 PLN</button>
-        <button class="btn-danger" style="background:#444" onclick="addMoney(-5000)">-5,000 PLN (ШТРАФ)</button>
-    </div>
+    <div class="main">
+        <div class="toolbar">
+            <div id="selected-user-info">
+                <span style="font-size:18px; font-weight:bold; color:#fff" id="display-id">ВЫБЕРИТЕ ИГРОКА</span>
+                <div style="font-size:12px; color:#666" id="display-device">---</div>
+            </div>
+            <button class="btn-save" onclick="saveUser()">СОХРАНИТЬ ВСЁ</button>
+        </div>
 
-    <div class="card">
-        <h2>💊 Лечение</h2>
-        <p>Восстановить энергию, воду, настроение и починить все вещи (Велик, Сумку).</p>
-        <button class="btn-heal" onclick="healFull()">ВЫЛЕЧИТЬ ВСЁ (100%)</button>
-    </div>
+        <div id="editor-content" class="content" style="opacity:0.2; pointer-events:none">
+            
+            <div class="card" style="border-top: 3px solid #ffd700">
+                <h3>💰 Финансы & Статистика</h3>
+                <div class="form-group"><label>БАЛАНС (PLN)</label><input type="number" id="val-balance"></div>
+                <div class="form-group"><label>РЕЙТИНГ (0.0 - 5.0)</label><input type="number" step="0.1" max="5" id="val-rating"></div>
+                <div class="form-group"><label>ОПЫТ (Всего заказов)</label><input type="number" id="val-xp"></div>
+                <div class="form-group"><label>ПРОБЕГ (КМ)</label><input type="number" id="val-dist"></div>
+                <button class="btn-act" onclick="cheatMoney()">+10,000 PLN</button>
+            </div>
 
-    <div class="card">
-        <h2>🚖 Всё для Такси</h2>
-        <p>Выдать детали для машины или открыть лицензию без выполнения доставок.</p>
-        <button class="btn-parts" onclick="giveLoot()">🎁 ВЫДАТЬ ДЕТАЛИ МАШИНЫ</button>
-        <button class="btn-parts" style="background:#555" onclick="cheatStats()">🔓 ВЗЛОМАТЬ ЛИЦЕНЗИЮ (XP)</button>
-    </div>
+            <div class="card" style="border-top: 3px solid #f44336">
+                <h3>❤️ Здоровье (Needs) <span onclick="maxNeeds()" style="cursor:pointer; font-size:10px; color:#2196f3">[MAX ALL]</span></h3>
+                <div class="form-group">
+                    <label>ЭНЕРГИЯ <span class="range-val" id="disp-energy">0</span></label>
+                    <input type="range" min="0" max="100" id="val-energy" oninput="upd(this, 'disp-energy')">
+                </div>
+                <div class="form-group">
+                    <label>ВОДА <span class="range-val" id="disp-water">0</span></label>
+                    <input type="range" min="0" max="100" id="val-water" oninput="upd(this, 'disp-water')">
+                </div>
+                <div class="form-group">
+                    <label>НАСТРОЕНИЕ <span class="range-val" id="disp-mood">0</span></label>
+                    <input type="range" min="0" max="100" id="val-mood" oninput="upd(this, 'disp-mood')">
+                </div>
+            </div>
 
-    <div class="card">
-        <h2>🔑 Пароль</h2>
-        <p>Если игрок забыл пароль — введи новый здесь.</p>
-        <input type="text" id="new-pass" placeholder="Новый пароль...">
-        <button class="btn-pass" onclick="setPass()">УСТАНОВИТЬ ПАРОЛЬ</button>
-        <button class="btn-danger" style="background:#444; margin-top:5px" onclick="removePass()">СНЯТЬ ПАРОЛЬ</button>
-    </div>
+            <div class="card" style="border-top: 3px solid #9c27b0">
+                <h3>🎒 Оборудование (Items) <span onclick="repairItems()" style="cursor:pointer; font-size:10px; color:#2196f3">[REPAIR]</span></h3>
+                <div class="form-group">
+                    <label>ВЕЛОСИПЕД <span class="range-val" id="disp-bike">0</span></label>
+                    <input type="range" min="0" max="100" id="val-bike" oninput="upd(this, 'disp-bike')">
+                </div>
+                <div class="form-group">
+                    <label>СУМКА <span class="range-val" id="disp-bag">0</span></label>
+                    <input type="range" min="0" max="100" id="val-bag" oninput="upd(this, 'disp-bag')">
+                </div>
+                <div class="form-group">
+                    <label>ТЕЛЕФОН <span class="range-val" id="disp-phone">0</span></label>
+                    <input type="range" min="0" max="100" id="val-phone" oninput="upd(this, 'disp-phone')">
+                </div>
+            </div>
 
-    <div class="card">
-        <h2>🌍 Цены (Инфляция)</h2>
-        <p>Множитель цен на доставку (1.0 = норма).</p>
-        <input type="number" id="inf-val" step="0.1" value="1.0">
-        <button class="btn-money" style="background:#009688; color:white" onclick="saveInf()">ПРИМЕНИТЬ</button>
-    </div>
+            <div class="card" style="border-top: 3px solid #00e676">
+                <h3>🚖 Такси Бизнес</h3>
+                <div class="form-group">
+                    <label>ЛИЦЕНЗИЯ</label>
+                    <select id="val-license">
+                        <option value="false">❌ НЕТ ЛИЦЕНЗИИ</option>
+                        <option value="true">✅ ЛИЦЕНЗИЯ АКТИВНА</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>ТРАНСПОРТ</label>
+                    <select id="val-vehicle">
+                        <option value="null">🚲 Велосипед (Стандарт)</option>
+                        <option value="cyber_taxi">🚖 Cyber Taxi 2077</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>ДЕТАЛИ (Чип / Двиг / Сплав)</label>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;">
+                        <input type="number" id="part-chip" placeholder="Chip">
+                        <input type="number" id="part-eng" placeholder="Eng">
+                        <input type="number" id="part-aly" placeholder="Aly">
+                    </div>
+                </div>
+                <button class="btn-act" onclick="giveFullParts()">🎁 Выдать все детали</button>
+            </div>
 
-    <div class="card" style="border-color: red">
-        <h2 style="color:red">☠️ УДАЛЕНИЕ</h2>
-        <p>Полный сброс игры. Начать с нуля.</p>
-        <button class="btn-danger" onclick="wipe()">СБРОСИТЬ ИГРОКА</button>
+            <div class="card" style="border-top: 3px solid #2196f3">
+                <h3>🔐 Безопасность</h3>
+                <div class="form-group">
+                    <label>ПАРОЛЬ ИГРОКА (Пусто = Вход без пароля)</label>
+                    <input type="text" id="val-pass" placeholder="Введите новый пароль...">
+                </div>
+                <button class="btn-act" style="background:#0277bd" onclick="saveUser()">Установить Пароль</button>
+                <div style="margin-top:20px; border-top:1px solid #333; padding-top:10px">
+                    <button class="btn-danger" onclick="wipeUser()">☠️ УДАЛИТЬ АККАУНТ</button>
+                </div>
+            </div>
+
+            <div class="card" style="border-top: 3px solid #fff">
+                <h3>🌍 Глобальный Мир</h3>
+                <div class="form-group">
+                    <label>ИНФЛЯЦИЯ (Множитель цен)</label>
+                    <input type="number" step="0.1" id="global-inf">
+                </div>
+                <button class="btn-act" onclick="saveInflation()">Применить ко всем</button>
+            </div>
+
+        </div>
     </div>
 
 <script>
-    // === КЛЮЧИ СОХРАНЕНИЯ ===
-    const GAME_KEY = 'wolt_game_save_v1';
-    const CFG_KEY = 'wolt_admin_config';
+    // 1. КОНФИГ
+    const firebaseConfig = {
+        apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
+        authDomain: "warszawa-courier.firebaseapp.com",
+        databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "warszawa-courier",
+        storageBucket: "warszawa-courier.firebasestorage.app",
+        messagingSenderId: "295860613508",
+        appId: "1:295860613508:web:86fe8364377d6875612dd1",
+        measurementId: "G-TGSCHBVLX2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    // === ПРОВЕРКА ПОДКЛЮЧЕНИЯ ===
-    function checkConnection() {
-        const raw = localStorage.getItem(GAME_KEY);
-        const box = document.getElementById('status-box');
-        const bal = document.getElementById('bal-text');
+    let users = {};
+    let currentId = null;
 
-        if(raw) {
-            box.className = "online";
-            box.innerHTML = "✅ ИГРОК НАЙДЕН (ONLINE)";
-            const data = JSON.parse(raw);
-            bal.innerText = Math.floor(data.balance) + ' PLN';
-        } else {
-            box.className = "offline";
-            box.innerHTML = "❌ ИГРОК НЕ НАЙДЕН (OFFLINE)<br><span style='font-size:12px; font-weight:normal'>Зайди в игру в этом браузере!</span>";
-            bal.innerText = "---";
+    // 2. СЛУШАТЕЛИ (REALTIME)
+    db.ref('users').on('value', snap => {
+        users = snap.val() || {};
+        renderList();
+        if(currentId && users[currentId]) populateForm(currentId);
+    });
+
+    db.ref('config/inflation').on('value', snap => {
+        document.getElementById('global-inf').value = snap.val() || 1.0;
+    });
+
+    // 3. ОТРИСОВКА СПИСКА
+    function renderList() {
+        const container = document.getElementById('userList');
+        container.innerHTML = '';
+        
+        const now = Date.now();
+        const ids = Object.keys(users);
+        
+        if(ids.length === 0) {
+            container.innerHTML = '<div style="padding:20px; color:#444">База пуста...</div>';
+            return;
+        }
+
+        ids.forEach(id => {
+            const u = users[id];
+            const isOnline = (now - (u._last_seen || 0)) < 15000; // 15 sec timeout
+            
+            const el = document.createElement('div');
+            el.className = `user-row ${id === currentId ? 'active' : ''}`;
+            el.onclick = () => selectUser(id);
+            el.innerHTML = `
+                <div>
+                    <div style="font-weight:bold; color:#fff">${id}</div>
+                    <div class="u-info">${Math.floor(u.balance||0)} PLN • Rating ${u.stats?.rating||0}</div>
+                </div>
+                <div class="status-dot ${isOnline ? 'on' : ''}"></div>
+            `;
+            container.appendChild(el);
+        });
+    }
+
+    // 4. ВЫБОР И ЗАПОЛНЕНИЕ
+    function selectUser(id) {
+        currentId = id;
+        renderList(); // Обновить подсветку
+        
+        const area = document.getElementById('editor-content');
+        area.style.opacity = '1';
+        area.style.pointerEvents = 'all';
+        
+        document.getElementById('display-id').innerText = id;
+        document.getElementById('display-device').innerText = users[id]._device || "Unknown Device";
+
+        populateForm(id);
+    }
+
+    function populateForm(id) {
+        const u = users[id];
+        
+        // 1. Stats
+        document.getElementById('val-balance').value = u.balance;
+        document.getElementById('val-rating').value = u.stats?.rating || 0;
+        document.getElementById('val-xp').value = u.stats?.total_deliveries || 0;
+        document.getElementById('val-dist').value = u.stats?.distance || 0;
+        
+        // 2. Needs
+        setRg('val-energy', 'disp-energy', u.needs?.energy);
+        setRg('val-water', 'disp-water', u.needs?.water);
+        setRg('val-mood', 'disp-mood', u.needs?.mood);
+        
+        // 3. Items
+        setRg('val-bike', 'disp-bike', u.items?.bike);
+        setRg('val-bag', 'disp-bag', u.items?.bag);
+        setRg('val-phone', 'disp-phone', u.items?.phone);
+
+        // 4. Taxi
+        document.getElementById('val-license').value = (u.taxi?.license || false).toString();
+        document.getElementById('val-vehicle').value = u.taxi?.vehicle || "null";
+        
+        document.getElementById('part-chip').value = u.inventory?.part_chip || 0;
+        document.getElementById('part-eng').value = u.inventory?.part_engine || 0;
+        document.getElementById('part-aly').value = u.inventory?.part_alloy || 0;
+
+        // 5. Pass
+        document.getElementById('val-pass').value = u.password || "";
+    }
+
+    // Вспомогательная для ползунков
+    function setRg(inpId, txtId, val) {
+        const v = val !== undefined ? val : 100;
+        document.getElementById(inpId).value = v;
+        document.getElementById(txtId).innerText = v;
+    }
+    function upd(el, txtId) { document.getElementById(txtId).innerText = el.value; }
+
+
+    // 5. СОХРАНЕНИЕ
+    function saveUser() {
+        if(!currentId) return;
+        const u = JSON.parse(JSON.stringify(users[currentId])); // Clone
+
+        // Собираем данные
+        u.balance = parseFloat(document.getElementById('val-balance').value);
+        if(!u.stats) u.stats = {};
+        u.stats.rating = parseFloat(document.getElementById('val-rating').value);
+        u.stats.total_deliveries = parseInt(document.getElementById('val-xp').value);
+        u.stats.distance = parseFloat(document.getElementById('val-dist').value);
+
+        if(!u.needs) u.needs = {};
+        u.needs.energy = parseInt(document.getElementById('val-energy').value);
+        u.needs.water = parseInt(document.getElementById('val-water').value);
+        u.needs.mood = parseInt(document.getElementById('val-mood').value);
+
+        if(!u.items) u.items = {};
+        u.items.bike = parseInt(document.getElementById('val-bike').value);
+        u.items.bag = parseInt(document.getElementById('val-bag').value);
+        u.items.phone = parseInt(document.getElementById('val-phone').value);
+
+        if(!u.taxi) u.taxi = {};
+        u.taxi.license = (document.getElementById('val-license').value === 'true');
+        const veh = document.getElementById('val-vehicle').value;
+        u.taxi.vehicle = (veh === 'null') ? null : veh;
+
+        if(!u.inventory) u.inventory = {};
+        u.inventory.part_chip = parseInt(document.getElementById('part-chip').value);
+        u.inventory.part_engine = parseInt(document.getElementById('part-eng').value);
+        u.inventory.part_alloy = parseInt(document.getElementById('part-aly').value);
+
+        const pass = document.getElementById('val-pass').value;
+        if(pass.trim() === "") delete u.password; else u.password = pass;
+
+        // Отправка
+        db.ref('users/' + currentId).set(u)
+            .then(() => alert('Данные сохранены!'))
+            .catch(e => alert('Ошибка: ' + e));
+    }
+
+    // 6. БЫСТРЫЕ ДЕЙСТВИЯ
+    function cheatMoney() { 
+        document.getElementById('val-balance').value = parseFloat(document.getElementById('val-balance').value) + 10000;
+        saveUser();
+    }
+    function maxNeeds() {
+        setRg('val-energy', 'disp-energy', 100);
+        setRg('val-water', 'disp-water', 100);
+        setRg('val-mood', 'disp-mood', 100);
+    }
+    function repairItems() {
+        setRg('val-bike', 'disp-bike', 100);
+        setRg('val-bag', 'disp-bag', 100);
+        setRg('val-phone', 'disp-phone', 100);
+    }
+    function giveFullParts() {
+        document.getElementById('part-chip').value = 1;
+        document.getElementById('part-eng').value = 1;
+        document.getElementById('part-aly').value = 1;
+        saveUser();
+    }
+    function wipeUser() {
+        if(confirm('ТОЧНО УДАЛИТЬ ИГРОКА? ЭТО НЕОБРАТИМО.')) {
+            db.ref('users/' + currentId).remove();
+            document.getElementById('editor-content').style.opacity = '0.2';
+            document.getElementById('editor-content').style.pointerEvents = 'none';
+            currentId = null;
         }
     }
 
-    // === ФУНКЦИЯ ИЗМЕНЕНИЯ ДАННЫХ ===
-    function modify(action) {
-        const raw = localStorage.getItem(GAME_KEY);
-        if(!raw) return alert('Ошибка: Сначала зайди в игру!');
-        
-        const data = JSON.parse(raw);
-        action(data); // Выполняем действие
-        localStorage.setItem(GAME_KEY, JSON.stringify(data)); // Сохраняем
-        
-        checkConnection(); // Обновляем вид
+    function saveInflation() {
+        const val = parseFloat(document.getElementById('global-inf').value);
+        db.ref('config/inflation').set(val);
+        alert('Инфляция мира обновлена: x' + val);
     }
-
-    // === КНОПКИ ===
-    function addMoney(amount) {
-        modify(d => {
-            d.balance += amount;
-            alert(`Баланс изменен: ${amount} PLN`);
-        });
-    }
-
-    function healFull() {
-        modify(d => {
-            d.needs = { energy: 100, water: 100, mood: 100 };
-            if(!d.items) d.items = {};
-            d.items.bike = 100; d.items.bag = 100; d.items.phone = 100;
-            alert('Игрок полностью здоров!');
-        });
-    }
-
-    function giveLoot() {
-        modify(d => {
-            if(!d.inventory) d.inventory = {};
-            d.inventory.part_chip = 1;
-            d.inventory.part_engine = 1;
-            d.inventory.part_alloy = 1;
-            alert('Детали выданы! Иди в магазин собирать машину.');
-        });
-    }
-
-    function cheatStats() {
-        modify(d => {
-            if(!d.stats) d.stats = {};
-            d.stats.total_deliveries = 1000;
-            alert('Опыт накручен (1000 заказов). Лицензия доступна.');
-        });
-    }
-
-    function setPass() {
-        const p = document.getElementById('new-pass').value;
-        if(!p) return alert('Введите пароль!');
-        modify(d => {
-            d.password = p;
-            alert(`Пароль установлен: ${p}`);
-        });
-    }
-
-    function removePass() {
-        modify(d => {
-            delete d.password;
-            alert('Пароль удален. Вход свободный.');
-        });
-    }
-
-    function saveInf() {
-        const v = parseFloat(document.getElementById('inf-val').value);
-        localStorage.setItem(CFG_KEY, JSON.stringify({ inflation: v }));
-        alert(`Инфляция установлена: x${v}`);
-    }
-
-    function wipe() {
-        if(confirm('ТОЧНО УДАЛИТЬ ВСЁ? ЭТО НЕЛЬЗЯ ОТМЕНИТЬ.')) {
-            localStorage.removeItem(GAME_KEY);
-            checkConnection();
-        }
-    }
-
-    // Запуск проверки каждую секунду
-    setInterval(checkConnection, 1000);
-    checkConnection();
-
-    // Загрузка инфляции
-    const cfg = localStorage.getItem(CFG_KEY);
-    if(cfg) document.getElementById('inf-val').value = JSON.parse(cfg).inflation;
 
 </script>
-
 </body>
 </html>
