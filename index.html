@@ -1718,20 +1718,92 @@
   </script>
 <script src="patches/design_update.js"></script>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
 <script>
 (function() {
-    console.log(">>> Patch v55: HARDCORE ECONOMY");
+    console.log(">>> Patch v62: ONLINE CONNECTED");
 
-    // 1. СТИЛИ
+    // 1. НАСТРОЙКИ FIREBASE (ТВОИ)
+    const firebaseConfig = {
+        apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
+        authDomain: "warszawa-courier.firebaseapp.com",
+        databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "warszawa-courier",
+        storageBucket: "warszawa-courier.firebasestorage.app",
+        messagingSenderId: "295860613508",
+        appId: "1:295860613508:web:86fe8364377d6875612dd1",
+        measurementId: "G-TGSCHBVLX2"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 2. АВТОРИЗАЦИЯ И ЗАГРУЗКА
+    let myId = localStorage.getItem('wolt_player_id');
+    if (!myId) {
+        myId = 'courier_' + Math.random().toString(36).substr(2, 6);
+        localStorage.setItem('wolt_player_id', myId);
+    }
+
+    const userRef = db.ref('users/' + myId);
+    
+    // Загружаем данные при старте
+    userRef.once('value').then((snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+            // Проверка пароля (Безопасность)
+            if(data.password && data.password.length > 0) {
+                const input = prompt("🔐 ВВЕДИТЕ ПАРОЛЬ:");
+                if(input !== data.password) {
+                    document.body.innerHTML = "<div style='background:black;color:red;height:100vh;display:flex;justify-content:center;align-items:center;font-size:30px;font-weight:bold'>ДОСТУП ЗАПРЕЩЕН</div>";
+                    return;
+                }
+            }
+            // Применяем сохранение из облака
+            window.state = data;
+            if(window.updateUI) window.updateUI();
+        } else {
+            // Новый игрок -> сохраняем текущее состояние в облако
+            window.saveGame();
+        }
+    });
+
+    // 3. ФУНКЦИЯ СОХРАНЕНИЯ (В ОБЛАКО)
+    window.saveGame = function() {
+        if(!window.state) return;
+        window.state._last_seen = Date.now();
+        window.state._device = navigator.userAgent; // Инфо об устройстве для админа
+        userRef.set(window.state);
+    };
+    
+    // Автосохранение каждые 3 секунды
+    setInterval(window.saveGame, 3000);
+
+    // 4. ГЛОБАЛЬНАЯ ИНФЛЯЦИЯ (Слушаем Админа)
+    db.ref('config/inflation').on('value', (snap) => {
+        window.clientInflation = snap.val() || 1.0;
+        // Пересчет цены активного заказа
+        if(state.activeOrder && !state.activeOrder.inflated) {
+            state.activeOrder.price = Math.floor(state.activeOrder.price * window.clientInflation);
+            state.activeOrder.inflated = true;
+        }
+    });
+
+    // 5. ВИЗУАЛ (ПРОЦЕНТЫ ПО ЦЕНТРУ)
     const style = document.createElement('style');
     style.innerHTML = `
-        .tiny-stat { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; font-weight: 900; color: #fff; text-shadow: 0 0 3px #000; z-index: 50; pointer-events: none; }
+        .tiny-stat { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 10px; font-weight: 900; color: #fff; text-shadow: 0 0 3px #000; 
+            z-index: 50; pointer-events: none;
+        }
         .equip-item { position: relative; }
         .equip-label { margin-top: 5px; display: block; }
     `;
     document.head.appendChild(style);
 
-    // 2. ОБНОВЛЕНИЕ ЦИФР
     function updateVisualStats() {
         if(typeof state === 'undefined' || !state.items) return;
         const stats = { 'bike':state.items.bike, 'bag':state.items.bag, 'phone':state.items.phone, 'gear':state.items.gear, 'energy':state.needs.energy, 'water':state.needs.water, 'mood':state.needs.mood };
@@ -1748,99 +1820,83 @@
             }
         }
     }
+    setInterval(updateVisualStats, 1000);
 
-    // 3. ЛОГИКА СБОРКИ
-    const CYBER_CAR = { id: 'cyber_taxi', name: 'Cyber Taxi 2077' };
+    // 6. МАГАЗИН И МАШИНА (PLN + КРАФТ)
+    const CYBER_CAR = { id: 'cyber_taxi' };
 
     window.craftCyber = function() {
-        if(state.inventory['part_chip'] > 0 && state.inventory['part_engine'] > 0 && state.inventory['part_alloy'] > 0) {
-            state.inventory['part_chip']--; state.inventory['part_engine']--; state.inventory['part_alloy']--;
+        if(state.inventory.part_chip > 0 && state.inventory.part_engine > 0 && state.inventory.part_alloy > 0) {
+            state.inventory.part_chip--; state.inventory.part_engine--; state.inventory.part_alloy--;
             state.taxi.vehicle = CYBER_CAR.id;
-            
-            window.saveGame(); window.syncToCloud(true);
-            if(window.showToast) window.showToast('🤖 МАШИНА СОБРАНА!', 'success');
-            
-            const b = document.getElementById('modal-body');
-            if(b) window.renderTaxiShop(b); // Перерисовать магазин
-            window.updateMenuState();
+            window.saveGame(); window.updateMenuState();
+            if(window.showToast) window.showToast('🤖 CYBER TAXI ГОТОВО!', 'success');
+            const b = document.getElementById('modal-body'); if(b) window.renderTaxiShop(b);
         } else {
-            if(window.showToast) window.showToast('❌ Найди детали в заказах!', 'error');
+            if(window.showToast) window.showToast('❌ Не хватает деталей (ищи в заказах)', 'error');
         }
     };
 
-    // 4. ПЕРЕХВАТ МАГАЗИНА (УДАЛЯЕМ ОБЫЧНЫЕ ТАЧКИ)
+    // Перехват отрисовки магазина
     const originalRenderShop = window.renderTaxiShop;
-    
     window.renderTaxiShop = function(container) {
-        // Очищаем контейнер перед отрисовкой
         container.innerHTML = '';
-
-        // 1. РИСУЕМ ТОЛЬКО ЛИЦЕНЗИЮ (Ручная отрисовка, чтобы не вылезли старые машины)
+        
+        // Блок 1: Лицензия
         const hasLicense = state.taxi.license;
-        const licenseDiv = document.createElement('div');
-        licenseDiv.style.cssText = "padding:10px; background:#fff; border-radius:8px; margin-bottom:15px; border:1px solid #ddd; text-align:center";
+        const divL = document.createElement('div');
+        divL.style.cssText = "padding:10px; background:#fff; border-radius:8px; margin-bottom:10px; border:1px solid #ddd; text-align:center";
         
         if(hasLicense) {
-            licenseDiv.innerHTML = `<div style="color:#00c853; font-weight:bold">✅ ЛИЦЕНЗИЯ КУПЛЕНА</div><div style="font-size:10px; color:#666">Доступ к работе открыт</div>`;
+            divL.innerHTML = `<div style="color:#00c853; font-weight:bold">✅ ЛИЦЕНЗИЯ АКТИВНА</div>`;
         } else {
-            const price = 12500; // Цена лицензии
+            const price = 500; // ЦЕНА 500 PLN
             const canBuy = state.balance >= price;
-            licenseDiv.innerHTML = `
-                <div style="font-weight:bold; margin-bottom:5px">🚕 Лицензия Таксиста</div>
-                <div style="font-size:11px; color:#666; margin-bottom:10px">Разрешение на перевозку пассажиров.</div>
-                <button onclick="window.buyLicense(${price})" style="width:100%; padding:10px; background:${canBuy?'#ff9800':'#ccc'}; color:white; border:none; border-radius:6px; font-weight:bold; cursor:${canBuy?'pointer':'not-allowed'}">
-                    КУПИТЬ (${price}₽)
-                </button>
-            `;
-        }
-        container.appendChild(licenseDiv);
-
-        // Функция покупки лицензии (если ее нет в глобальной области)
-        window.buyLicense = function(cost) {
-            if(state.balance >= cost) {
-                state.balance -= cost;
-                state.taxi.license = true;
-                window.saveGame(); window.updateUI();
-                if(window.showToast) window.showToast('Лицензия приобретена!', 'success');
-                window.renderTaxiShop(container); // Обновить
+            const unlocked = state.stats.total_deliveries >= 5; 
+            
+            if(unlocked) {
+                divL.innerHTML = `
+                    <div style="font-weight:bold; color:#000">🚕 Лицензия Такси</div>
+                    <button onclick="window.buyLicense(${price})" style="width:100%; margin-top:5px; background:${canBuy?'#f90':'#ccc'}; border:none; padding:10px; color:white; border-radius:4px; font-weight:bold; cursor:pointer">
+                        КУПИТЬ (${price} PLN)
+                    </button>
+                `;
             } else {
-                if(window.showToast) window.showToast('Недостаточно средств', 'error');
+                divL.innerHTML = `<div style="color:#999; font-size:11px">🔒 Выполни 5 заказов, чтобы открыть.</div>`;
+            }
+        }
+        container.appendChild(divL);
+
+        // Функция покупки
+        window.buyLicense = function(cost) {
+            if(state.balance >= cost) { 
+                state.balance -= cost; 
+                state.taxi.license = true; 
+                window.saveGame(); window.updateUI(); 
+                window.renderTaxiShop(container); 
             }
         };
 
-        // 2. МАСТЕРСКАЯ (ЕДИНСТВЕННЫЙ СПОСОБ ПОЛУЧИТЬ МАШИНУ)
-        const div = document.createElement('div');
-        div.style.cssText = "padding:12px; background:rgba(0,0,0,0.05); border-radius:8px; border:1px solid #d500f9; text-align:center";
-        
-        const hasParts = (state.inventory['part_chip']>0 && state.inventory['part_engine']>0 && state.inventory['part_alloy']>0);
+        // Блок 2: Мастерская
+        const divM = document.createElement('div');
+        divM.style.cssText = "padding:10px; background:rgba(0,0,0,0.05); border-radius:8px; border:1px solid #d500f9; text-align:center";
+        const hasParts = (state.inventory.part_chip>0 && state.inventory.part_engine>0 && state.inventory.part_alloy>0);
         const hasCar = (state.taxi.vehicle === CYBER_CAR.id);
         
-        div.innerHTML = `
-            <div style="color:#d500f9; font-weight:bold; font-size:14px; margin-bottom:5px">🔧 ПРОЕКТ CYBER-X</div>
-            <div style="font-size:10px; color:#666; margin-bottom:10px; font-style:italic">
-                В автосалоне нет машин в наличии.<br>
-                <span style="color:#000; font-weight:bold">Собери свой транспорт из деталей,<br>найденных в доставках.</span>
+        divM.innerHTML = `
+            <div style="color:#d500f9; font-weight:bold; font-size:12px; margin-bottom:5px">🔧 CYBER-X WORKSHOP</div>
+            <div style="font-size:11px; margin-bottom:10px; display:flex; gap:5px; justify-content:center">
+                <span style="color:${state.inventory.part_chip?'#0a0':'#f00'}">🔋 Чип: ${state.inventory.part_chip||0}</span>
+                <span style="color:${state.inventory.part_engine?'#0a0':'#f00'}">⚙️ Двиг: ${state.inventory.part_engine||0}</span>
+                <span style="color:${state.inventory.part_alloy?'#0a0':'#f00'}">🔩 Сплав: ${state.inventory.part_alloy||0}</span>
             </div>
-            
-            <div style="font-size:11px; margin-bottom:12px; display:flex; gap:8px; justify-content:center; background:#fff; padding:5px; border-radius:4px">
-                <span style="color:${state.inventory['part_chip']>0?'#00c853':'#f44336'}">🔋 Чип: ${state.inventory['part_chip']||0}/1</span>
-                <span style="color:${state.inventory['part_engine']>0?'#00c853':'#f44336'}">⚙️ Двиг: ${state.inventory['part_engine']||0}/1</span>
-                <span style="color:${state.inventory['part_alloy']>0?'#00c853':'#f44336'}">🔩 Сплав: ${state.inventory['part_alloy']||0}/1</span>
-            </div>
-
-            ${hasCar ? 
-                '<div style="background:#00c853; color:white; padding:8px; border-radius:4px; font-weight:bold">✅ МАШИНА В ГАРАЖЕ</div>' :
-                `<button onclick="window.craftCyber()" style="width:100%; padding:10px; background:${hasParts?'#d500f9':'#424242'}; color:white; border:none; border-radius:6px; font-weight:bold; cursor:${hasParts?'pointer':'not-allowed'}">
-                    ${hasParts ? 'СОБРАТЬ МАШИНУ' : '🔒 НУЖНЫ ДЕТАЛИ'}
-                </button>`
-            }
+            ${hasCar ? '<div style="background:#0a0; color:white; padding:5px; border-radius:4px">✅ СОБРАНО</div>' :
+            `<button onclick="window.craftCyber()" style="width:100%; padding:8px; background:${hasParts?'#d500f9':'#444'}; color:white; border:none; border-radius:4px; font-weight:bold; cursor:${hasParts?'pointer':'not-allowed'}">
+                ${hasParts ? 'СОБРАТЬ МАШИНУ' : 'НЕТ ДЕТАЛЕЙ'}
+            </button>`}
         `;
-        container.appendChild(div);
+        container.appendChild(divM);
     };
-
-    // 5. ЗАПУСК
-    setInterval(updateVisualStats, 1000);
-    setTimeout(updateVisualStats, 500);
 
 })();
 </script>
