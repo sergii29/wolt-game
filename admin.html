@@ -2,215 +2,233 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>WOLT :: SERVER ADMIN (WARSAW)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>АДМИН ПУЛЬТ</title>
     <style>
-        :root { --bg: #121212; --panel: #1e1e1e; --border: #333; --accent: #00bcd4; --text: #e0e0e0; --danger: #f44336; --success: #4caf50; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; font-size: 13px; }
+        body {
+            background-color: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* ОГРОМНЫЙ СТАТУС */
+        #status-box {
+            background: #333;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border: 3px solid #555;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .online { border-color: #00ff00 !important; color: #00ff00; }
+        .offline { border-color: #ff0000 !important; color: #ff0000; }
+
+        /* КАРТОЧКИ УСЛУГ */
+        .card {
+            background: #252525;
+            border: 1px solid #444;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        h2 { margin-top: 0; color: #ffa500; text-transform: uppercase; }
+        p { color: #aaa; font-size: 14px; margin-bottom: 15px; }
+
+        /* КНОПКИ ДЛЯ ДЕБИЛОВ (БОЛЬШИЕ) */
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: white;
+            transition: 0.2s;
+        }
         
-        .sidebar { width: 250px; background: #000; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .brand { padding: 20px; font-weight: 900; font-size: 18px; color: var(--accent); border-bottom: 1px solid var(--border); letter-spacing: 1px; }
-        .menu-item { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #111; transition: 0.2s; color: #888; }
-        .menu-item:hover, .menu-item.active { background: var(--panel); color: #fff; border-left: 3px solid var(--accent); }
+        .btn-money { background: linear-gradient(45deg, #00c853, #00e676); color: black; }
+        .btn-heal { background: linear-gradient(45deg, #2196f3, #64b5f6); }
+        .btn-parts { background: linear-gradient(45deg, #9c27b0, #ba68c8); }
+        .btn-pass { background: linear-gradient(45deg, #ff9800, #ffb74d); color: black; }
+        .btn-danger { background: linear-gradient(45deg, #d32f2f, #ef5350); }
+
+        button:active { transform: scale(0.95); }
         
-        .content { flex: 1; padding: 30px; overflow-y: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        h1 { margin: 0; font-size: 24px; font-weight: 300; }
-        
-        table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 4px; overflow: hidden; }
-        th { text-align: left; padding: 15px; background: #252525; color: #aaa; font-weight: 600; font-size: 11px; text-transform: uppercase; }
-        td { padding: 15px; border-bottom: 1px solid var(--border); }
-        tr:hover { background: #2a2a2a; }
-        
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        .b-online { background: rgba(76, 175, 80, 0.2); color: var(--success); }
-        .b-offline { background: rgba(244, 67, 54, 0.2); color: var(--danger); }
-        
-        .card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 20px; }
-        .card h3 { margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; font-size: 14px; color: var(--accent); }
-        
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-        .form-group { margin-bottom: 10px; }
-        label { display: block; margin-bottom: 5px; color: #888; font-size: 11px; }
-        input, select { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 8px; border-radius: 4px; box-sizing: border-box; }
-        
-        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 11px; }
-        .btn-primary { background: var(--accent); color: #000; }
-        .btn-danger { background: var(--danger); color: #fff; }
-        .btn-success { background: var(--success); color: #fff; }
-        
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        input {
+            width: 80%; padding: 10px; font-size: 18px; text-align: center;
+            border-radius: 5px; border: none; margin-bottom: 10px;
+        }
+
+        .balance-display { font-size: 30px; font-weight: bold; color: #fff; margin: 10px 0; }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <div class="brand">WARSZAWA ADMIN</div>
-        <div class="menu-item active" onclick="showTab('users')">👥 ИГРОКИ</div>
-        <div class="menu-item" onclick="showTab('gameplay')">🎮 УПРАВЛЕНИЕ</div>
-        <div class="menu-item" onclick="showTab('security')">🔐 БЕЗОПАСНОСТЬ</div>
-        <div class="menu-item" onclick="showTab('logs')">📜 ЛОГИ</div>
+    <div id="status-box" class="offline">
+        ПОИСК ИГРОКА...<br>
+        <span style="font-size:12px; color:#ccc; font-weight:normal">(Открой админку в том же браузере, где играешь!)</span>
     </div>
 
-    <div class="content">
-        
-        <div id="users" class="tab-content active">
-            <div class="header"><h1>Список Игроков (PLN)</h1> <button class="btn btn-success" onclick="refreshData()">ОБНОВИТЬ</button></div>
-            <table>
-                <thead><tr><th>ID</th><th>Статус</th><th>Имя</th><th>Баланс (PLN)</th><th>Система</th><th>Действие</th></tr></thead>
-                <tbody id="users-table"></tbody>
-            </table>
-        </div>
+    <div class="card">
+        <h2>💰 Деньги (PLN)</h2>
+        <p>Нажми, чтобы добавить денег игроку.</p>
+        <div class="balance-display" id="bal-text">0 PLN</div>
+        <button class="btn-money" onclick="addMoney(1000)">+1,000 PLN</button>
+        <button class="btn-money" onclick="addMoney(50000)">+50,000 PLN</button>
+        <button class="btn-danger" style="background:#444" onclick="addMoney(-5000)">-5,000 PLN (ШТРАФ)</button>
+    </div>
 
-        <div id="gameplay" class="tab-content">
-            <div class="header"><h1>Редактор профиля (ID: LOCAL_01)</h1> <button class="btn btn-primary" onclick="saveAll()">СОХРАНИТЬ</button></div>
+    <div class="card">
+        <h2>💊 Лечение</h2>
+        <p>Восстановить энергию, воду, настроение и починить все вещи (Велик, Сумку).</p>
+        <button class="btn-heal" onclick="healFull()">ВЫЛЕЧИТЬ ВСЁ (100%)</button>
+    </div>
 
-            <div class="form-grid">
-                <div class="card">
-                    <h3>💰 Финансы</h3>
-                    <div class="form-group"><label>Баланс (zł)</label><input type="number" id="inp-balance"></div>
-                    <div class="form-group"><label>Рейтинг (0-5)</label><input type="number" id="inp-rating" step="0.1" max="5"></div>
-                    <div class="form-group"><label>Опыт (Заказы)</label><input type="number" id="inp-xp"></div>
-                </div>
+    <div class="card">
+        <h2>🚖 Всё для Такси</h2>
+        <p>Выдать детали для машины или открыть лицензию без выполнения доставок.</p>
+        <button class="btn-parts" onclick="giveLoot()">🎁 ВЫДАТЬ ДЕТАЛИ МАШИНЫ</button>
+        <button class="btn-parts" style="background:#555" onclick="cheatStats()">🔓 ВЗЛОМАТЬ ЛИЦЕНЗИЮ (XP)</button>
+    </div>
 
-                <div class="card">
-                    <h3>❤️ Показатели</h3>
-                    <div class="form-group"><label>Энергия (%)</label><input type="range" id="inp-energy" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>0</output></div>
-                    <div class="form-group"><label>Вода (%)</label><input type="range" id="inp-water" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>0</output></div>
-                    <div class="form-group"><label>Настроение (%)</label><input type="range" id="inp-mood" min="0" max="100" oninput="this.nextElementSibling.value=this.value"><output>0</output></div>
-                </div>
+    <div class="card">
+        <h2>🔑 Пароль</h2>
+        <p>Если игрок забыл пароль — введи новый здесь.</p>
+        <input type="text" id="new-pass" placeholder="Новый пароль...">
+        <button class="btn-pass" onclick="setPass()">УСТАНОВИТЬ ПАРОЛЬ</button>
+        <button class="btn-danger" style="background:#444; margin-top:5px" onclick="removePass()">СНЯТЬ ПАРОЛЬ</button>
+    </div>
 
-                <div class="card">
-                    <h3>🚖 Такси и Инвентарь</h3>
-                    <div class="form-group"><label>Лицензия</label><select id="inp-license"><option value="false">Нет</option><option value="true">Есть</option></select></div>
-                    <div class="form-group"><label>Машина</label><select id="inp-vehicle"><option value="null">Нет</option><option value="cyber_taxi">Cyber Taxi</option></select></div>
-                    <div class="form-group"><label>Детали (Чип/Двиг/Сплав)</label><div style="display:flex;gap:5px"><input type="number" id="inp-part1"><input type="number" id="inp-part2"><input type="number" id="inp-part3"></div></div>
-                </div>
-                
-                <div class="card">
-                    <h3>🌍 Мир (Варшава)</h3>
-                    <div class="form-group"><label>Инфляция (Цена x)</label><input type="number" id="inp-inf" step="0.1"></div>
-                    <button class="btn btn-primary" onclick="setInflation()">Применить</button>
-                </div>
-            </div>
-        </div>
+    <div class="card">
+        <h2>🌍 Цены (Инфляция)</h2>
+        <p>Множитель цен на доставку (1.0 = норма).</p>
+        <input type="number" id="inf-val" step="0.1" value="1.0">
+        <button class="btn-money" style="background:#009688; color:white" onclick="saveInf()">ПРИМЕНИТЬ</button>
+    </div>
 
-        <div id="security" class="tab-content">
-            <div class="header"><h1>Безопасность</h1></div>
-            <div class="card" style="max-width:500px">
-                <h3>🔑 Сброс пароля</h3>
-                <div class="form-group"><label>Текущий пароль:</label><input type="text" id="sec-status" disabled></div>
-                <div class="form-group"><label>Новый пароль:</label><input type="text" id="new-pass"></div>
-                <div style="display:flex;gap:10px"><button class="btn btn-primary" onclick="resetPassword()">УСТАНОВИТЬ</button><button class="btn btn-danger" onclick="removePassword()">УДАЛИТЬ</button></div>
-            </div>
-            <div class="card" style="border-color:var(--danger)">
-                <h3>☠️ Wipe Data</h3>
-                <button class="btn btn-danger" onclick="wipeUser()">УДАЛИТЬ АККАУНТ</button>
-            </div>
-        </div>
-        
-        <div id="logs" class="tab-content">
-            <div class="header"><h1>Логи</h1></div>
-            <div style="background:#000;padding:15px;border:1px solid #333;font-family:monospace;color:#00e676;height:400px;overflow-y:auto" id="log-output">
-                [SYSTEM] Admin Panel Loaded. Currency: PLN<br>
-            </div>
-        </div>
+    <div class="card" style="border-color: red">
+        <h2 style="color:red">☠️ УДАЛЕНИЕ</h2>
+        <p>Полный сброс игры. Начать с нуля.</p>
+        <button class="btn-danger" onclick="wipe()">СБРОСИТЬ ИГРОКА</button>
     </div>
 
 <script>
-    const SAVE_KEY = 'wolt_game_save_v1';
+    // === КЛЮЧИ СОХРАНЕНИЯ ===
+    const GAME_KEY = 'wolt_game_save_v1';
     const CFG_KEY = 'wolt_admin_config';
 
-    function showTab(id) {
-        document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
-        document.querySelectorAll('.menu-item').forEach(el=>el.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if(id==='users') refreshData();
-        if(id==='gameplay'||id==='security') loadEditor();
-    }
+    // === ПРОВЕРКА ПОДКЛЮЧЕНИЯ ===
+    function checkConnection() {
+        const raw = localStorage.getItem(GAME_KEY);
+        const box = document.getElementById('status-box');
+        const bal = document.getElementById('bal-text');
 
-    function getDB() { const r=localStorage.getItem(SAVE_KEY); return r?JSON.parse(r):null; }
-    function setDB(d) { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); log(`Data saved. Balance: ${d.balance} PLN`); }
-    function log(m) { document.getElementById('log-output').innerHTML+=`[LOG] ${m}<br>`; }
-
-    function refreshData() {
-        const u = getDB();
-        const t = document.getElementById('users-table');
-        t.innerHTML = '';
-        if(u) {
-            t.innerHTML += `<tr><td>#001</td><td><span class="badge b-online">ONLINE</span></td><td>Courier_WAW</td><td>${Math.floor(u.balance)} PLN</td><td>Android/Web</td><td><button class="btn btn-primary" onclick="showTab('gameplay')">EDIT</button></td></tr>`;
+        if(raw) {
+            box.className = "online";
+            box.innerHTML = "✅ ИГРОК НАЙДЕН (ONLINE)";
+            const data = JSON.parse(raw);
+            bal.innerText = Math.floor(data.balance) + ' PLN';
         } else {
-            t.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px">БАЗА ПУСТА</td></tr>`;
+            box.className = "offline";
+            box.innerHTML = "❌ ИГРОК НЕ НАЙДЕН (OFFLINE)<br><span style='font-size:12px; font-weight:normal'>Зайди в игру в этом браузере!</span>";
+            bal.innerText = "---";
         }
-        t.innerHTML += `<tr style="opacity:0.5"><td>#002</td><td><span class="badge b-offline">OFFLINE</span></td><td>Uber_Pl</td><td>450 PLN</td><td>iOS</td><td><button class="btn" disabled>LOCKED</button></td></tr>`;
     }
 
-    function loadEditor() {
-        const u = getDB(); if(!u) return;
-        document.getElementById('inp-balance').value = u.balance;
-        document.getElementById('inp-rating').value = u.stats.rating;
-        document.getElementById('inp-xp').value = u.stats.total_deliveries;
-        document.getElementById('inp-energy').value = u.needs.energy;
-        document.getElementById('inp-water').value = u.needs.water;
-        document.getElementById('inp-mood').value = u.needs.mood;
-        document.querySelectorAll('input[type=range]').forEach(el=>el.nextElementSibling.value=el.value);
-        if(!u.taxi) u.taxi={license:false,vehicle:null};
-        document.getElementById('inp-license').value = u.taxi.license.toString();
-        document.getElementById('inp-vehicle').value = u.taxi.vehicle||"null";
-        if(!u.inventory) u.inventory={};
-        document.getElementById('inp-part1').value = u.inventory.part_chip||0;
-        document.getElementById('inp-part2').value = u.inventory.part_engine||0;
-        document.getElementById('inp-part3').value = u.inventory.part_alloy||0;
+    // === ФУНКЦИЯ ИЗМЕНЕНИЯ ДАННЫХ ===
+    function modify(action) {
+        const raw = localStorage.getItem(GAME_KEY);
+        if(!raw) return alert('Ошибка: Сначала зайди в игру!');
         
-        const c = localStorage.getItem(CFG_KEY);
-        if(c) document.getElementById('inp-inf').value = JSON.parse(c).inflation;
-
-        const ss = document.getElementById('sec-status');
-        if(u.password) { ss.value=u.password; ss.style.color='#4caf50'; } 
-        else { ss.value="НЕТ"; ss.style.color='#f44336'; }
+        const data = JSON.parse(raw);
+        action(data); // Выполняем действие
+        localStorage.setItem(GAME_KEY, JSON.stringify(data)); // Сохраняем
+        
+        checkConnection(); // Обновляем вид
     }
 
-    function saveAll() {
-        const u = getDB(); if(!u) return;
-        u.balance = parseFloat(document.getElementById('inp-balance').value);
-        u.stats.rating = parseFloat(document.getElementById('inp-rating').value);
-        u.stats.total_deliveries = parseInt(document.getElementById('inp-xp').value);
-        u.needs.energy = parseInt(document.getElementById('inp-energy').value);
-        u.needs.water = parseInt(document.getElementById('inp-water').value);
-        u.needs.mood = parseInt(document.getElementById('inp-mood').value);
-        u.taxi.license = (document.getElementById('inp-license').value==='true');
-        const v = document.getElementById('inp-vehicle').value;
-        u.taxi.vehicle = (v==='null')?null:v;
-        u.inventory.part_chip = parseInt(document.getElementById('inp-part1').value);
-        u.inventory.part_engine = parseInt(document.getElementById('inp-part2').value);
-        u.inventory.part_alloy = parseInt(document.getElementById('inp-part3').value);
-        setDB(u); alert('Сохранено!');
+    // === КНОПКИ ===
+    function addMoney(amount) {
+        modify(d => {
+            d.balance += amount;
+            alert(`Баланс изменен: ${amount} PLN`);
+        });
     }
 
-    function setInflation() {
-        const v = parseFloat(document.getElementById('inp-inf').value);
-        localStorage.setItem(CFG_KEY, JSON.stringify({inflation:v}));
-        alert(`Инфляция: x${v}`);
+    function healFull() {
+        modify(d => {
+            d.needs = { energy: 100, water: 100, mood: 100 };
+            if(!d.items) d.items = {};
+            d.items.bike = 100; d.items.bag = 100; d.items.phone = 100;
+            alert('Игрок полностью здоров!');
+        });
     }
 
-    function resetPassword() {
+    function giveLoot() {
+        modify(d => {
+            if(!d.inventory) d.inventory = {};
+            d.inventory.part_chip = 1;
+            d.inventory.part_engine = 1;
+            d.inventory.part_alloy = 1;
+            alert('Детали выданы! Иди в магазин собирать машину.');
+        });
+    }
+
+    function cheatStats() {
+        modify(d => {
+            if(!d.stats) d.stats = {};
+            d.stats.total_deliveries = 1000;
+            alert('Опыт накручен (1000 заказов). Лицензия доступна.');
+        });
+    }
+
+    function setPass() {
         const p = document.getElementById('new-pass').value;
         if(!p) return alert('Введите пароль!');
-        const u = getDB(); u.password = p; setDB(u);
-        alert(`Пароль установлен: ${p}`); loadEditor();
-    }
-    
-    function removePassword() {
-        if(!confirm('Снять пароль?')) return;
-        const u = getDB(); delete u.password; setDB(u);
-        alert('Пароль удален'); loadEditor();
+        modify(d => {
+            d.password = p;
+            alert(`Пароль установлен: ${p}`);
+        });
     }
 
-    function wipeUser() {
-        if(confirm('УДАЛИТЬ?')) { localStorage.removeItem(SAVE_KEY); location.reload(); }
+    function removePass() {
+        modify(d => {
+            delete d.password;
+            alert('Пароль удален. Вход свободный.');
+        });
     }
 
-    refreshData();
+    function saveInf() {
+        const v = parseFloat(document.getElementById('inf-val').value);
+        localStorage.setItem(CFG_KEY, JSON.stringify({ inflation: v }));
+        alert(`Инфляция установлена: x${v}`);
+    }
+
+    function wipe() {
+        if(confirm('ТОЧНО УДАЛИТЬ ВСЁ? ЭТО НЕЛЬЗЯ ОТМЕНИТЬ.')) {
+            localStorage.removeItem(GAME_KEY);
+            checkConnection();
+        }
+    }
+
+    // Запуск проверки каждую секунду
+    setInterval(checkConnection, 1000);
+    checkConnection();
+
+    // Загрузка инфляции
+    const cfg = localStorage.getItem(CFG_KEY);
+    if(cfg) document.getElementById('inf-val').value = JSON.parse(cfg).inflation;
+
 </script>
+
 </body>
 </html>
