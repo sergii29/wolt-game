@@ -3,74 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Warsaw Courier: STABLE</title>
+    <title>Warsaw Courier Sim</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
-        :root { --bg-dark: #1a1a1a; --brand-blue: #0088cc; --taxi-yellow: #ffcc00; --accent-green: #00e676; --accent-red: #ff3d00; }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; background: var(--bg-dark); color: white; overflow: hidden; user-select: none; -webkit-user-select: none; }
-        
-        #map { height: 100%; width: 100%; z-index: 0; background: #222; position: absolute; top: 0; left: 0; }
-        
-        /* UI OVERLAY - Z-INDEX MUST BE HIGHER THAN MAP */
-        .ui-layer { position: relative; z-index: 10; pointer-events: none; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
-        .pointer-events-auto { pointer-events: auto; }
+        /* --- ОРИГИНАЛЬНЫЙ СТИЛЬ WOLT --- */
+        :root {
+            --bg-dark: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent-blue: #00ccff;
+            --accent-green: #00e676;
+            --accent-orange: #ff9100;
+            --accent-red: #ff3d00;
+            --accent-purple: #d500f9;
+            --brand-blue: #0088cc; 
+            --taxi-yellow: #ffcc00;
+            --taxi-black: #222;
+        }
 
-        .top-bar { padding: 15px; display: flex; justify-content: space-between; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); }
-        .menu-btn, .stats-btn { background: white; color: black; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; border: none; cursor: pointer; }
-        .balance-display { background: rgba(0,0,0,0.8); padding: 8px 16px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(5px); }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-dark); color: var(--text-primary); overflow: hidden; user-select: none; }
         
-        .equip-bar { display: flex; gap: 4px; padding: 0 15px; margin-top: 10px; }
-        .equip-item { flex: 1; background: rgba(0,0,0,0.8); border-radius: 6px; padding: 4px 2px; text-align: center; position: relative; }
-        .progress-mini { width: 80%; height: 3px; background: #444; margin: 2px auto; }
+        #map { height: 100%; width: 100%; z-index: 0; position: absolute; top: 0; left: 0; filter: brightness(0.7) contrast(1.1); }
+
+        /* UI СЛОЙ ПОВЕРХ КАРТЫ */
+        .ui-layer { position: relative; z-index: 10; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        .pointer-auto { pointer-events: auto; }
+
+        .top-bar { padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); }
+        .menu-btn, .stats-btn { background: white; color: black; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; border: none; }
+        .balance-display { background: rgba(0, 0, 0, 0.8); padding: 8px 16px; border-radius: 20px; text-align: center; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1); }
+        .balance-amount { font-size: 18px; font-weight: 800; color: white; }
+        .balance-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; }
+        .debt-warning { color: var(--accent-red); font-size: 10px; font-weight: bold; display: none; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        .equip-bar { display: flex; gap: 4px; padding: 0 10px; margin-top: 5px; }
+        .equip-item { flex: 1; background: rgba(0,0,0,0.8); border-radius: 6px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; backdrop-filter: blur(4px); position: relative; }
+        .equip-icon { font-size: 10px; margin-bottom: 2px; color: #ccc; }
+        .progress-mini { width: 80%; height: 3px; background: #444; border-radius: 2px; overflow: hidden; margin-bottom: 2px; }
         .progress-mini-fill { height: 100%; background: var(--accent-green); transition: width 0.3s; }
-        .equip-label { font-size: 7px; color: #aaa; display: block; font-weight: bold; }
-        .tiny-stat { font-size: 10px; font-weight: bold; position: absolute; width: 100%; top: 50%; left: 0; transform: translateY(-50%); text-shadow: 0 1px 2px black; }
+        .equip-label { font-size: 7px; text-transform: uppercase; color: #888; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .tiny-stat { position: absolute; bottom: 2px; font-size: 8px; font-weight: 900; color: #fff; }
 
-        .bottom-sheet { background: white; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; color: #333; box-shadow: 0 -5px 30px rgba(0,0,0,0.5); pointer-events: auto; }
-        
-        .slider-container { position: relative; width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; overflow: hidden; margin-top: 10px; display: flex; align-items: center; justify-content: center; }
-        .slider-knob { position: absolute; left: 4px; width: 52px; height: 52px; background: var(--brand-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; }
-        .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 136, 204, 0.2); }
-        .slider-text { z-index: 1; font-weight: bold; color: #999; font-size: 14px; text-transform: uppercase; }
-        
-        .pedal-btn { width: 100%; background: var(--brand-blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase; margin-top: 10px; cursor: pointer; transition: transform 0.1s; }
-        .pedal-btn:active { transform: scale(0.98); }
-        .pedal-btn:disabled { background: #ccc; transform: none; }
-        .pedal-btn.blocked { background: var(--accent-orange); }
+        .game-toast { position: absolute; top: 140px; left: 50%; transform: translateX(-50%) translateY(-20px); background: rgba(0, 0, 0, 0.9); color: white; padding: 10px 20px; border-radius: 25px; font-weight: bold; font-size: 14px; z-index: 1001; opacity: 0; transition: all 0.3s; pointer-events: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; border: 1px solid #333; }
+        .game-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .toast-warn { border-color: var(--accent-orange); color: var(--accent-orange); }
+        .toast-success { border-color: var(--accent-green); color: var(--accent-green); }
 
-        .game-toast { position: absolute; top: 120px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 2000; text-align: center; width: 80%; }
-        .game-toast.show { opacity: 1; }
+        .bottom-sheet { background: white; border-top-left-radius: 24px; border-top-right-radius: 24px; padding: 20px; box-shadow: 0 -5px 30px rgba(0,0,0,0.3); color: #333; }
 
-        /* Other UI elements omitted for brevity but classes kept for logic compatibility */
-        .auth-modal, .full-modal, #side-menu-overlay { display: none; } 
-        .auth-modal.open, .full-modal.open, #side-menu-overlay.open { display: flex; }
+        .slider-container { position: relative; width: 100%; height: 60px; background: #f0f0f0; border-radius: 30px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-top: 10px; transition: background 0.3s; }
+        .slider-text { color: #999; font-weight: 600; z-index: 1; letter-spacing: 0.5px; text-transform: uppercase; font-size: 14px; }
+        .slider-knob { position: absolute; left: 4px; top: 4px; bottom: 4px; width: 52px; background: var(--brand-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; cursor: grab; z-index: 2; transition: transform 0.1s; }
+        .slider-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: rgba(0, 136, 204, 0.2); z-index: 0; }
         
-        /* Side Menu Styles */
-        #side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 3000; }
-        #side-menu { position: absolute; top: 0; left: -85%; width: 85%; max-width: 300px; height: 100%; background: #222; transition: left 0.3s; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; }
+        .slider-container.taxi-mode { background: #fff9c4; border: 1px solid #fbc02d; }
+        .slider-container.taxi-mode .slider-knob { background: var(--taxi-yellow); color: black; }
+        .slider-container.taxi-mode .slider-fill { background: rgba(255, 204, 0, 0.3); }
+        .slider-container.taxi-mode .slider-text { color: #f57f17; }
+        
+        .slider-container.scheduled { background: #ffebee; border: 1px solid #ffcdd2; }
+        .slider-container.scheduled .slider-knob { background: var(--accent-red); }
+        .slider-container.scheduled .slider-text { color: var(--accent-red); }
+
+        .controls-row { display: flex; gap: 10px; margin-top: 15px; }
+        .pedal-btn { flex: 1; background: var(--brand-blue); color: white; border: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; box-shadow: 0 4px 0 #006699; transition: all 0.1s; }
+        .pedal-btn:active { transform: translateY(4px); box-shadow: none; }
+        .pedal-btn:disabled { background: #ccc; box-shadow: none; transform: none; }
+        .pedal-btn.blocked { background: var(--accent-orange); box-shadow: 0 4px 0 #e65100; cursor: not-allowed; }
+        .pedal-btn.taxi-pedal { background: var(--taxi-black); color: var(--taxi-yellow); box-shadow: 0 4px 0 #444; }
+
+        .bribe-btn { display:none; flex: 1; background: #222; color: #ff3d00; border: 1px solid #ff3d00; padding: 18px; border-radius: 16px; font-size: 14px; font-weight: 800; text-transform: uppercase; cursor: pointer; animation: pulse 1s infinite; }
+
+        .bag-btn { width: 60px; background: #f8f9fa; border: 2px solid #eee; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #333; cursor: pointer; position: relative; }
+        .bag-badge { position: absolute; top: -5px; right: -5px; background: var(--accent-red); color: white; font-size: 10px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+        .quick-inv { position: absolute; bottom: 90px; left: 20px; width: 220px; background: #252525; color: white; padding: 10px; border-radius: 16px; z-index: 1005; display: none; flex-direction: column; gap: 8px; box-shadow: 0 5px 25px rgba(0,0,0,0.6); border: 1px solid #444; }
+        .quick-inv.open { display: flex; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .inv-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: background 0.2s; }
+        .inv-item:active { background: rgba(255,255,255,0.2); }
+        .inv-item.link-btn { background: var(--brand-blue); justify-content: center; font-weight: bold; }
+        .inv-count { background: var(--brand-blue); padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+        @keyframes popUp { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        /* МЕНЮ И МОДАЛКИ */
+        #side-menu-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        #side-menu-overlay.open { opacity: 1; pointer-events: auto; }
+        #side-menu { position: absolute; top: 0; left: -85%; width: 85%; max-width: 320px; height: 100%; background: #1e1e1e; transition: left 0.3s; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; }
         #side-menu.open { left: 0; }
-        .menu-item { padding: 15px; border-bottom: 1px solid #333; cursor: pointer; color: white; display: flex; align-items: center; gap: 10px; }
+        .menu-item { padding: 15px 0; border-bottom: 1px solid #333; cursor: pointer; display: flex; gap: 15px; font-size: 16px; align-items: center; }
+        .menu-divider { height: 20px; border-bottom: 1px solid #333; margin-bottom: 20px; }
+        .menu-section-title { font-size: 12px; color: var(--taxi-yellow); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; margin-top: 10px; }
+        .menu-item.locked { opacity: 0.5; cursor: not-allowed; color: #777; }
+        .menu-item.taxi-item { border-bottom: 1px solid #444; }
         
-        /* Modal Styles */
-        .full-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f5f5f5; z-index: 4000; flex-direction: column; color: black; }
-        .modal-header { padding: 15px; background: white; font-weight: bold; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid #eee; }
-        .modal-content { padding: 15px; overflow-y: auto; flex: 1; }
-        .shop-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .shop-btn { padding: 8px 15px; border-radius: 8px; border: none; font-weight: bold; background: var(--brand-blue); color: white; cursor: pointer; }
+        .taxi-toggle-btn { background: #333; color: #777; width: 100%; padding: 15px; border-radius: 10px; border: 2px solid #444; font-weight: bold; margin-top: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .taxi-toggle-btn.active { background: var(--taxi-yellow); color: black; border-color: var(--taxi-yellow); box-shadow: 0 0 15px rgba(255, 204, 0, 0.4); }
+
+        .full-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f5f5f5; color: black; z-index: 3000; transform: translateY(100%); transition: transform 0.3s; display: flex; flex-direction: column; }
+        .full-modal.open { transform: translateY(0); }
+        .modal-header { padding: 15px; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; font-weight: bold; }
+        .modal-content { flex: 1; overflow-y: auto; padding: 15px; }
+
+        .shop-section { margin-bottom: 25px; }
+        .shop-card { background: white; padding: 15px; border-radius: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .shop-btn { padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 13px; cursor: pointer; border: 1px solid var(--brand-blue); color: var(--brand-blue); background: white; min-width: 80px; transition: all 0.2s; }
+        .shop-btn.buy { background: var(--brand-blue); color: white; }
+        .shop-btn.bought { background: var(--accent-green); border-color: var(--accent-green); color: white; transform: scale(1.05); }
+
+        .accept-timer-bg { width: 100%; height: 6px; background: #eee; margin-top: 8px; border-radius: 3px; overflow: hidden; display: none; }
+        .accept-timer-fill { height: 100%; background: var(--accent-red); width: 100%; }
+        @keyframes shrinkTimer { from { width: 100%; } to { width: 0%; } }
+        .animate-timer { animation: shrinkTimer 15s linear forwards; }
         
-        /* Quick Inv */
-        .quick-inv { position: absolute; bottom: 100px; left: 20px; background: #333; padding: 10px; border-radius: 10px; display: none; flex-direction: column; gap: 5px; width: 200px; z-index: 2000; }
-        .quick-inv.open { display: flex; }
-        .inv-item { padding: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; }
-        
-        .bribe-btn { background: #222; color: var(--accent-red); border: 1px solid var(--accent-red); padding: 15px; border-radius: 12px; width: 100%; font-weight: bold; margin-top: 5px; display: none; }
-        
-        /* Map Icons */
-        .custom-div-icon { background: transparent; border: none; }
+        .map-event-icon { font-size: 24px; animation: bounce 1s infinite; filter: drop-shadow(0 0 3px black); }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
     </style>
 </head>
 <body>
@@ -78,460 +129,579 @@
     <div id="map"></div>
 
     <div class="ui-layer">
-        <div class="top-bar pointer-events-auto">
+        <div class="top-bar pointer-auto">
             <button class="menu-btn" onclick="toggleMenu()"><i class="fa-solid fa-bars"></i></button>
             <div class="balance-display">
                 <div class="balance-amount" id="balance-val">0.00 PLN</div>
-                <div style="font-size:10px; color:#ccc">Баланс <span id="debt-warning" style="color:red;display:none">!ДОЛГ!</span></div>
+                <div class="balance-label">Баланс <span id="debt-warning" class="debt-warning">(ДОЛГ!)</span></div>
             </div>
             <button class="stats-btn" onclick="openModal('stats')"><i class="fa-solid fa-chart-simple"></i></button>
         </div>
 
-        <div class="equip-bar pointer-events-auto">
-            <div class="equip-item"><i class="fa-solid fa-bolt" style="color:yellow"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-energy"></div></div><div class="tiny-stat" id="stat-energy"></div></div>
-            <div class="equip-item"><i class="fa-solid fa-droplet" style="color:cyan"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-water"></div></div><div class="tiny-stat" id="stat-water"></div></div>
-            <div class="equip-item"><i class="fa-solid fa-face-smile" style="color:magenta"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-mood"></div></div><div class="tiny-stat" id="stat-mood"></div></div>
+        <div class="equip-bar pointer-auto">
+            <div class="equip-item"><i class="fa-solid fa-bicycle equip-icon" id="icon-vehicle"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-bike" style="width: 100%"></div></div><span class="equip-label" id="label-vehicle">ВЕЛ</span><div class="tiny-stat" id="stat-bike"></div></div>
+            <div class="equip-item"><i class="fa-solid fa-box-open equip-icon" id="icon-bag"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-bag" style="width: 100%"></div></div><span class="equip-label" id="label-bag">СУМКА</span><div class="tiny-stat" id="stat-bag"></div></div>
+            <div class="equip-item"><i class="fa-solid fa-mobile-screen equip-icon"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-phone" style="width: 100%"></div></div><span class="equip-label">СВЯЗЬ</span><div class="tiny-stat" id="stat-phone"></div></div>
+            <div class="equip-item"><i class="fa-solid fa-shirt equip-icon" id="icon-gear"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-gear" style="width: 100%"></div></div><span class="equip-label" id="label-gear">ОДЕЖДА</span><div class="tiny-stat" id="stat-gear"></div></div>
+            <div class="equip-item"><i class="fa-solid fa-bolt equip-icon" id="icon-energy" style="color:yellow"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-energy" style="background:yellow; width: 100%"></div></div><span class="equip-label" id="label-energy">СИЛЫ</span><div class="tiny-stat" id="stat-energy"></div></div>
+            <div class="equip-item"><i class="fa-solid fa-droplet equip-icon" style="color:cyan"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-water" style="background:cyan; width: 100%"></div></div><span class="equip-label">ВОДА</span><div class="tiny-stat" id="stat-water"></div></div>
+            <div class="equip-item"><i class="fa-solid fa-face-smile equip-icon" style="color:#d500f9"></i><div class="progress-mini"><div class="progress-mini-fill" id="bar-mood" style="background:#d500f9; width: 100%"></div></div><span class="equip-label">НАСТР</span><div class="tiny-stat" id="stat-mood"></div></div>
         </div>
 
-        <div id="toast" class="game-toast"></div>
+        <div id="toast" class="game-toast"><i class="fa-solid fa-circle-info"></i> <span>Msg</span></div>
 
-        <div class="bottom-sheet">
+        <div style="flex:1"></div>
+
+        <div class="bottom-sheet pointer-auto">
             <div id="offline-view">
-                <h3>Варшава <span style="font-size:12px;color:#999">Офлайн</span></h3>
-                <div class="slider-container">
-                    <div class="slider-fill" id="off-fill"></div>
-                    <div class="slider-text">СВАЙП -> РАБОТА</div>
-                    <div class="slider-knob" id="off-knob"><i class="fa-solid fa-chevron-right"></i></div>
+                <h3 style="margin:0" id="city-label">Варшава</h3>
+                <div id="demo-mode-alert" style="color:#ff3d00; font-size:11px; margin:5px 0; display:none; border:1px solid #ff3d00; padding:5px; border-radius:5px; background:rgba(0,0,0,0.05); font-weight:bold; text-align:center;">
+                    ⚠️ ДЕМО РЕЖИМ (Android/Web)<br>Войдите или Зарегистрируйтесь для сохранения!
+                </div>
+
+                <p style="color:#888; font-size:13px">Спрос: Высокий • Инфляция: Активна</p>
+                <div class="slider-container" id="offline-slider-box">
+                    <div class="slider-fill" id="offline-slider-fill"></div>
+                    <div class="slider-text">СВАЙП ДЛЯ ОНЛАЙНА</div>
+                    <div class="slider-knob" id="offline-slider-knob"><i class="fa-solid fa-chevron-right"></i></div>
                 </div>
             </div>
 
-            <div id="active-view" style="display:none">
-                <div style="display:flex; justify-content:space-between; align-items:center">
-                    <div>
-                        <h3 id="order-title" style="margin:0">Поиск...</h3>
-                        <div id="order-subtitle" style="font-size:12px; color:#666">Ожидание...</div>
-                    </div>
-                    <div id="order-price" style="font-size:18px; font-weight:bold; color:var(--accent-green)">--</div>
-                </div>
-
-                <div style="height:4px; background:#eee; margin:15px 0; position:relative">
-                    <div id="trip-progress" style="height:100%; width:0%; background:var(--brand-blue); transition:width 0.2s"></div>
-                </div>
-
-                <div class="controls-row" style="display:flex; gap:10px">
-                    <div class="bag-btn pointer-events-auto" style="width:50px; background:#f0f0f0; border-radius:12px; display:flex; align-items:center; justify-content:center; cursor:pointer" onclick="toggleQuickInv()">🎒</div>
+            <div id="active-order-view" style="display:none; flex-direction:column; gap:10px">
+                <div style="display:flex; gap:15px; align-items:center">
+                    <div style="font-size:24px; width:45px; height:45px; background:#f5f5f5; border-radius:10px; display:flex; align-items:center; justify-content:center" id="rest-icon">🍔</div>
                     <div style="flex:1">
-                        <button id="pedal-btn" class="pedal-btn">ЖМИ ГАЗ</button>
-                        <button id="bribe-btn" class="bribe-btn" onclick="payBribe()">ВЗЯТКА (-20)</button>
+                        <h3 style="margin:0" id="rest-name">Поиск...</h3>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px">
+                            <span style="font-size:12px; color:#666" id="order-dest">Ожидание</span>
+                            <span id="order-offer" style="font-weight:bold; color:var(--accent-green); font-size:15px">-- PLN</span>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end; align-items:center">
+                            <span id="delivery-timer" style="font-size:11px; color:#666; font-weight:bold; margin-top:2px"></span>
+                        </div>
+                        <div class="accept-timer-bg" id="accept-timer"><div class="accept-timer-fill" id="accept-timer-fill"></div></div>
                     </div>
                 </div>
 
-                <div class="slider-container" style="height:40px; margin-top:15px; background:#fff0f0">
-                    <div class="slider-fill" id="on-fill" style="background:#ffcdd2"></div>
-                    <div class="slider-text" style="font-size:10px; color:red">СВАЙП -> ОФЛАЙН</div>
-                    <div class="slider-knob" id="on-knob" style="width:32px; height:32px; background:red; font-size:14px"><i class="fa-solid fa-power-off"></i></div>
+                <div style="position:relative; height:30px; margin:5px 0">
+                    <div style="position:absolute; top:50%; left:0; right:0; height:4px; background:#eee; transform:translateY(-50%)"></div>
+                    <div style="position:absolute; top:50%; left:0; height:4px; background:var(--brand-blue); transform:translateY(-50%); width:0%" id="track-fill"></div>
+                    <div style="position:absolute; top:50%; left:0; transform:translate(-50%, -50%); width:28px; height:28px; background:white; border:2px solid var(--brand-blue); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--brand-blue); font-size:12px; transition:left 0.2s" id="track-icon"><i class="fa-solid fa-bicycle"></i></div>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; font-size:12px; color:#666">
+                    <span>Состояние: <strong id="temp-val">100%</strong></span>
+                    <span id="status-label">Поиск...</span>
+                </div>
+
+                <div class="slider-container" id="online-slider-box">
+                    <div class="slider-fill" id="online-slider-fill"></div>
+                    <div class="slider-text" id="online-slider-text">СВАЙП ДЛЯ ОФЛАЙНА</div>
+                    <div class="slider-knob" id="online-slider-knob"><i class="fa-solid fa-chevron-right"></i></div>
+                </div>
+
+                <div class="quick-inv" id="quick-inv"></div>
+
+                <div class="controls-row">
+                    <div class="bag-btn" onclick="toggleQuickInv()">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                        <div class="bag-badge" id="bag-count">0</div>
+                    </div>
+                    <button class="pedal-btn" id="pedal-btn">ЖМИ ГАЗ (PEDAL)</button>
+                    <button class="bribe-btn" id="bribe-btn" onclick="giveBribe()">ДАТЬ ВЗЯТКУ (-20)</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="quick-inv" class="quick-inv pointer-events-auto"></div>
+    <div id="auth-modal" class="auth-modal">
+        <div class="auth-box">
+            <div style="text-align:right; margin-bottom:10px;"><i class="fa-solid fa-xmark" onclick="closeAuthModal()" style="color:#888; font-size:20px; cursor:pointer"></i></div>
+            <div class="auth-title"><i class="fa-solid fa-lock"></i> Вход / Регистрация</div>
+            <input type="text" id="auth-login" class="auth-input" placeholder="Логин">
+            <input type="password" id="auth-pass" class="auth-input" placeholder="Пароль">
+            <button class="auth-btn btn-login" onclick="performLogin()">Войти</button>
+            <button class="auth-btn btn-register" onclick="performRegister()">Регистрация</button>
+        </div>
+    </div>
 
     <div id="side-menu-overlay" onclick="toggleMenu()">
         <div id="side-menu" onclick="event.stopPropagation()">
-            <h2 style="color:white">Меню</h2>
-            <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store"></i> Магазин</div>
-            <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns"></i> Банк</div>
-            <div class="menu-item" onclick="toggleTaxi()"><i class="fa-solid fa-taxi"></i> Режим Такси</div>
-            <div class="menu-item" onclick="resetGame()" style="color:red; margin-top:auto"><i class="fa-solid fa-trash"></i> Сброс</div>
+            <h2 style="margin-bottom: 5px">Профиль</h2>
+            <div id="player-name-display" style="font-size:18px; color:var(--brand-blue); font-weight:bold; margin-bottom:5px"></div>
+            <div id="player-id-display" style="font-size:10px; color:#666; display:block; margin-bottom:20px">Loading ID...</div>
+            
+            <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--brand-blue)"></i> Магазин / Инвентарь</div>
+            <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
+            <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
+            <div class="menu-item" onclick="openModal('stats')"><i class="fa-solid fa-clock-rotate-left"></i> История</div>
+            
+            <div class="menu-divider"></div>
+            <div class="menu-section-title">🚖 Такси Департамент</div>
+            <div class="menu-item taxi-item locked" id="taxi-showroom-btn" onclick="openModal('taxi-shop')">
+                <i class="fa-solid fa-car" style="color:var(--taxi-yellow)"></i> Автосалон
+            </div>
+            <div class="menu-item taxi-item locked" id="taxi-licenses-btn" onclick="openModal('taxi-licenses')">
+                <i class="fa-solid fa-id-card" style="color:#aaa"></i> Лицензии / Права
+            </div>
+            
+            <button id="taxi-toggle-btn" class="taxi-toggle-btn" onclick="toggleTaxiMode()" style="display:none">
+                <i class="fa-solid fa-taxi"></i> <span>ВКЛЮЧИТЬ TAXI</span>
+            </button>
+
+            <div id="taxi-lock-msg" style="font-size:10px; color:#666; margin-left:15px; margin-top:5px; font-style:italic">
+                <i class="fa-solid fa-lock"></i> Требуется 50 доставок (У вас: <span id="career-count">0</span>)
+            </div>
+
+            <div style="margin-top:auto">
+                <div class="menu-item" id="auth-menu-item" onclick="openAuthModal()" style="display:none; color:var(--accent-green)">
+                    <i class="fa-solid fa-key"></i> 🔐 Вход / Регистрация
+                </div>
+                <div class="menu-item" onclick="resetGame()" style="color:var(--accent-red); display:flex; flex-direction:column; align-items:flex-start; gap:0">
+                    <div style="display:flex; gap:15px; align-items:center"><i class="fa-solid fa-trash"></i> Сброс прогресса</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="full-modal" class="full-modal">
         <div class="modal-header">
-            <i class="fa-solid fa-arrow-left" onclick="closeModal()"></i>
-            <span id="modal-title">...</span>
+            <i class="fa-solid fa-arrow-left" onclick="closeModal()" style="font-size:20px; padding:10px; cursor:pointer"></i>
+            <span id="modal-title">Title</span>
         </div>
         <div class="modal-content" id="modal-body"></div>
     </div>
 
-    <div id="auth-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:5000;display:none;justify-content:center;align-items:center;flex-direction:column">
-        <h3 style="color:white">Вход</h3>
-        <input id="auth-login" placeholder="Логин" style="padding:10px;margin:5px">
-        <button onclick="performAuth()" style="padding:10px;background:var(--brand-blue);color:white;border:none">OK</button>
-        <button onclick="document.getElementById('auth-modal').style.display='none'" style="margin-top:10px;background:none;color:#aaa;border:none">Закрыть</button>
-    </div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- 1. CORE GAME STATE (ROBUST) ---
-        const SAVE_KEY = 'WARSZAWA_FOREVER_V2';
-        const DEFAULT_STATE = {
-            balance: 0, debt: 0, 
-            inventory: { water: 0, bar: 0, gas: 0 },
-            stats: { energy: 100, water: 100, mood: 100 },
-            items: { bike: 100 },
-            taxi: { active: false },
-            isOnline: false
+        // CONFIG
+        const firebaseConfig = {
+          apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk", 
+          authDomain: "warszawa-courier.firebaseapp.com",
+          databaseURL: "https://warszawa-courier-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "warszawa-courier",
+          storageBucket: "warszawa-courier.firebasestorage.app",
+          messagingSenderId: "295860613508",
+          appId: "1:295860613508:web:86fe8364377d6875612dd1",
+          measurementId: "G-TGSCHBVLX2"
         };
-        let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
 
-        // --- 2. MAP VARIABLES (SAFE) ---
-        let map = null;
-        let mapLoaded = false;
-        let routeLine = null;
-        let markers = [];
-        const WARSAW = [52.2297, 21.0122];
-        let currentDest = null;
-        let courierPos = [...WARSAW];
+        let db = null;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        } catch(e) { console.error("Firebase Error:", e); }
 
-        // --- 3. GAME VARIABLES ---
+        const SAVE_KEY = 'WARSZAWA_FOREVER';
+        const TAXI_UNLOCK_REQ = 50;
+        const WARSAW_CENTER = [52.2297, 21.0122]; 
+        
+        let gameConfig = {
+            basePickupPay: 4.0, perKmPay: 1.5, payVariance: 2.0, 
+            inflationRate: 0.1, trafficChance: 0.1, trafficDuration: 5000,
+            energyDrain: 0.15, waterDrain: 0.10, moodDrain: 0.05, 
+            deliveryTime: 60, coolingRate: 0.5, 
+            tipChance: 0.5, tipBonusChance: 0.3, tipMinTemp: 60, tipMinMood: 80,
+            itemPrices: {}
+        };
+
+        const ITEMS_DB = {
+            bike: { name: 'Велосипед', type: 'repair', baseCost: 5, icon: 'fa-bicycle', desc: 'Ремонт ходовой (+100%)' },
+            bag: { name: 'Сумка', type: 'repair', baseCost: 2, icon: 'fa-box-open', desc: 'Заплатка дыр (+100%)' },
+            phone: { name: 'Связь', type: 'repair', baseCost: 1, icon: 'fa-mobile-screen', desc: 'Оплата интернета (+100%)' },
+            gear: { name: 'Одежда', type: 'repair', baseCost: 3, icon: 'fa-shirt', desc: 'Химчистка (+100%)' },
+            car_main: { name: 'Автосервис', type: 'repair', baseCost: 100, icon: 'fa-wrench', desc: 'Ремонт подвески и ТО (+100%)' },
+            car_interior: { name: 'Химчистка салона', type: 'repair', baseCost: 40, icon: 'fa-sparkles', desc: 'Чистота для клиентов (+100%)' },
+            car_tires: { name: 'Шиномонтаж', type: 'repair', baseCost: 80, icon: 'fa-circle-notch', desc: 'Смена резины (+100%)' },
+            water: { name: 'Вода (0.5л)', type: 'buy', cost: 2.0, icon: 'fa-bottle-water', effect: { water: 35, energy: 5 }, desc: 'Спасает от жажды.', target: 'water' },
+            bar: { name: 'Сникерс', type: 'buy', cost: 4.5, icon: 'fa-cookie-bite', effect: { energy: 20, mood: 15 }, desc: 'Баланс энергии.', target: 'energy' },
+            energy_drink: { name: 'Red Bull', type: 'buy', cost: 7.0, icon: 'fa-bolt', effect: { energy: 50, mood: 5, water: -5 }, desc: 'Останавливает расход ЭНЕРГИИ, но не воды!', target: 'energy', special: 'no_drain' },
+            coffee: { name: 'Латте', type: 'buy', cost: 9.0, icon: 'fa-mug-hot', effect: { mood: 30, energy: 10 }, desc: 'Для Настроения!', target: 'mood' },
+            chocolate: { name: 'Шоколадка', type: 'buy', cost: 6.5, icon: 'fa-gift', effect: { mood: 20 }, desc: 'Съешь на заказе - клиент подобреет!', target: 'mood', special: 'gift' },
+            gas: { name: 'Бензин (10л)', type: 'buy', cost: 12.0, icon: 'fa-gas-pump', effect: { energy: 80 }, desc: 'Заправка авто.', target: 'energy' }
+        };
+
+        const DEFAULT_STATE = {
+            name: null, balance: 0, debt: 0, debtTimer: 0, debtOverdue: false, loanStreak: 0, 
+            isOnline: false, isSearching: false, scheduledOffline: false,
+            items: { bike: 100, bag: 100, phone: 100, gear: 100 }, needs: { energy: 100, water: 100, mood: 100 },
+            inventory: { water: 0, bar: 0, energy_drink: 0, coffee: 0, gas: 0, chocolate: 0 },
+            repairs: { bike: 0, bag: 0, phone: 0, gear: 0 }, history: [], energyBoostActive: false, isAuth: false,
+            career: { totalOrders: 0 }, taxi: { unlocked: false, active: false, vehicle: null, licenses: { driver: false, insurance: false, taxi: false } }
+        };
+
+        let state = JSON.parse(JSON.stringify(DEFAULT_STATE)); 
+        state.id = 'u_' + Math.random().toString(36).substr(2, 9);
+
+        // MAP VARIABLES
+        let map;
+        let mapVisuals = { courierMarker: null, destMarker: null, routeLine: null, eventMarker: null };
+        let mapPoints = { courier: null, restaurant: null, client: null };
+
+        const restaurants = [{ name: "McDonald's", icon: "🍔" }, { name: "KFC", icon: "🍗" }, { name: "Pasibus", icon: "🍔" }, { name: "Kebab King", icon: "🌯" }, { name: "Sushi Master", icon: "🍣" }, { name: "Pizza Hut", icon: "🍕" }];
+        const taxiDestinations = [{ name: "Аэропорт Шопен", icon: "✈️" }, { name: "Центральный Вокзал", icon: "🚆" }, { name: "Бизнес Центр", icon: "🏢" }, { name: "Старый Город", icon: "🏛" }, { name: "Клуб 'Level 27'", icon: "🍸" }, { name: "ТЦ Zlote Tarasy", icon: "🛍" }];
+        const clientNames = ["Анна", "Петр", "Кася", "Михал", "Ольга", "Томаш", "Юлия", "Якуб"];
+        
         let currentOrder = null;
-        let orderTimer = null;
+        let acceptTimeout = null;
+        let orderInterval = null;
+        let lastSync = 0;
 
-        // --- 4. INITIALIZATION ---
         function init() {
-            // Load Save
-            try {
-                const s = localStorage.getItem(SAVE_KEY);
-                if(s) state = { ...DEFAULT_STATE, ...JSON.parse(s) };
-            } catch(e) { console.error("Save load error", e); }
+            // MAP INIT (FIXED)
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView(WARSAW_CENTER, 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+            setTimeout(() => { map.invalidateSize(); }, 500);
 
-            // INIT SLIDERS FIRST (So they work even if map fails)
-            initSliders();
+            const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+            loadGame();
+
+            if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                state.id = tg.initDataUnsafe.user.id.toString();
+                state.name = tg.initDataUnsafe.user.first_name;
+                state.isAuth = true; 
+                saveGame();
+                setTimeout(() => { document.getElementById('auth-menu-item').style.display = 'none'; document.getElementById('demo-mode-alert').style.display = 'none'; }, 500);
+                listenToCloud(); syncToCloud(true);
+            } else {
+                if (!state.name) state.name = "Guest Courier";
+                if (!state.isAuth) { document.getElementById('demo-mode-alert').style.display = 'block'; document.getElementById('auth-menu-item').style.display = 'flex'; }
+            }
             
-            // Buttons
+            document.getElementById('player-id-display').textContent = `ID: ${state.id}`;
+            document.getElementById('player-name-display').textContent = state.name;
             document.getElementById('pedal-btn').addEventListener('click', pedal);
-            
-            // UI Update
-            updateUI();
+            initSliders();
+            setInterval(checkDebt, 1000); 
+            setInterval(checkSystemPenalties, 60000);
+            if(state.isAuth || true) { listenToCloud(); syncToCloud(true); }
+            updateMenuState(); updateAuthUI(); updateUI(); updateVisualStats();
+        }
 
-            // Try Init Map
-            try {
-                setTimeout(() => {
-                    map = L.map('map', { zoomControl: false, attributionControl: false }).setView(WARSAW, 13);
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
-                    mapLoaded = true;
-                    console.log("Map Loaded Successfully");
-                }, 500);
-            } catch(e) {
-                console.error("Map Failed:", e);
-                document.getElementById('map').style.background = '#333'; // Fallback bg
-                document.getElementById('map').innerHTML = '<div style="color:white;text-align:center;padding-top:100px">Карта не загрузилась<br>Игра работает в текстовом режиме</div>';
+        // --- REALISM MAP LOGIC (INTEGRATED) ---
+        function getRandomPoint() {
+            const lat = WARSAW_CENTER[0] + (Math.random() - 0.5) * 0.08;
+            const lng = WARSAW_CENTER[1] + (Math.random() - 0.5) * 0.12;
+            return [lat, lng];
+        }
+
+        function drawPath(start, end) {
+            if (!map) return;
+            if (mapVisuals.routeLine) map.removeLayer(mapVisuals.routeLine);
+            mapVisuals.routeLine = L.polyline([start, end], { color: '#009de0', weight: 4, opacity: 0.7, dashArray: '10, 10' }).addTo(map);
+            map.fitBounds([start, end], {padding: [50, 50]});
+        }
+
+        function updateCourierPos(start, end, progress) {
+            if (!mapVisuals.courierMarker) {
+                const iconHtml = state.taxi.active 
+                    ? '<i class="fa-solid fa-taxi" style="color:#ffcc00; font-size:20px; border:2px solid black; background:black; border-radius:50%; padding:5px;"></i>'
+                    : '<i class="fa-solid fa-bicycle" style="color:white; font-size:20px; border:2px solid #009de0; background:#009de0; border-radius:50%; padding:5px;"></i>';
+                const icon = L.divIcon({ html: iconHtml, className: 'custom-div-icon', iconSize: [30, 30], iconAnchor: [15, 15] });
+                mapVisuals.courierMarker = L.marker(start, {icon: icon, zIndexOffset: 1000}).addTo(map);
             }
-
-            // Start Loops
-            setInterval(updateUI, 1000);
+            const pct = progress / 100;
+            const lat = start[0] + (end[0] - start[0]) * pct;
+            const lng = start[1] + (end[1] - start[1]) * pct;
+            const newPos = [lat, lng];
+            mapVisuals.courierMarker.setLatLng(newPos);
+            mapPoints.courier = newPos; 
             
-            // Restore state if online
-            if(state.isOnline) {
-                goOnlineUI();
-                startSearching();
-            }
+            if(mapVisuals.eventMarker) mapVisuals.eventMarker.setLatLng(newPos);
         }
 
-        // --- 5. SLIDER LOGIC (PURE JS, NO MAP DEPENDENCY) ---
-        function initSliders() {
-            setupSlider('off', () => { 
-                state.isOnline = true; 
-                goOnlineUI();
-                startSearching();
-                saveGame();
-            });
-            setupSlider('on', () => { 
-                state.isOnline = false; 
-                goOfflineUI();
-                saveGame();
-            });
-        }
-
-        function setupSlider(id, callback) {
-            const knob = document.getElementById(id + '-knob');
-            const fill = document.getElementById(id + '-fill');
-            const box = knob.parentElement;
-            let startX = 0, dragging = false;
-
-            const start = (x) => { dragging = true; startX = x; };
-            const move = (x) => {
-                if(!dragging) return;
-                let val = x - startX;
-                let max = box.offsetWidth - knob.offsetWidth;
-                if(val < 0) val = 0; if(val > max) val = max;
-                knob.style.transform = `translateX(${val}px)`;
-                fill.style.width = (val/max*100) + '%';
-                if(val > max * 0.9) { dragging = false; reset(); callback(); }
-            };
-            const end = () => { dragging = false; reset(); };
-            const reset = () => { knob.style.transform = 'translateX(0)'; fill.style.width = '0%'; };
-
-            knob.addEventListener('mousedown', e => start(e.clientX));
-            knob.addEventListener('touchstart', e => start(e.touches[0].clientX));
-            document.addEventListener('mousemove', e => move(e.clientX));
-            document.addEventListener('touchmove', e => move(e.touches[0].clientX));
-            document.addEventListener('mouseup', end);
-            document.addEventListener('touchend', end);
-        }
-
-        // --- 6. GAMEPLAY LOGIC ---
-        function goOnlineUI() {
-            document.getElementById('offline-view').style.display = 'none';
-            document.getElementById('active-view').style.display = 'block';
-        }
-        function goOfflineUI() {
-            document.getElementById('offline-view').style.display = 'block';
-            document.getElementById('active-view').style.display = 'none';
-            currentOrder = null;
-            clearMap();
-        }
-
-        function startSearching() {
-            if(!state.isOnline) return;
-            document.getElementById('order-title').textContent = "Поиск заказа...";
-            document.getElementById('pedal-btn').disabled = true;
-            document.getElementById('pedal-btn').textContent = "ПОИСК...";
+        function showMapEvent(type) {
+            if (!mapPoints.courier) return;
+            let html = '';
+            if(type === 'police') html = '<div class="map-event-icon">🚓</div>';
+            if(type === 'traffic') html = '<div class="map-event-icon">🚧</div>';
             
-            // Simulate delay
-            setTimeout(() => {
-                if(!state.isOnline) return;
-                createOrder();
-            }, 2000);
-        }
-
-        function createOrder() {
-            // Generate Random Coords nearby
-            const dest = [WARSAW[0] + (Math.random()-0.5)*0.05, WARSAW[1] + (Math.random()-0.5)*0.08];
-            currentDest = dest;
-
-            // Calc Distance (Safe Mode)
-            let distKm = 3.5; // Default fallback
-            try {
-                if(mapLoaded) {
-                    distKm = (map.distance(courierPos, dest) / 1000).toFixed(1);
-                }
-            } catch(e) { console.warn("Dist calc failed", e); }
-
-            let pay = (4 + (distKm * 1.5)).toFixed(2);
-            if(state.taxi.active) pay = (pay * 3).toFixed(2);
-
-            currentOrder = {
-                pay: parseFloat(pay),
-                dist: distKm,
-                progress: 0,
-                stage: 1 // 1 = Picking up, 2 = Delivering
-            };
-
-            document.getElementById('order-title').textContent = state.taxi.active ? "🚖 Клиент найден" : "🍔 Заказ найден";
-            document.getElementById('order-subtitle').textContent = `Дистанция: ${distKm} км`;
-            document.getElementById('order-price').textContent = pay + " PLN";
-            
-            const btn = document.getElementById('pedal-btn');
-            btn.disabled = false;
-            btn.textContent = "ПРИНЯТЬ";
-            btn.onclick = acceptOrder;
-
-            // Draw on Map (Safe Mode)
-            drawMapRoute(courierPos, dest);
-        }
-
-        function acceptOrder() {
-            const btn = document.getElementById('pedal-btn');
-            btn.textContent = state.taxi.active ? "ГАЗ В ПОЛ" : "КРУТИ ПЕДАЛИ";
-            btn.onclick = pedal;
-            document.getElementById('order-subtitle').textContent = "В пути...";
-        }
-
-        function pedal() {
-            if(!currentOrder) return;
-
-            // Stats Logic
-            if(state.stats.energy <= 0) { showToast("Нет сил! Съешь что-нибудь", "warn"); return; }
-            state.stats.energy -= 1;
-            state.stats.water -= 0.5;
-
-            // Progress Logic
-            currentOrder.progress += 5; // 5% per click
-            
-            // Visual Updates
-            document.getElementById('trip-progress').style.width = currentOrder.progress + '%';
-            
-            // Map Movement (Safe Mode)
-            updateCourierMapPos(currentOrder.progress);
-
-            // Random Events (Simulated)
-            if(Math.random() < 0.05) { // 5% chance
-                triggerEvent("police");
-            } else if (Math.random() < 0.05) {
-                triggerEvent("traffic");
-            }
-
-            if(currentOrder.progress >= 100) {
-                finishOrder();
-            }
-            
-            saveGame();
-            updateUI();
-        }
-
-        function finishOrder() {
-            state.balance += currentOrder.pay;
-            showToast(`+${currentOrder.pay} PLN`, 'success');
-            currentOrder = null;
-            document.getElementById('trip-progress').style.width = '0%';
-            clearMap();
-            startSearching();
-        }
-
-        function triggerEvent(type) {
-            const btn = document.getElementById('pedal-btn');
-            btn.disabled = true;
-            
-            if(type === 'police') {
-                btn.textContent = "👮 ПОЛИЦИЯ!";
-                document.getElementById('bribe-btn').style.display = 'block';
-                showToast("Вас остановили!", "warn");
-                setTimeout(() => { if(btn.disabled) resumeFromEvent(); }, 5000);
-            } else {
-                btn.textContent = "🚧 ПРОБКА...";
-                showToast("Стоим в пробке", "warn");
-                setTimeout(() => resumeFromEvent(), 3000);
-            }
-        }
-
-        function payBribe() {
-            if(state.balance >= 20) {
-                state.balance -= 20;
-                showToast("Взятка дана (-20 PLN)", "warn");
-                resumeFromEvent();
-            } else {
-                showToast("Нет денег!", "warn");
-            }
-        }
-
-        function resumeFromEvent() {
-            const btn = document.getElementById('pedal-btn');
-            btn.disabled = false;
-            btn.textContent = state.taxi.active ? "ГАЗ В ПОЛ" : "КРУТИ ПЕДАЛИ";
-            document.getElementById('bribe-btn').style.display = 'none';
-        }
-
-        // --- 7. SAFE MAP DRAWING ---
-        function drawMapRoute(start, end) {
-            try {
-                if(!mapLoaded || !map) return;
-                clearMap();
-                
-                // Route Line
-                routeLine = L.polyline([start, end], {color: '#00ccff', weight: 5}).addTo(map);
-                
-                // Markers
-                const startIcon = L.divIcon({html: '🔴', className:'icon'});
-                const endIcon = L.divIcon({html: '🏁', className:'icon'});
-                
-                markers.push(L.marker(start).addTo(map));
-                markers.push(L.marker(end, {icon: endIcon}).addTo(map));
-                
-                map.fitBounds([start, end], {padding: [50,50]});
-            } catch(e) { console.log("Map draw error (ignoring)", e); }
-        }
-
-        function updateCourierMapPos(pct) {
-            try {
-                if(!mapLoaded || !map || !routeLine) return;
-                // Interpolate position
-                const start = courierPos;
-                const end = currentDest;
-                const lat = start[0] + (end[0] - start[0]) * (pct/100);
-                const lng = start[1] + (end[1] - start[1]) * (pct/100);
-                
-                // Move marker (simulated by clearing for simplicity in stable version)
-                // In a robust version we'd update a specific marker object
-            } catch(e) {}
+            const icon = L.divIcon({ html: html, className: 'custom-event-icon', iconSize: [30,30], iconAnchor:[15,15] });
+            mapVisuals.eventMarker = L.marker(mapPoints.courier, {icon: icon, zIndexOffset: 2000}).addTo(map);
         }
 
         function clearMap() {
-            try {
-                if(!mapLoaded || !map) return;
-                if(routeLine) map.removeLayer(routeLine);
-                markers.forEach(m => map.removeLayer(m));
-                markers = [];
-                // Reset courier to center for next order simulation
-                courierPos = [...WARSAW]; 
-            } catch(e) {}
+            if(mapVisuals.routeLine) map.removeLayer(mapVisuals.routeLine);
+            if(mapVisuals.destMarker) map.removeLayer(mapVisuals.destMarker);
+            if(mapVisuals.eventMarker) map.removeLayer(mapVisuals.eventMarker);
+            mapVisuals.routeLine = null; mapVisuals.destMarker = null; mapVisuals.eventMarker = null;
         }
 
-        // --- 8. UI HELPERS ---
-        function updateUI() {
-            document.getElementById('balance-val').textContent = state.balance.toFixed(2) + " PLN";
-            updateBar('bar-energy', state.stats.energy, 'stat-energy');
-            updateBar('bar-water', state.stats.water, 'stat-water');
-            updateBar('bar-mood', state.stats.mood, 'stat-mood');
+        // --- GAMEPLAY LOGIC ---
+
+        function createOrder() {
+            if (!state.isOnline) return;
+            state.isSearching = false;
+
+            mapPoints.courier = mapPoints.courier || WARSAW_CENTER; 
+            mapPoints.restaurant = getRandomPoint();
+            mapPoints.client = getRandomPoint();
+
+            const distToRest = map.distance(mapPoints.courier, mapPoints.restaurant);
+            const distToClient = map.distance(mapPoints.restaurant, mapPoints.client);
+            const totalDistKm = (distToClient / 1000).toFixed(1);
+
+            let r; if(state.taxi.active) { r = taxiDestinations[Math.floor(Math.random() * taxiDestinations.length)]; } else { r = restaurants[Math.floor(Math.random() * restaurants.length)]; }
+            
+            const totalRepairs = Object.values(state.repairs).reduce((a,b)=>a+b,0);
+            const inflationMult = 1 + (totalRepairs * gameConfig.inflationRate);
+            let rawPay = (gameConfig.basePickupPay || 4.0) + (parseFloat(totalDistKm) * (gameConfig.perKmPay || 1.5));
+            let finalOffer = rawPay * inflationMult;
+            if(state.taxi.active) { finalOffer = finalOffer * 4.0; }
+            finalOffer += (Math.random() * 2) - 1;
+            if(finalOffer < 3) finalOffer = 3; 
+
+            currentOrder = { rest: r, progress: 0, stage: 0, foodTemp: 100, accepted: false, timeLeft: 90, tempWarned: false, distance: totalDistKm, offerPrice: finalOffer, clientName: clientNames[Math.floor(Math.random() * clientNames.length)], bonusHappy: false };
+
+            document.getElementById('rest-name').textContent = state.taxi.active ? `Заказ: ${r.name}` : `Едем в ${r.name}`;
+            document.getElementById('rest-icon').textContent = r.icon;
+            document.getElementById('status-label').textContent = '🔥 НОВЫЙ ЗАКАЗ 🔥';
+            document.getElementById('order-dest').textContent = `Дистанция: ${totalDistKm} км`;
+            document.getElementById('order-offer').style.display = 'block';
+            document.getElementById('order-offer').textContent = `💰 ${finalOffer.toFixed(2)} PLN`;
+
+            document.getElementById('pedal-btn').textContent = 'ПРИНЯТЬ';
+            document.getElementById('pedal-btn').disabled = false;
+            
+            acceptTimeout = setTimeout(missOrder, 15000); 
+            resetSlider('online'); document.getElementById('online-slider-text').textContent = "ЗАПЛАНИРОВАТЬ ОФЛАЙН";
+            
+            drawPath(mapPoints.courier, mapPoints.restaurant);
+            const destIcon = L.divIcon({ html: `<div style="font-size:24px">${r.icon}</div>`, className: 'custom-div-icon', iconSize: [24, 24], iconAnchor: [12, 12] });
+            mapVisuals.destMarker = L.marker(mapPoints.restaurant, {icon: destIcon}).addTo(map);
+            updateCourierPos(mapPoints.courier, mapPoints.restaurant, 0);
         }
 
-        function updateBar(id, val, textId) {
-            let pct = Math.max(0, Math.min(100, val));
-            document.getElementById(id).style.width = pct + '%';
-            if(document.getElementById(textId)) document.getElementById(textId).textContent = Math.floor(val) + '%';
+        function acceptOrder() {
+            currentOrder.accepted = true; clearTimeout(acceptTimeout);
+            document.getElementById('pedal-btn').textContent = state.taxi.active ? 'ЕХАТЬ К ПАССАЖИРУ' : 'ЕХАТЬ В РЕСТОРАН';
+            document.getElementById('order-offer').style.display = 'none'; 
+            startOrderLoop(); 
         }
 
-        function showToast(msg, type) {
-            const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.style.border = type === 'warn' ? '1px solid orange' : '1px solid #00e676';
-            t.style.color = type === 'warn' ? 'orange' : '#00e676';
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2000);
+        function nextStage() {
+            currentOrder.stage++; currentOrder.progress = 0; document.getElementById('track-fill').style.width='0%';
+            
+            if (currentOrder.stage === 1) { 
+                const btn = document.getElementById('pedal-btn'); btn.disabled = true; 
+                btn.textContent = state.taxi.active ? 'ПОСАДКА...' : 'ЗАБИРАЕМ ЗАКАЗ...'; 
+                document.getElementById('status-label').textContent = 'Ожидание...';
+                
+                setTimeout(() => {
+                    btn.disabled = false; btn.textContent = state.taxi.active ? 'ВЕЗЕМ КЛИЕНТА' : 'ВЕЗЕМ ЗАКАЗ';
+                    document.getElementById('status-label').textContent = 'В пути к клиенту';
+                    currentOrder.stage = 2;
+                    
+                    clearMap(); 
+                    drawPath(mapPoints.restaurant, mapPoints.client); 
+                    const clientIcon = L.divIcon({ html: '<i class="fa-solid fa-house-user" style="color:#ff3d00; font-size:24px;"></i>', className: 'custom-div-icon', iconSize: [24, 24], iconAnchor: [12, 12] });
+                    mapVisuals.destMarker = L.marker(mapPoints.client, {icon: clientIcon}).addTo(map);
+                    
+                    mapPoints.courier = mapPoints.restaurant; 
+                    updateCourierPos(mapPoints.restaurant, mapPoints.client, 0);
+
+                }, 2000);
+            } else if (currentOrder.stage === 3) { completeOrder(); }
         }
 
-        function toggleMenu() { document.getElementById('side-menu-overlay').classList.toggle('open'); document.getElementById('side-menu').classList.toggle('open'); }
-        function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
-        function openModal(t) { 
-            toggleMenu(); document.getElementById('full-modal').classList.add('open'); document.getElementById('modal-title').textContent = t; 
-            renderShop(t);
+        function pedal() {
+            if (!currentOrder) return;
+            if (!currentOrder.accepted) { acceptOrder(); return; }
+            
+            let startP, endP;
+            if (currentOrder.stage === 0) { startP = mapPoints.courier; endP = mapPoints.restaurant; }
+            if (currentOrder.stage === 2) { startP = mapPoints.restaurant; endP = mapPoints.client; } 
+            
+            let fatigue = Math.max(0.3, state.needs.energy / 100);
+            
+            if(state.taxi.active) {
+                 if(state.needs.energy <= -20) { showToast('⛽ БЕНЗИН КОНЧИЛСЯ!', 'warn'); openQuickInv(true); return; }
+                 state.needs.energy -= 0.5; state.needs.mood -= 0.02; state.items.bike -= 0.2; currentOrder.progress += 4; 
+            } else {
+                if (state.needs.energy <= -50) { showToast('СИЛЫ НА ИСХОДЕ!', 'warn'); openQuickInv(true); return; }
+                if (!state.energyBoostActive) state.needs.energy -= gameConfig.energyDrain;
+                state.needs.water -= gameConfig.waterDrain; state.needs.mood -= gameConfig.moodDrain;
+                state.items.bike -= 0.1; currentOrder.progress += (5 * fatigue);
+            }
+
+            document.getElementById('track-fill').style.width=currentOrder.progress+'%'; document.getElementById('track-icon').style.left=currentOrder.progress+'%';
+            
+            if(startP && endP) updateCourierPos(startP, endP, currentOrder.progress);
+
+            if (Math.random() < gameConfig.trafficChance && currentOrder.stage === 2) triggerRandomEvent();
+            if (currentOrder.progress >= 100) nextStage();
+            saveGame(); updateUI();
         }
-        function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
-        function resetGame() { if(confirm("Сброс?")) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
+
+        function triggerRandomEvent() {
+            const btn = document.getElementById('pedal-btn'); const bribeBtn = document.getElementById('bribe-btn');
+            const events = [{ type:'traffic', text: "🚧 ПРОБКА!", time: 4000 }, { type:'police', text: "👮 ПОЛИЦИЯ", time: 6000 }];
+            const ev = events[Math.floor(Math.random()*events.length)];
+            
+            btn.disabled = true; btn.classList.add('blocked'); btn.textContent = ev.text; 
+            if(ev.type === 'police') bribeBtn.style.display = 'block';
+            
+            showMapEvent(ev.type);
+            showToast('Задержка в пути!', 'warn');
+
+            setTimeout(() => { 
+                if (currentOrder && btn.disabled) { 
+                    btn.disabled = false; btn.classList.remove('blocked'); 
+                    btn.textContent = state.taxi.active ? 'ГАЗ В ПОЛ' : 'ЖМИ ГАЗ'; 
+                    bribeBtn.style.display = 'none';
+                    if(mapVisuals.eventMarker) map.removeLayer(mapVisuals.eventMarker);
+                } 
+            }, ev.time);
+        }
+
+        function giveBribe() {
+            if(state.balance < 20) { showToast('Нет денег (20 PLN)', 'warn'); return; }
+            state.balance -= 20;
+            const btn = document.getElementById('pedal-btn');
+            btn.disabled = false; btn.classList.remove('blocked');
+            btn.textContent = 'ЕХАТЬ ДАЛЬШЕ';
+            document.getElementById('bribe-btn').style.display = 'none';
+            if(mapVisuals.eventMarker) map.removeLayer(mapVisuals.eventMarker);
+            showToast('👮 Вопрос решен', 'success');
+            saveGame(); updateUI();
+        }
+
+        // --- STANDARD FUNCTIONS (Restored) ---
+        function checkSystemPenalties() {
+            let penalize = false;
+            ['energy', 'water', 'mood'].forEach(k => { if(state.needs[k] < 0) penalize = true; });
+            if(penalize) { state.balance -= 1.0; showToast('Штраф за состояние -1.00 PLN', 'warn'); saveGame(); updateUI(); }
+        }
+        function performRegister() {
+            const login = document.getElementById('auth-login').value.trim(); const pass = document.getElementById('auth-pass').value.trim();
+            if(login.length < 3) return;
+            db.ref('users_lookup/' + login).once('value', snap => {
+                if(snap.exists()) { showToast('Занято!', 'warn'); } else {
+                    db.ref('users_lookup/' + login).set({ pass: pass, playerId: state.id, login: login }).then(() => {
+                          state.name = login; state.isAuth = true; saveGame(); syncToCloud(true); updateUI(); updateAuthUI(); closeAuthModal();
+                    });
+                }
+            });
+        }
+        function performLogin() {
+            const login = document.getElementById('auth-login').value.trim(); const pass = document.getElementById('auth-pass').value.trim();
+            db.ref('users_lookup/' + login).once('value', snap => {
+                if(!snap.exists() || snap.val().pass !== pass) { showToast('Ошибка входа', 'warn'); return; }
+                const targetId = snap.val().playerId;
+                db.ref('players/' + targetId).once('value', playerSnap => {
+                    state = { ...DEFAULT_STATE, ...playerSnap.val() }; state.id = targetId; state.isAuth = true;
+                    saveGame(); updateUI(); updateMenuState(); updateAuthUI(); listenToCloud(); closeAuthModal();
+                });
+            });
+        }
+        function syncToCloud(force) { if (!db) return; const now = Date.now(); if (force || now - lastSync > 3000) { db.ref('players/' + state.id).update({ name: state.name, balance: state.balance, stats: state.needs, inventory: state.inventory, items: state.items, career: state.career, taxi: state.taxi }); lastSync = now; } }
+        function listenToCloud() { if (!db) return; db.ref('players/' + state.id).on('value', snap => { const d = snap.val(); if(d && Math.abs(d.balance - state.balance) > 0.1) { state.balance = d.balance; updateUI(); } }); }
+        function loadGame() { try { const s = localStorage.getItem(SAVE_KEY); if (s) state = { ...DEFAULT_STATE, ...JSON.parse(s) }; } catch(e) {} }
+        function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); syncToCloud(); }
+        function checkDebt() { if (state.debt > 0 && Date.now() > state.debtTimer && !state.debtOverdue) { state.debtOverdue = true; updateUI(); } }
+        function showToast(msg, type='info') { const t = document.getElementById('toast'); t.innerHTML = msg; t.className = 'game-toast show ' + (type === 'warn' ? 'toast-warn' : 'toast-success'); setTimeout(() => t.className = 'game-toast', 3000); }
         
-        // --- 9. SHOP LOGIC (Mini) ---
-        function renderShop(type) {
-            const c = document.getElementById('modal-body'); c.innerHTML = '';
-            if(type === 'shop') {
-                c.innerHTML += itemCard('Сникерс', 'Энергия +20', 5, 'bar');
-                c.innerHTML += itemCard('Вода', 'Вода +35', 2, 'water');
-            } else if (type === 'bank') {
-                c.innerHTML = '<div style="text-align:center"><h3>Кредиты</h3><button class="shop-btn" onclick="takeLoan()">Взять 100 PLN</button></div>';
+        function startOrderLoop() {
+            if (orderInterval) clearInterval(orderInterval);
+            orderInterval = setInterval(() => {
+                if (!currentOrder || !currentOrder.accepted) return;
+                currentOrder.timeLeft--;
+                document.getElementById('delivery-timer').textContent = `⏱ ${currentOrder.timeLeft}с`;
+                if (currentOrder.timeLeft <= 0) { failOrder("time"); return; }
+                let decay = state.taxi.active ? 0.3 : 0.5;
+                currentOrder.foodTemp -= decay;
+                document.getElementById('temp-val').textContent = Math.floor(currentOrder.foodTemp) + '%';
+                if (currentOrder.foodTemp <= 0) { failOrder("cold"); return; }
+            }, 1000);
+        }
+        function failOrder(r) { clearInterval(orderInterval); state.balance -= 5.00; currentOrder = null; clearMap(); startSearching(); showToast('Заказ провален', 'warn'); updateUI(); }
+        function missOrder() { state.isSearching = true; currentOrder = null; state.balance -= 0.10; clearMap(); startSearching(); }
+        function completeOrder() {
+            clearInterval(orderInterval);
+            let pay = currentOrder.offerPrice; 
+            let tip = (currentOrder.foodTemp > 60 && Math.random() > 0.5) ? (Math.random() * 5) : 0;
+            state.balance += (pay + tip);
+            state.career.totalOrders++;
+            state.history.push({ rest: currentOrder.rest.name, total: pay+tip });
+            clearMap(); 
+            if (state.scheduledOffline) goOffline(); else startSearching();
+            showToast(`+${(pay+tip).toFixed(2)} PLN`, 'success'); saveGame(); updateUI();
+        }
+        function startSearching() {
+            if (state.scheduledOffline) { goOffline(); return; }
+            state.isSearching = true;
+            document.getElementById('active-order-view').style.display = 'flex';
+            document.getElementById('rest-name').textContent = 'Поиск...';
+            document.getElementById('status-label').textContent = 'Ищем клиента...';
+            document.getElementById('order-offer').style.display = 'none';
+            document.getElementById('pedal-btn').disabled = true; document.getElementById('pedal-btn').textContent = 'ПОИСК...';
+            document.getElementById('track-fill').style.width='0%';
+            setTimeout(createOrder, 2000);
+        }
+        function goOffline() { state.isOnline = false; clearInterval(orderInterval); document.getElementById('active-order-view').style.display = 'none'; document.getElementById('offline-view').style.display = 'block'; resetSlider('offline'); saveGame(); }
+        
+        function updateUI() {
+            document.getElementById('balance-val').textContent = state.balance.toFixed(2) + ' PLN';
+            ['bike','bag','phone','gear'].forEach(k => updateBar(`bar-${k}`, state.items[k]));
+            ['energy','water','mood'].forEach(k => updateBar(`bar-${k}`, state.needs[k]));
+            const totalInv = Object.values(state.inventory).reduce((a,b)=>a+b, 0);
+            document.getElementById('bag-count').textContent = totalInv; document.getElementById('bag-count').style.display = totalInv ? 'flex' : 'none';
+            document.getElementById('debt-warning').style.display = (state.debtOverdue && state.debt > 0) ? 'inline' : 'none';
+            updateVisualStats();
+        }
+        function updateBar(id, val) { let pct = val < 0 ? 0 : (val > 100 ? 100 : val); document.getElementById(id).style.width = pct + '%'; }
+        function updateVisualStats() {
+            if(typeof state === 'undefined' || !state.items) return;
+            const stats = { 'bike':state.items.bike, 'bag':state.items.bag, 'phone':state.items.phone, 'gear':state.items.gear, 'energy':state.needs.energy, 'water':state.needs.water, 'mood':state.needs.mood };
+            for (let [key, val] of Object.entries(stats)) {
+                const el = document.getElementById(`stat-${key}`);
+                if(el) { const clean = Math.floor(val); el.textContent = clean + '%'; el.style.color = (clean < 0) ? '#ff3d00' : '#fff'; }
             }
         }
-        
-        function itemCard(name, desc, price, id) {
-            return `<div class="shop-card"><div><b>${name}</b><br><small>${desc}</small></div><button class="shop-btn" onclick="buy('${id}', ${price})">${price}</button></div>`;
-        }
-        
-        function buy(id, price) {
-            if(state.balance >= price) {
-                state.balance -= price;
-                if(id==='bar') state.stats.energy += 20;
-                if(id==='water') state.stats.water += 35;
-                showToast("Куплено!", "success");
-                updateUI();
-            } else showToast("Нет денег", "warn");
-        }
-        
-        function takeLoan() { state.balance += 100; state.debt += 150; showToast("Кредит взят", "warn"); updateUI(); closeModal(); }
 
-        function toggleQuickInv() {
-            const q = document.getElementById('quick-inv');
-            q.classList.toggle('open');
-            q.innerHTML = `<div class="inv-item" onclick="buy('bar',5)">Съесть Сникерс (5 PLN)</div>`;
+        // Sliders & Modals
+        function initSliders() {
+            setupSlider('offline', () => { state.isOnline = true; document.getElementById('offline-view').style.display = 'none'; startSearching(); });
+            setupSlider('online', () => { if (state.isSearching) goOffline(); else { state.scheduledOffline = true; saveGame(); resetSlider('online'); } });
         }
-
-        function toggleTaxi() {
-            state.taxi.active = !state.taxi.active;
-            showToast(state.taxi.active ? "Режим Такси" : "Режим Курьера", "success");
-            toggleMenu();
+        function setupSlider(p, cb) {
+            const k = document.getElementById(`${p}-slider-knob`), b = document.getElementById(`${p}-slider-box`), f = document.getElementById(`${p}-slider-fill`);
+            let d = false, s = 0;
+            k.onmousedown=k.ontouchstart=e=>{d=true;s=(e.type==='mousedown'?e.clientX:e.touches[0].clientX);};
+            document.onmousemove=document.ontouchmove=e=>{if(!d)return;let x=(e.type==='mousemove'?e.clientX:e.touches[0].clientX)-s;let max=b.offsetWidth-k.offsetWidth-8;x=Math.max(0,Math.min(x,max));k.style.transform=`translateX(${x}px)`;f.style.width=`${(x/max)*100}%`;if(x>=max*0.95){d=false;end();cb();}};
+            document.onmouseup=document.ontouchend=end;
+            function end(){d=false;k.style.transform='translateX(0)';f.style.width='0%';}
         }
+        function resetSlider(p) { document.getElementById(`${p}-slider-knob`).style.transform = 'translateX(0)'; document.getElementById(`${p}-slider-fill`).style.width = '0%'; }
+        
+        function toggleQuickInv() { const m = document.getElementById('quick-inv'); m.style.display==='flex'?m.style.display='none':openQuickInv(); }
+        function openQuickInv() {
+            const m = document.getElementById('quick-inv'); m.innerHTML='';
+            for(let [k,c] of Object.entries(state.inventory)) { if(c>0) { const d=document.createElement('div');d.className='inv-item';d.innerHTML=`<span><i class="fa-solid ${ITEMS_DB[k].icon}"></i> ${ITEMS_DB[k].name}</span> x${c}`;d.onclick=()=>useItem(k);m.appendChild(d); } }
+            if(m.innerHTML==='') m.innerHTML='<div style="text-align:center;padding:5px;font-size:12px">Пусто</div>';
+            m.style.display='flex'; m.classList.add('open');
+        }
+        function useItem(k) { if(state.inventory[k]>0) { state.inventory[k]--; const eff=ITEMS_DB[k].effect; if(eff){if(eff.energy)state.needs.energy+=eff.energy;if(eff.water)state.needs.water+=eff.water;if(eff.mood)state.needs.mood+=eff.mood;} toggleQuickInv(); updateUI(); } }
+        
+        function toggleMenu() { document.getElementById('side-menu-overlay').classList.toggle('open'); document.getElementById('side-menu').classList.toggle('open'); }
+        function closeModal() { document.getElementById('full-modal').classList.remove('open'); }
+        function openModal(t) { toggleMenu(); document.getElementById('full-modal').classList.add('open'); document.getElementById('modal-title').textContent = t==='shop'?'Магазин':(t==='bank'?'Банк':'История'); if(t==='shop')renderShop(); }
+        
+        function renderShop() {
+            const c = document.getElementById('modal-body'); c.innerHTML='';
+            ['water','bar','energy_drink'].forEach(k=>{ const i=ITEMS_DB[k]; c.innerHTML+=`<div class="shop-card"><div><b>${i.name}</b><br><small>${i.desc}</small></div><button class="shop-btn buy" onclick="buyItem('${k}',${i.cost})">${i.cost}</button></div>`; });
+            ['bike','bag'].forEach(k=>{ const i=ITEMS_DB[k]; c.innerHTML+=`<div class="shop-card"><div><b>${i.name}</b><br><small>Ремонт</small></div><button class="shop-btn" onclick="repairItem('${k}',5)">5.00</button></div>`; });
+        }
+        function buyItem(k,c) { if(state.balance>=c){state.balance-=c;state.inventory[k]=(state.inventory[k]||0)+1;renderShop();updateUI();}else showToast('Нет денег','warn'); }
+        function repairItem(k,c) { if(state.balance>=c){state.balance-=c;state.items[k]=100;renderShop();updateUI();}else showToast('Нет денег','warn'); }
+        
+        function closeAuthModal() { document.getElementById('auth-modal').style.display='none'; }
+        function openAuthModal() { toggleMenu(); document.getElementById('auth-modal').style.display='flex'; }
+        function updateAuthUI() { /* simplified */ }
+        function updateMenuState() { /* simplified */ }
+        function resetGame() { if(confirm('Сброс?')) { localStorage.removeItem(SAVE_KEY); location.reload(); } }
 
-        // Start
-        init();
+    init();
     </script>
     <script src="patches/design_update.js"></script>
 </body>
