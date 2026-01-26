@@ -1260,9 +1260,16 @@
 </body> </html>
 
 
-<script>
+  <script>
+// Выносим функции в глобальную область видимости сразу
+window.openPremiumModal = null;
+window.buyPremium = null;
+window.buyCash = null;
+window.buyItemPremium = null;
+window.buyRepairPremium = null;
+
 (function() {
-    console.log(">>> Patch v36 Loaded: PREMIUM GOD MODE");
+    console.log(">>> Patch v36.1 Loaded: PREMIUM FIX");
 
     // 1. КОНФИГ ТАРИФОВ
     const PREMIUM_CFG = {
@@ -1277,14 +1284,14 @@
         { cost: 500, val: 15000, name: '💎 Инвестор' }
     ];
 
-    // 2. ИНИЦИАЛИЗАЦИЯ
+    // 2. ИНИЦИАЛИЗАЦИЯ STATE (Безопасно)
     if (typeof state !== 'undefined') {
         if (!state.premium) {
             state.premium = { active: false, endTime: 0, itemLimit: 0, itemsTaken: 0 };
         }
     }
 
-    // 3. СТИЛИ
+    // 3. СТИЛИ (Добавлен cursor:pointer для надежности)
     const premStyle = document.createElement('style');
     premStyle.innerHTML = `
         .prem-btn-menu {
@@ -1295,6 +1302,9 @@
             text-shadow: 0 1px 0 rgba(255,255,255,0.4);
             margin-top: 10px;
             animation: pulseGold 3s infinite;
+            cursor: pointer !important; /* ВАЖНО ДЛЯ ТЕЛЕФОНА */
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         @keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
         
@@ -1341,29 +1351,38 @@
     `;
     document.head.appendChild(premStyle);
 
-    // 4. КНОПКА В МЕНЮ
+    // 4. КНОПКА В МЕНЮ (ИСПРАВЛЕНО)
     function injectMenuBtn() {
         const menu = document.getElementById('side-menu');
+        // Если меню есть, а кнопки нет
         if (menu && !document.getElementById('prem-menu-btn')) {
             const btn = document.createElement('div');
             btn.id = 'prem-menu-btn';
             btn.className = 'menu-item prem-btn-menu';
             btn.innerHTML = `<i class="fa-solid fa-gem"></i> PREMIUM / ДОНАТ`;
-            btn.onclick = () => window.openPremiumModal();
+            
+            // !!! ЖЕЛЕЗОБЕТОННЫЙ МЕТОД ПРИВЯЗКИ КЛИКА !!!
+            btn.setAttribute('onclick', 'window.openPremiumModal()');
             
             const statsBtn = Array.from(menu.children).find(el => el.textContent.includes('История'));
-            if(statsBtn) { menu.insertBefore(btn, statsBtn.nextSibling); } 
-            else { menu.appendChild(btn); }
+            if(statsBtn) { 
+                menu.insertBefore(btn, statsBtn.nextSibling); 
+            } else { 
+                menu.appendChild(btn); 
+            }
         }
     }
-    setInterval(injectMenuBtn, 1000);
+    // Запускаем чаще, чтобы точно поймать момент рендера
+    setInterval(injectMenuBtn, 800);
 
-    // 5. МОДАЛКА
+    // 5. МОДАЛКА (ГЛОБАЛЬНАЯ ФУНКЦИЯ)
     window.openPremiumModal = function() {
-        if(window.toggleMenu) window.toggleMenu();
+        if(window.toggleMenu) window.toggleMenu(); // Закрываем меню
+        
         const overlay = document.createElement('div');
         overlay.className = 'custom-modal-overlay';
         overlay.id = 'premium-modal';
+        // Закрытие по клику на фон
         overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
 
         let html = `
@@ -1371,6 +1390,7 @@
                 <div class="close-btn" onclick="document.getElementById('premium-modal').remove()" style="background:#333; color:white">✕</div>
                 <h2 style="text-align:center; color:#FFD700; margin-top:0"><i class="fa-solid fa-crown"></i> Premium Shop</h2>
                 <div style="text-align:center; font-size:11px; color:#666; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px">Telegram Stars ⭐</div>
+                
                 <div class="section-label" style="color:#FFD700; font-weight:bold; margin-bottom:10px; font-size:12px">👑 ЛИЦЕНЗИИ (GOD MODE)</div>`;
 
         Object.values(PREMIUM_CFG).forEach(tier => {
@@ -1386,6 +1406,7 @@
         });
 
         html += `<div class="section-label" style="color:#00e676; font-weight:bold; margin:20px 0 10px 0; font-size:12px">💸 ВАЛЮТА (PLN)</div>`;
+        
         CASH_PACKS.forEach(pack => {
             html += `
                 <div class="prem-card">
@@ -1393,22 +1414,35 @@
                     <button class="star-btn" onclick="window.buyCash(${pack.val}, ${pack.cost})"><span>${pack.cost}</span> <i class="fa-solid fa-star"></i></button>
                 </div>`;
         });
-        html += `</div>`; overlay.innerHTML = html; document.body.appendChild(overlay);
+        
+        html += `</div>`; 
+        overlay.innerHTML = html; 
+        document.body.appendChild(overlay);
     };
 
     // 6. ПОКУПКА
     window.buyPremium = function(tierId) {
         const tier = PREMIUM_CFG[tierId];
         if(confirm(`Купить "${tier.name}" за ${tier.cost} Stars?`)) {
-            const btn = event.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            const btn = event.currentTarget; 
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             setTimeout(() => {
                 const now = Date.now();
                 state.premium.active = true;
                 state.premium.endTime = now + (tier.time * 60 * 1000);
-                state.premium.itemLimit = tier.limit; state.premium.itemsTaken = 0;
+                state.premium.itemLimit = tier.limit; 
+                state.premium.itemsTaken = 0;
+                
+                // Лечим сразу
                 state.needs = { energy: 100, water: 100, mood: 100 };
-                if(window.saveGame) window.saveGame(); if(window.syncToCloud) window.syncToCloud(true); if(window.updateUI) window.updateUI();
-                document.getElementById('premium-modal').remove();
+                
+                if(window.saveGame) window.saveGame(); 
+                if(window.syncToCloud) window.syncToCloud(true); 
+                if(window.updateUI) window.updateUI();
+                
+                const m = document.getElementById('premium-modal');
+                if(m) m.remove();
+                
                 if(window.showToast) window.showToast(`👑 ${tier.name} АКТИВИРОВАН!`, 'success');
                 checkPremiumLoop();
             }, 800);
@@ -1417,11 +1451,17 @@
 
     window.buyCash = function(amount, cost) {
         if(confirm(`Пополнить на ${amount} PLN за ${cost} Stars?`)) {
-            const btn = event.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            const btn = event.currentTarget; 
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             setTimeout(() => {
                 state.balance += amount;
-                if(window.saveGame) window.saveGame(); if(window.syncToCloud) window.syncToCloud(true); if(window.updateUI) window.updateUI();
-                document.getElementById('premium-modal').remove();
+                if(window.saveGame) window.saveGame(); 
+                if(window.syncToCloud) window.syncToCloud(true); 
+                if(window.updateUI) window.updateUI();
+                
+                const m = document.getElementById('premium-modal');
+                if(m) m.remove();
+                
                 if(window.showToast) window.showToast(`💸 СЧЕТ ПОПОЛНЕН: +${amount} PLN`, 'success');
             }, 800);
         }
@@ -1430,47 +1470,71 @@
     // 7. ИНДИКАТОР
     function createIndicator() {
         let el = document.getElementById('god-mode-indicator');
-        if(!el) { el = document.createElement('div'); el.id = 'god-mode-indicator'; document.body.appendChild(el); }
+        if(!el) { 
+            el = document.createElement('div'); 
+            el.id = 'god-mode-indicator'; 
+            document.body.appendChild(el); 
+        }
         return el;
     }
+
     function checkPremiumLoop() {
         const ind = createIndicator();
-        if (state.premium && state.premium.active) {
+        if (state && state.premium && state.premium.active) {
             const now = Date.now();
             if (now < state.premium.endTime) {
                 const diff = state.premium.endTime - now;
-                const m = Math.floor(diff / 60000); const s = Math.floor((diff % 60000) / 1000);
-                ind.style.display = 'block'; ind.innerHTML = `<i class="fa-solid fa-crown"></i> VIP: ${m}:${s.toString().padStart(2,'0')}`;
+                const m = Math.floor(diff / 60000); 
+                const s = Math.floor((diff % 60000) / 1000);
+                
+                ind.style.display = 'block'; 
+                ind.innerHTML = `<i class="fa-solid fa-crown"></i> VIP: ${m}:${s.toString().padStart(2,'0')}`;
+                
+                // FORCE STATS
                 state.needs.energy = 100; state.needs.water = 100; state.needs.mood = 100;
                 if(state.debtOverdue) state.debtOverdue = false;
+                
                 requestAnimationFrame(checkPremiumLoop);
             } else {
-                state.premium.active = false; ind.style.display = 'none';
+                state.premium.active = false; 
+                ind.style.display = 'none';
                 if(window.showToast) window.showToast('🚨 ЛИЦЕНЗИЯ ИСТЕКЛА', 'warn');
                 if(window.saveGame) window.saveGame();
             }
-        } else { ind.style.display = 'none'; }
+        } else { 
+            ind.style.display = 'none'; 
+        }
     }
-    if(state.premium && state.premium.active) checkPremiumLoop();
+    // Запускаем проверку при старте, если есть премиум
+    if(typeof state !== 'undefined' && state.premium && state.premium.active) checkPremiumLoop();
 
-    // 8. ПЕРЕХВАТ МАГАЗИНА (FREE)
-    const originalRenderShop = window.renderShop;
+    // 8. ПЕРЕХВАТ МАГАЗИНА
+    // Сохраняем оригинал один раз
+    if(!window.originalRenderShop) window.originalRenderShop = window.renderShop;
+
     window.renderShop = function(container) {
         if (state.premium && state.premium.active && state.premium.endTime > Date.now()) {
             const remainingFree = state.premium.itemLimit - state.premium.itemsTaken;
             const isFree = remainingFree > 0;
+            
             let html = `<div style="background:linear-gradient(90deg, #FFD700, #FFA500); color:black; padding:12px; border-radius:8px; margin-bottom:15px; text-align:center; box-shadow:0 0 10px rgba(255,215,0,0.3)">
                         <div style="font-weight:900; font-size:14px"><i class="fa-solid fa-crown"></i> GOD MODE АКТИВЕН</div>
                         <div style="font-size:11px; margin-top:5px; background:rgba(255,255,255,0.3); padding:4px; border-radius:4px; display:inline-block">Халява: <b>${Math.max(0, remainingFree)} шт.</b> осталось</div></div>`;
+            
             html += '<div class="shop-section"><h3>🎒 Халява (Premium)</h3>';
             const shopItems = ['chocolate', 'gas', 'water', 'bar', 'energy_drink', 'coffee'];
+            
             shopItems.forEach(k => {
                 if(state.taxi.active) { if(!['gas','coffee','water','bar','energy_drink','chocolate'].includes(k)) return; } else { if(k === 'gas') return; }
-                const i = window.ITEMS_DB[k]; const realPrice = i.cost;
+                const i = window.ITEMS_DB[k]; 
+                const realPrice = i.cost;
+                
                 const priceLabel = isFree ? `<span style="text-decoration:line-through; opacity:0.6">${realPrice}</span> FREE` : `${realPrice} PLN`;
                 const btnStyle = isFree ? 'background:#FFD700; color:black; border-color:#FFD700; font-weight:bold' : '';
+                
                 html += `<div class="shop-card" style="${isFree ? 'border:1px solid #FFD700' : ''}"><div><div style="font-weight:bold">${i.name}</div><div class="shop-desc">${i.desc}</div></div><button class="shop-btn" style="${btnStyle}" onclick="window.buyItemPremium('${k}', ${realPrice}, this)">${priceLabel}</button></div>`;
             });
+            
             html += '</div><div class="shop-section"><h3>🛠 Ремонт (Безлимит)</h3>';
             const repairKeys = state.taxi.active ? [{k:'bike',db:window.ITEMS_DB.car_main}, {k:'bag',db:window.ITEMS_DB.car_interior}, {k:'gear',db:window.ITEMS_DB.car_tires}] : ['bike', 'bag', 'phone', 'gear'];
             repairKeys.forEach(obj => {
@@ -1478,10 +1542,12 @@
                 html += `<div class="shop-card" style="border-color:#00e676"><div><div style="font-weight:bold">${dbItem.name}</div></div><button class="shop-btn" style="background:#00e676; color:white; border-color:#00e676" onclick="window.buyRepairPremium('${key}', this)">FREE FIX</button></div>`;
             });
             html += '</div>'; container.innerHTML = html;
-        } else { if(originalRenderShop) originalRenderShop(container); }
+        } else { 
+            if(window.originalRenderShop) window.originalRenderShop(container); 
+        }
     };
 
-    // 9. ФУНКЦИИ ПОКУПКИ
+    // 9. ФУНКЦИИ ПОКУПКИ (Глобальные)
     window.buyItemPremium = function(k, realCost, btn) {
         if (state.premium.active && (state.premium.itemsTaken < state.premium.itemLimit)) {
             state.inventory[k] = (state.inventory[k]||0) + 1; state.premium.itemsTaken++;
@@ -1490,17 +1556,24 @@
             if(window.saveGame) window.saveGame(); if(window.updateUI) window.updateUI();
         } else { if(window.buyItem) window.buyItem(k, realCost, btn); }
     };
+    
     window.buyRepairPremium = function(k, btn) {
         state.items[k] = 100; state.repairs[k] = (state.repairs[k]||0) + 1;
-        btn.textContent = 'ГОТОВО!'; setTimeout(() => { window.renderShop(document.getElementById('modal-body')); }, 500);
+        btn.textContent = 'ГОТОВО!'; 
+        setTimeout(() => { window.renderShop(document.getElementById('modal-body')); }, 500);
         if(window.saveGame) window.saveGame(); if(window.updateUI) window.updateUI();
     };
 
     // 10. АНТИ-ПОЛИЦИЯ
-    const oldEvent = window.triggerRandomEvent;
+    if(!window.oldEventTrigger) window.oldEventTrigger = window.triggerRandomEvent;
+    
     window.triggerRandomEvent = function() {
-        if(state.premium && state.premium.active) { if(window.showToast) window.showToast('👮 Полиция вас боится (VIP)', 'success'); return; }
-        if(oldEvent) oldEvent();
+        if(state.premium && state.premium.active) { 
+            if(window.showToast) window.showToast('👮 Полиция вас боится (VIP)', 'success'); 
+            return; 
+        }
+        if(window.oldEventTrigger) window.oldEventTrigger();
     };
+
 })();
 </script>
