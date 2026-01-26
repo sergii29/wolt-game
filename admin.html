@@ -3,34 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WOLT ADMIN</title>
+    <title>WOLT GOD MODE | Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
     <style>
-        body { background: #121212; color: white; font-family: monospace; display: flex; height: 100vh; margin: 0; }
-        .sidebar { width: 300px; border-right: 1px solid #333; overflow-y: auto; }
-        .main { flex: 1; padding: 20px; overflow-y: auto; }
-        .player-row { padding: 10px; border-bottom: 1px solid #333; cursor: pointer; display: flex; justify-content: space-between; }
-        .player-row:hover { background: #222; }
-        .player-row.active { background: #004d40; border-left: 5px solid #00e676; }
-        .online-dot { color: #00e676; } .offline-dot { color: #555; }
-        .card { background: #1e1e1e; padding: 15px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; }
-        h3 { margin-top: 0; color: #aaa; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        button { padding: 10px; background: #333; color: white; border: none; cursor: pointer; margin-right: 5px; border-radius: 4px; }
-        button:hover { background: #555; }
-        .btn-green { background: #1b5e20; }
-        .btn-red { background: #b71c1c; }
+        :root {
+            --bg: #121212;
+            --panel: #1e1e1e;
+            --border: #333;
+            --text: #e0e0e0;
+            --accent: #00e676;
+            --danger: #ff3d00;
+            --info: #2979ff;
+            --warn: #ffea00;
+        }
+
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+        
+        /* SIDEBAR (LIST) */
+        .sidebar { width: 350px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .search-box { padding: 15px; border-bottom: 1px solid var(--border); }
+        .search-input { width: 100%; padding: 10px; background: #2c2c2c; border: 1px solid #444; color: white; border-radius: 6px; box-sizing: border-box; }
+        
+        .player-list { flex: 1; overflow-y: auto; }
+        .player-item { padding: 15px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: space-between; }
+        .player-item:hover { background: #252525; }
+        .player-item.active { background: #2c3e50; border-left: 4px solid var(--info); }
+        .player-item.banned { opacity: 0.5; background: #2a0000; }
+
+        .p-info h3 { margin: 0 0 5px 0; font-size: 16px; color: white; }
+        .p-meta { font-size: 12px; color: #888; display: flex; gap: 10px; align-items: center; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #555; display: inline-block; margin-right: 5px; }
+        .online .status-dot { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
+        .offline .status-dot { background: #555; }
+
+        /* MAIN PANEL */
+        .main { flex: 1; padding: 30px; overflow-y: auto; display: none; }
+        .main.visible { display: block; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+        .user-title h1 { margin: 0; color: var(--info); }
+        .user-id { color: #666; font-family: monospace; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        
+        .card { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
+        .card h3 { margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; color: #aaa; font-size: 14px; text-transform: uppercase; }
+        
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .val { font-weight: bold; color: white; }
+        .val.bad { color: var(--danger); }
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        button { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.2s; }
+        button:hover { filter: brightness(1.2); }
+        button:active { transform: scale(0.98); }
+
+        .btn-money { background: #00695c; }
+        .btn-heal { background: #1565c0; }
+        .btn-item { background: #6a1b9a; }
+        .btn-danger { background: #c62828; }
+        .btn-warn { background: #f57f17; color: black; }
+
+        .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: #444; font-size: 20px; }
     </style>
 </head>
 <body>
 
-<div class="sidebar" id="list">Загрузка...</div>
+    <div class="sidebar">
+        <div class="search-box">
+            <input type="text" id="search" class="search-input" placeholder="🔍 Поиск игрока..." onkeyup="renderList()">
+        </div>
+        <div id="list-container" class="player-list">
+            <div style="padding:20px; text-align:center; color:#666">Загрузка...</div>
+        </div>
+        <div style="padding:10px; font-size:11px; text-align:center; color:#444">
+            WARSZAWA_FOREVER ADMIN v2.0
+        </div>
+    </div>
 
-<div class="main" id="details">
-    <h1>Выберите игрока</h1>
-</div>
+    <div id="empty-state" class="empty-state">
+        Выберите игрока из списка слева
+    </div>
+
+    <div id="main-panel" class="main">
+        <div class="header">
+            <div class="user-title">
+                <h1 id="p-name">Player Name</h1>
+                <span id="p-id" class="user-id">ID: ...</span>
+                <div id="p-status" style="margin-top:5px; font-size:12px; font-weight:bold">OFFLINE</div>
+            </div>
+            <div style="text-align:right">
+                <div style="font-size:30px; color:var(--accent)" id="p-balance">0.00 PLN</div>
+                <div style="font-size:12px; color:#888">Баланс</div>
+            </div>
+        </div>
+        
+        <div id="auth-info-box" style="background:#263238; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #37474f; font-family:monospace">
+             Загрузка данных входа...
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>💰 Финансы</h3>
+                <div class="stat-row"><span>Текущий:</span> <span class="val" id="val-bal">0</span></div>
+                <div class="stat-row"><span>Долг:</span> <span class="val" id="val-debt" style="color:red">0</span></div>
+                <div class="controls">
+                    <button class="btn-money" onclick="modBalance(1000)">+1K PLN</button>
+                    <button class="btn-money" onclick="modBalance(10000)">+10K PLN</button>
+                    <button class="btn-warn" onclick="modBalance(-1000)">-1000 (Штраф)</button>
+                    <button class="btn-money" style="background:#2e7d32" onclick="clearDebt()">Снять долг</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>❤️ Состояние</h3>
+                <div class="stat-row"><span>Энергия:</span> <span class="val" id="val-energy">0%</span></div>
+                <div class="stat-row"><span>Вода:</span> <span class="val" id="val-water">0%</span></div>
+                <div class="stat-row"><span>Настроение:</span> <span class="val" id="val-mood">0%</span></div>
+                <div class="controls">
+                    <button class="btn-heal" onclick="setStat('needs', {energy:100, water:100, mood:100})">ВЫЛЕЧИТЬ ВСЁ</button>
+                    <button class="btn-heal" style="background:#0277bd" onclick="killStats()">Убить (1%)</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🎒 Экипировка</h3>
+                <div class="stat-row"><span>Велик:</span> <span class="val" id="val-bike">0%</span></div>
+                <div class="stat-row"><span>Сумка:</span> <span class="val" id="val-bag">0%</span></div>
+                <div class="controls">
+                    <button class="btn-item" onclick="setStat('items', {bike:100, bag:100, phone:100, gear:100})">Починить всё</button>
+                    <button class="btn-item" onclick="giveItem('water', 5)">+5 Воды</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🚖 Такси / Cyber</h3>
+                <div class="stat-row"><span>Авто:</span> <span class="val" id="val-car">Нет</span></div>
+                <div class="stat-row"><span>Лицензия:</span> <span class="val" id="val-lic">Нет</span></div>
+                <div class="controls">
+                    <button class="btn-item" style="background:#d500f9" onclick="giveCyberCar()">🎁 ВЫДАТЬ CYBER-X</button>
+                    <button class="btn-item" style="background:#ff9800; color:black" onclick="unlockTaxi()">🔓 Открыть такси</button>
+                </div>
+            </div>
+
+            <div class="card" style="border-color: var(--danger)">
+                <h3 style="color:var(--danger)">☠️ Управление аккаунтом</h3>
+                <div class="stat-row"><span>Бан:</span> <span class="val" id="val-banned">НЕТ</span></div>
+                <div class="controls">
+                    <button class="btn-danger" onclick="toggleBan()">БАН / РАЗБАН</button>
+                    <button class="btn-danger" style="background:#b71c1c" onclick="fullReset()">СБРОСИТЬ (WIPE)</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 <script>
+    // === CONFIG ===
     const firebaseConfig = {
         apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
         authDomain: "warszawa-courier.firebaseapp.com",
@@ -40,103 +171,205 @@
         messagingSenderId: "295860613508",
         appId: "1:295860613508:web:86fe8364377d6875612dd1"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let players = {};
-    let users = {}; // Тут пароли
-    let currentId = null;
+    let allPlayers = {};
+    let usersLookup = {}; // Хранилище паролей
+    let selectedId = null;
 
-    // Читаем игроков
-    db.ref('players').on('value', s => {
-        players = s.val() || {};
+    // === СЛУШАТЕЛЬ БАЗЫ ДАННЫХ ===
+    db.ref('players').on('value', snap => {
+        allPlayers = snap.val() || {};
         renderList();
-        if(currentId) renderDetails(currentId);
+        if(selectedId && allPlayers[selectedId]) {
+            renderMain(selectedId);
+        }
     });
 
-    // Читаем пароли
-    db.ref('users_lookup').on('value', s => {
-        users = s.val() || {};
-        if(currentId) renderDetails(currentId);
+    // === СЛУШАТЕЛЬ ПАРОЛЕЙ ===
+    db.ref('users_lookup').on('value', snap => {
+        usersLookup = snap.val() || {};
+        if(selectedId) renderMain(selectedId);
     });
 
+    // === РЕНДЕР СПИСКА ===
     function renderList() {
+        const container = document.getElementById('list-container');
+        const search = document.getElementById('search').value.toLowerCase();
+        
         let html = '';
         const now = Date.now();
-        // Сортировка: Сначала онлайн
-        Object.keys(players).sort((a,b) => (players[b].lastSeen||0) - (players[a].lastSeen||0)).forEach(id => {
-            const p = players[id];
-            const isOnline = (now - (p.lastSeen || 0)) < 60000;
-            html += `
-                <div class="player-row ${id===currentId?'active':''}" onclick="currentId='${id}'; renderDetails('${id}'); renderList()">
-                    <div>
-                        <span class="${isOnline?'online-dot':'offline-dot'}">●</span> 
-                        ${p.name || 'No Name'}
-                    </div>
-                    <div>${Math.floor(p.balance||0)}</div>
-                </div>
-            `;
+
+        const sortedIds = Object.keys(allPlayers).sort((a,b) => {
+            const pA = allPlayers[a];
+            const pB = allPlayers[b];
+            const onlineA = (now - (pA.lastSeen || 0)) < 60000;
+            const onlineB = (now - (pB.lastSeen || 0)) < 60000;
+            if (onlineA && !onlineB) return -1;
+            if (!onlineA && onlineB) return 1;
+            return (pB.balance || 0) - (pA.balance || 0);
         });
-        document.getElementById('list').innerHTML = html;
+
+        sortedIds.forEach(id => {
+            const p = allPlayers[id];
+            const name = p.name || 'Без имени';
+            
+            if (!name.toLowerCase().includes(search) && !id.toLowerCase().includes(search)) return;
+
+            const isOnline = (now - (p.lastSeen || 0)) < 60000;
+            const statusClass = isOnline ? 'online' : 'offline';
+            const activeClass = (id === selectedId) ? 'active' : '';
+            const bannedClass = p.isBanned ? 'banned' : '';
+
+            html += `
+            <div class="player-item ${statusClass} ${activeClass} ${bannedClass}" onclick="selectPlayer('${id}')">
+                <div class="p-info">
+                    <h3>
+                        <span class="status-dot"></span>
+                        ${name} 
+                        ${p.isBanned ? '<span style="color:red; font-size:10px">[BANNED]</span>' : ''}
+                    </h3>
+                    <div class="p-meta">
+                        <span>${(p.balance || 0).toFixed(0)} PLN</span>
+                        <span>•</span>
+                        <span>${p.career ? p.career.totalOrders : 0} заказов</span>
+                    </div>
+                </div>
+                <div style="font-size:10px; color:#555">${isOnline ? '🟢' : '⚫'}</div>
+            </div>`;
+        });
+
+        container.innerHTML = html || '<div style="padding:20px;text-align:center;color:#666">Никого нет</div>';
     }
 
-    function renderDetails(id) {
-        const p = players[id];
+    function selectPlayer(id) {
+        selectedId = id;
+        document.getElementById('empty-state').style.display = 'none';
+        document.getElementById('main-panel').classList.add('visible');
+        renderList();
+        renderMain(id);
+    }
+
+    function renderMain(id) {
+        const p = allPlayers[id];
         if(!p) return;
 
-        // Поиск пароля
-        let authInfo = '<span style="color:#888">Авторизация через Telegram</span>';
-        const userEntry = Object.values(users).find(u => u.playerId === id);
-        if(userEntry) {
-            authInfo = `
-                <div style="background:#000; padding:10px; border:1px solid #333; font-family:monospace">
-                    LOGIN: <b style="color:#fff">${userEntry.login}</b><br>
-                    PASS:  <b style="color:#00e676">${userEntry.pass}</b>
+        document.getElementById('p-name').textContent = p.name || 'Unknown';
+        document.getElementById('p-id').textContent = id;
+        document.getElementById('p-balance').textContent = (p.balance || 0).toFixed(2) + ' PLN';
+
+        const now = Date.now();
+        const isOnline = (now - (p.lastSeen || 0)) < 60000;
+        const statusEl = document.getElementById('p-status');
+        statusEl.textContent = isOnline ? '🟢 ONLINE' : `⚫ OFFLINE (Был: ${new Date(p.lastSeen || 0).toLocaleTimeString()})`;
+        statusEl.style.color = isOnline ? 'var(--accent)' : '#666';
+
+        // --- PASSWORD DISPLAY LOGIC ---
+        let authHtml = `<span style="color:#888"><i class="fa-brands fa-telegram"></i> Telegram / Авто-вход</span>`;
+        // Ищем игрока в базе регистраций
+        const loginEntry = Object.values(usersLookup).find(u => u.playerId === id);
+        
+        if(loginEntry) {
+            authHtml = `
+                <div style="display:flex; justify-content:space-between; align-items:center">
+                    <div>
+                        <span style="color:#aaa">Login:</span> <strong style="color:white; font-size:16px">${loginEntry.login}</strong>
+                    </div>
+                    <div>
+                        <span style="color:#aaa">Pass:</span> <strong style="color:var(--accent); font-size:16px">${loginEntry.pass}</strong>
+                    </div>
                 </div>`;
         }
+        document.getElementById('auth-info-box').innerHTML = authHtml;
+        // ------------------------------
 
-        document.getElementById('details').innerHTML = `
-            <h2>${p.name} <span style="font-size:12px; color:#666">${id}</span></h2>
-            
-            <div class="card">
-                <h3>🔑 Данные входа (Android/Web)</h3>
-                ${authInfo}
-            </div>
+        document.getElementById('val-bal').textContent = (p.balance || 0).toFixed(2);
+        document.getElementById('val-debt').textContent = (p.debt || 0).toFixed(2);
+        
+        const safe = (obj, key) => (obj && obj[key] !== undefined) ? Math.floor(obj[key]) : 0;
+        
+        document.getElementById('val-energy').textContent = safe(p.stats, 'energy') + '%';
+        document.getElementById('val-water').textContent = safe(p.stats, 'water') + '%';
+        document.getElementById('val-mood').textContent = safe(p.stats, 'mood') + '%';
 
-            <div class="card">
-                <h3>💰 Баланс: ${p.balance} PLN</h3>
-                <button class="btn-green" onclick="send('${id}', 'balance', ${(p.balance||0)+1000})">+1000</button>
-                <button class="btn-green" onclick="send('${id}', 'balance', ${(p.balance||0)+50000})">+50K</button>
-                <button class="btn-red" onclick="send('${id}', 'balance', 0)">Обнулить</button>
-            </div>
+        document.getElementById('val-bike').textContent = safe(p.items, 'bike') + '%';
+        document.getElementById('val-bag').textContent = safe(p.items, 'bag') + '%';
 
-            <div class="card">
-                <h3>⚡ Действия</h3>
-                <button class="btn-green" onclick="giveCyber('${id}')">Выдать Cyber-X</button>
-                <button class="btn-green" onclick="heal('${id}')">Вылечить</button>
-                <button class="btn-red" onclick="send('${id}', 'isBanned', ${!p.isBanned})">${p.isBanned?'РАЗБАНИТЬ':'ЗАБАНИТЬ'}</button>
-            </div>
-        `;
+        document.getElementById('val-car').textContent = (p.taxi && p.taxi.vehicle) ? p.taxi.vehicle.toUpperCase() : 'Пешком';
+        const hasLic = (p.taxi && p.taxi.licenses && p.taxi.licenses.driver);
+        document.getElementById('val-lic').textContent = hasLic ? 'Есть' : 'Нет';
+
+        document.getElementById('val-banned').textContent = p.isBanned ? 'ДА' : 'Нет';
+        document.getElementById('val-banned').style.color = p.isBanned ? 'red' : 'green';
     }
 
-    // Отправка команд
-    window.send = function(id, path, val) {
-        db.ref('players/'+id+'/adminInbox').push({ type: 'SET_VAR', path: path, value: val });
-    };
+    function sendCmd(type, data) {
+        if(!selectedId) return;
+        let payload = { type: type, ...data };
+        db.ref('players/' + selectedId + '/adminInbox').push(payload)
+            .then(() => console.log('Command sent:', payload))
+            .catch(e => alert('Error: ' + e));
+    }
 
-    window.giveCyber = function(id) {
-        send(id, 'taxi.vehicle', 'cyber_x');
-        send(id, 'taxi.active', true);
-        alert('Машина выдана!');
-    };
-    
-    window.heal = function(id) {
-        send(id, 'needs.energy', 100);
-        send(id, 'needs.water', 100);
-        send(id, 'needs.mood', 100);
-        alert('Вылечен!');
-    };
+    function modBalance(amount) {
+        if(!selectedId) return;
+        const p = allPlayers[selectedId];
+        const cur = p.balance || 0;
+        sendCmd('SET_VAR', { path: 'balance', value: cur + amount });
+    }
+
+    function clearDebt() {
+        sendCmd('SET_VAR', { path: 'debt', value: 0 });
+        sendCmd('SET_VAR', { path: 'debtOverdue', value: false });
+    }
+
+    function setStat(cat, values) {
+        for (let [key, val] of Object.entries(values)) {
+            sendCmd('SET_VAR', { path: `${cat}.${key}`, value: val });
+        }
+    }
+
+    function killStats() {
+        setStat('needs', { energy: 1, water: 1, mood: 1 });
+    }
+
+    function giveItem(item, count) {
+        if(!selectedId) return;
+        const p = allPlayers[selectedId];
+        const currentCount = (p.inventory && p.inventory[item]) ? p.inventory[item] : 0;
+        sendCmd('SET_VAR', { path: `inventory.${item}`, value: currentCount + count });
+    }
+
+    function unlockTaxi() {
+        sendCmd('SET_VAR', { path: 'taxi.unlocked', value: true });
+        sendCmd('SET_VAR', { path: 'taxi.licenses.driver', value: true });
+        sendCmd('SET_VAR', { path: 'taxi.licenses.insurance', value: true });
+        sendCmd('SET_VAR', { path: 'taxi.licenses.taxi', value: true });
+        alert('Лицензии выданы');
+    }
+
+    function giveCyberCar() {
+        sendCmd('SET_VAR', { path: 'taxi.vehicle', value: 'cyber_x' });
+        sendCmd('SET_VAR', { path: 'taxi.active', value: true });
+        alert('Cyber-X выдан!');
+    }
+
+    function toggleBan() {
+        if(!selectedId) return;
+        const p = allPlayers[selectedId];
+        const newVal = !p.isBanned;
+        sendCmd('SET_VAR', { path: 'isBanned', value: newVal });
+    }
+
+    function fullReset() {
+        if(confirm('ТОЧНО СБРОСИТЬ ВЕСЬ ПРОГРЕСС ИГРОКА?')) {
+            sendCmd('FULL_RESET', {});
+        }
+    }
 
 </script>
+
 </body>
 </html>
