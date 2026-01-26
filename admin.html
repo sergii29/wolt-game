@@ -27,7 +27,7 @@
         .search-box { padding: 15px; border-bottom: 1px solid var(--border); }
         .search-input { width: 100%; padding: 10px; background: #2c2c2c; border: 1px solid #444; color: white; border-radius: 6px; box-sizing: border-box; }
         
-        /* НОВАЯ НАВИГАЦИЯ (В СТИЛЕ СТАРОГО ДИЗАЙНА) */
+        /* NAV BAR */
         .nav-bar { display: flex; border-bottom: 1px solid var(--border); background: #1a1a1a; }
         .nav-btn { flex: 1; padding: 10px; background: transparent; border: none; color: #666; cursor: pointer; font-size: 14px; transition: 0.2s; border-bottom: 2px solid transparent; }
         .nav-btn:hover { color: white; background: #252525; }
@@ -53,7 +53,7 @@
         .user-title h1 { margin: 0; color: var(--info); }
         .user-id { color: #666; font-family: monospace; }
         
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         
         .card { background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
         .card h3 { margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; color: #aaa; font-size: 14px; text-transform: uppercase; }
@@ -76,11 +76,17 @@
 
         .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: #444; font-size: 20px; }
 
-        /* --- СТИЛИ ДЛЯ НАСТРОЕК (НОВЫЕ) --- */
+        /* --- CONFIG STYLES --- */
         .config-input { width: 100%; background: #222; border: 1px solid #444; color: white; padding: 8px; border-radius: 5px; margin-bottom: 10px; box-sizing: border-box; }
         .config-label { font-size: 12px; color: #888; margin-bottom: 4px; display: block; }
         
-        /* --- СТИЛИ ДЛЯ ЛОГОВ (НОВЫЕ) --- */
+        /* PRICES GRID */
+        .prices-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .price-item { background: #252525; padding: 10px; border-radius: 6px; border: 1px solid #333; }
+        .price-label { font-size: 11px; color: #aaa; margin-bottom: 5px; display:block; text-transform:uppercase; font-weight:bold; }
+        .price-inp { width: 100%; background: #111; border: 1px solid #444; color: var(--accent); padding: 5px; font-weight:bold; border-radius: 4px; }
+
+        /* LOGS */
         .log-entry { padding: 8px; border-bottom: 1px solid #333; font-size: 12px; font-family: monospace; display: flex; gap: 10px; }
         .log-time { color: #666; min-width: 60px; }
         .log-user { color: var(--accent); font-weight: bold; min-width: 100px; }
@@ -104,7 +110,7 @@
             <div style="padding:20px; text-align:center; color:#666">Загрузка...</div>
         </div>
         <div style="padding:10px; font-size:11px; text-align:center; color:#444">
-            WARSZAWA_FOREVER ADMIN v3.0
+            WARSZAWA_FOREVER ADMIN v3.5
         </div>
     </div>
 
@@ -220,9 +226,10 @@
             </div>
             
             <div class="card" style="grid-column: span 2">
-                <h3>🏷 Цены Магазина (JSON Override)</h3>
-                <textarea id="cfg-itemPrices" class="config-input" style="height:80px" placeholder='{"water": 5.0, "gas": 15.0}'></textarea>
-                <button class="btn-save" onclick="saveConfig()">💾 СОХРАНИТЬ НАСТРОЙКИ</button>
+                <h3>🏷 Цены Магазина (Редактор)</h3>
+                <div id="prices-container" class="prices-grid">
+                    </div>
+                <button class="btn-save" onclick="saveConfig()">💾 СОХРАНИТЬ ВСЕ НАСТРОЙКИ</button>
             </div>
         </div>
     </div>
@@ -256,21 +263,42 @@
     let usersLookup = {};
     let selectedId = null;
 
+    // СЛОВАРЬ НАЗВАНИЙ ДЛЯ КРАСОТЫ
+    const ITEM_NAMES = {
+        "water": "Вода 0.5",
+        "bar": "Сникерс",
+        "energy_drink": "Red Bull",
+        "coffee": "Кофе",
+        "chocolate": "Шоколадка",
+        "gas": "Бензин (10л)",
+        "repair_bike": "Рем. Велика",
+        "repair_bag": "Рем. Сумки",
+        "repair_gear": "Химчистка",
+        "repair_phone": "Связь",
+        "car_skoda": "Skoda Fabia",
+        "car_toyota": "Toyota Prius",
+        "car_tesla": "Tesla Model 3",
+        "lic_driver": "Права (B)",
+        "lic_insurance": "Страховка",
+        "lic_taxi": "Лицензия Такси"
+    };
+
+    // СПИСОК КЛЮЧЕЙ (чтобы ничего не потерять)
+    const ALL_ITEM_KEYS = [
+        "water", "bar", "energy_drink", "coffee", "chocolate", "gas",
+        "repair_bike", "repair_bag", "repair_gear", "repair_phone",
+        "lic_driver", "lic_insurance", "lic_taxi",
+        "car_skoda", "car_toyota", "car_tesla"
+    ];
+
     // === ПЕРЕКЛЮЧЕНИЕ ЭКРАНОВ ===
     function showView(viewId, btn) {
-        // Скрываем все экраны
         document.getElementById('view-players').style.display = 'none';
         document.getElementById('view-config').style.display = 'none';
         document.getElementById('view-logs').style.display = 'none';
-        
-        // Показываем нужный
         document.getElementById('view-' + viewId).style.display = 'block';
-
-        // Кнопки
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-
-        // Логика для вкладок
         if(viewId === 'config') loadConfig();
         if(viewId === 'logs') loadLogs();
     }
@@ -278,10 +306,7 @@
     // === БД СЛУШАТЕЛИ ===
     db.ref('players').on('value', snap => {
         allPlayers = snap.val() || {};
-        // Рендерим список только если мы на вкладке игроков
-        if(document.getElementById('view-players').style.display !== 'none') {
-            renderList();
-        }
+        if(document.getElementById('view-players').style.display !== 'none') renderList();
         if(selectedId && allPlayers[selectedId]) renderMain(selectedId);
     });
 
@@ -296,11 +321,7 @@
         const search = document.getElementById('search').value.toLowerCase();
         let html = '';
         const now = Date.now();
-
-        const sortedIds = Object.keys(allPlayers).sort((a,b) => {
-            const pA = allPlayers[a]; const pB = allPlayers[b];
-            return (pB.balance || 0) - (pA.balance || 0);
-        });
+        const sortedIds = Object.keys(allPlayers).sort((a,b) => (allPlayers[b].balance || 0) - (allPlayers[a].balance || 0));
 
         sortedIds.forEach(id => {
             const p = allPlayers[id];
@@ -342,7 +363,6 @@
         }
         document.getElementById('auth-info-box').innerHTML = authHtml;
 
-        // Stats
         document.getElementById('val-bal').textContent = (p.balance || 0).toFixed(2);
         document.getElementById('val-debt').textContent = (p.debt || 0).toFixed(2);
         const safe = (obj, key) => (obj && obj[key] !== undefined) ? Math.floor(obj[key]) : 0;
@@ -383,12 +403,38 @@
             document.getElementById('cfg-tipChance').value = c.tipChance || 0.5;
             document.getElementById('cfg-energyDrain').value = c.energyDrain || 0.15;
             document.getElementById('cfg-waterDrain').value = c.waterDrain || 0.10;
-            document.getElementById('cfg-itemPrices').value = JSON.stringify(c.itemPrices || {});
+
+            // РЕНДЕР ЦЕН (NEW)
+            const prices = c.itemPrices || {};
+            const container = document.getElementById('prices-container');
+            container.innerHTML = '';
+            
+            // Проходим по всем известным ключам
+            ALL_ITEM_KEYS.forEach(key => {
+                const name = ITEM_NAMES[key] || key;
+                const val = prices[key] !== undefined ? prices[key] : 0;
+                
+                const div = document.createElement('div');
+                div.className = 'price-item';
+                div.innerHTML = `
+                    <label class="price-label">${name}</label>
+                    <input type="number" id="price_${key}" class="price-inp" value="${val}" step="0.5">
+                `;
+                container.appendChild(div);
+            });
         });
     }
 
     function saveConfig() {
         if(!confirm("Применить настройки для всех?")) return;
+        
+        // Сбор цен из инпутов
+        const newPrices = {};
+        ALL_ITEM_KEYS.forEach(key => {
+            const inp = document.getElementById(`price_${key}`);
+            if(inp) newPrices[key] = parseFloat(inp.value);
+        });
+
         const cfg = {
             basePickupPay: parseFloat(document.getElementById('cfg-basePickupPay').value),
             perKmPay: parseFloat(document.getElementById('cfg-perKmPay').value),
@@ -398,9 +444,9 @@
             tipChance: parseFloat(document.getElementById('cfg-tipChance').value),
             energyDrain: parseFloat(document.getElementById('cfg-energyDrain').value),
             waterDrain: parseFloat(document.getElementById('cfg-waterDrain').value),
-            itemPrices: {}
+            itemPrices: newPrices // Сохраняем объект
         };
-        try { cfg.itemPrices = JSON.parse(document.getElementById('cfg-itemPrices').value); } catch(e) {}
+        
         db.ref('config').update(cfg).then(()=>alert('Сохранено'));
     }
 
@@ -418,7 +464,6 @@
         });
     }
 
-    // Start on players tab
     showView('players', document.querySelector('.nav-btn'));
 
 </script>
