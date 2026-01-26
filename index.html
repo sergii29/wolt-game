@@ -1852,6 +1852,170 @@
 
 })();
 </script>
+
+<script>
+// ============================================================
+// --- PATCH v37: DYNAMIC GPS (VISUAL ONLY) ---
+// Key: WARSZAWA_FOREVER
+// Safe Mode: On (No logic changes, only visual overlay)
+// ============================================================
+
+(function() {
+    console.log(">>> Patch v37 Loaded: GPS VISUALIZER");
+
+    // 1. НАСТРОЙКИ КАРТЫ
+    const WARSAW_CENTER = [52.2297, 21.0122];
     
+    // Глобальные переменные для карты (храним их отдельно, чтобы не мусорить в state)
+    window.mapVisuals = {
+        courierMarker: null,
+        destMarker: null,
+        routeLine: null,
+        startCoords: null,
+        endCoords: null
+    };
+
+    // 2. ГЕНЕРАТОР КООРДИНАТ (Рандомная точка вокруг центра)
+    function getRandomPoint() {
+        // Разброс примерно 3-5 км
+        const lat = WARSAW_CENTER[0] + (Math.random() - 0.5) * 0.06;
+        const lng = WARSAW_CENTER[1] + (Math.random() - 0.5) * 0.10;
+        return [lat, lng];
+    }
+
+    // 3. ФУНКЦИЯ ОТРИСОВКИ МАРШРУТА
+    window.drawRoute = function() {
+        if (!window.map || !currentOrder) return;
+
+        // Если координат еще нет - генерируем их
+        if (!window.mapVisuals.startCoords) {
+            window.mapVisuals.startCoords = getRandomPoint(); // Точка А (Ресторан)
+            window.mapVisuals.endCoords = getRandomPoint();   // Точка Б (Клиент)
+        }
+
+        const start = window.mapVisuals.startCoords;
+        const end = window.mapVisuals.endCoords;
+
+        // Очищаем старое (на всякий случай)
+        clearMapVisuals();
+
+        // Рисуем линию (Маршрут)
+        window.mapVisuals.routeLine = L.polyline([start, end], {
+            color: '#009de0', // Цвет Wolt/Бренда
+            weight: 4,
+            opacity: 0.7,
+            dashArray: '10, 10' // Пунктир
+        }).addTo(window.map);
+
+        // Маркер Клиента (Финиш)
+        const destIcon = L.divIcon({
+            html: '<i class="fa-solid fa-house-user" style="color:#ff3d00; font-size:24px; text-shadow: 2px 2px 2px rgba(0,0,0,0.5);"></i>',
+            className: 'custom-div-icon',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        window.mapVisuals.destMarker = L.marker(end, {icon: destIcon}).addTo(window.map);
+
+        // Маркер Курьера (Старт)
+        const courierIconHtml = state.taxi.active 
+            ? '<i class="fa-solid fa-taxi" style="color:#ffcc00; font-size:20px; border:2px solid black; background:black; border-radius:50%; padding:5px;"></i>'
+            : '<i class="fa-solid fa-bicycle" style="color:white; font-size:20px; border:2px solid #009de0; background:#009de0; border-radius:50%; padding:5px;"></i>';
+
+        const courierIcon = L.divIcon({
+            html: courierIconHtml,
+            className: 'custom-div-icon',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+        });
+        
+        window.mapVisuals.courierMarker = L.marker(start, {icon: courierIcon, zIndexOffset: 1000}).addTo(window.map);
+
+        // Центрируем камеру, чтобы видеть весь маршрут
+        window.map.fitBounds([start, end], {padding: [50, 50]});
+    };
+
+    // 4. ФУНКЦИЯ ДВИЖЕНИЯ (Обновление позиции)
+    window.updateCourierPosition = function(progress) {
+        if (!window.mapVisuals.courierMarker || !window.mapVisuals.startCoords) return;
+
+        // Математика: находим точку на линии в зависимости от % (0..100)
+        const pct = progress / 100;
+        const start = window.mapVisuals.startCoords;
+        const end = window.mapVisuals.endCoords;
+
+        const currentLat = start[0] + (end[0] - start[0]) * pct;
+        const currentLng = start[1] + (end[1] - start[1]) * pct;
+
+        // Двигаем маркер
+        window.mapVisuals.courierMarker.setLatLng([currentLat, currentLng]);
+        
+        // Немного двигаем камеру за игроком (плавно)
+        // window.map.panTo([currentLat, currentLng], {animate: true, duration: 0.5}); 
+    };
+
+    // 5. ОЧИСТКА КАРТЫ
+    window.clearMapVisuals = function() {
+        if (window.mapVisuals.routeLine) window.map.removeLayer(window.mapVisuals.routeLine);
+        if (window.mapVisuals.destMarker) window.map.removeLayer(window.mapVisuals.destMarker);
+        if (window.mapVisuals.courierMarker) window.map.removeLayer(window.mapVisuals.courierMarker);
+        
+        window.mapVisuals.routeLine = null;
+        window.mapVisuals.destMarker = null;
+        window.mapVisuals.courierMarker = null;
+    };
+
+    // 6. ХУКИ (Внедряемся в игру аккуратно)
+
+    // А. Когда создаем заказ -> Генерируем точки
+    const originalCreateOrder = window.createOrder;
+    window.createOrder = function() {
+        originalCreateOrder();
+        // Сброс координат для нового заказа
+        window.mapVisuals.startCoords = null;
+        window.mapVisuals.endCoords = null;
+        // Рисуем (если уже есть карта)
+        setTimeout(drawRoute, 500); 
+    };
+
+    // Б. Когда жмем педаль -> Двигаем маркер
+    const originalPedal = window.pedal;
+    window.pedal = function() {
+        originalPedal();
+        if (currentOrder) {
+            // Если маркеров нет (например, перезагрузили страницу), рисуем их
+            if (!window.mapVisuals.courierMarker) drawRoute();
+            // Обновляем позицию
+            updateCourierPosition(currentOrder.progress);
+        }
+    };
+
+    // В. Когда заказ завершен -> Чистим карту
+    const originalCompleteOrder = window.completeOrder;
+    window.completeOrder = function() {
+        originalCompleteOrder();
+        clearMapVisuals();
+        
+        // Возвращаем камеру на центр Варшавы красиво
+        if(window.map) window.map.flyTo(WARSAW_CENTER, 13);
+    };
+
+    // Г. Если заказ провален/отменен
+    const originalFailOrder = window.failOrder;
+    window.failOrder = function(reason) {
+        originalFailOrder(reason);
+        clearMapVisuals();
+        if(window.map) window.map.flyTo(WARSAW_CENTER, 13);
+    };
+
+    // Д. При загрузке (если уже есть активный заказ после рефреша)
+    setTimeout(() => {
+        if (typeof currentOrder !== 'undefined' && currentOrder && currentOrder.accepted) {
+            drawRoute();
+            updateCourierPosition(currentOrder.progress || 0);
+        }
+    }, 2000);
+
+})();
 </script>
 </body> </html>
+
