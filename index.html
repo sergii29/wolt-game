@@ -1263,10 +1263,9 @@
   
   <script>
 (function() {
-    console.log(">>> Patch v42 Loaded: RECOVERY MODE");
+    console.log(">>> Patch v43 Loaded: SILENT MODE");
 
-    // 1. ЛОКАЛЬНАЯ БАЗА ТОВАРОВ (ЧТОБЫ МАГАЗИН НИКОГДА НЕ БЫЛ ПУСТЫМ)
-    // Мы не зависим от внешней базы, чтобы исключить ошибки
+    // 1. ЛОКАЛЬНАЯ БАЗА (SAFETY FIRST)
     const SAFE_ITEMS = {
         'water': { name: 'Вода (0.5л)', cost: 2.0, desc: 'Восстанавливает воду' },
         'bar': { name: 'Сникерс', cost: 4.5, desc: 'Энергия и настроение' },
@@ -1283,7 +1282,7 @@
         'gear': { name: 'Одежда / Шины', cost: 80 }
     };
 
-    // 2. НАСТРОЙКИ ТАРИФОВ
+    // 2. НАСТРОЙКИ
     window.PREMIUM_CFG = {
         tier1: { id: 'tier1', name: '☕ Перерыв', time: 3, limit: 15, cost: 20 },
         tier2: { id: 'tier2', name: '🚀 Смена', time: 8, limit: 35, cost: 55 },
@@ -1296,7 +1295,34 @@
         { cost: 500, val: 15000, name: '💎 Инвестор' }
     ];
 
-    // 3. ОТКРЫТИЕ ОКНА ДОНАТА
+    // ==========================================
+    // НОВОЕ: ПЕРЕХВАТ СОБЫТИЙ (ЧТОБЫ НЕ ДЕРГАЛОСЬ)
+    // ==========================================
+    
+    // Сохраняем оригиналы функций, если еще не сохранили
+    if(!window._origTrigger) window._origTrigger = window.triggerRandomEvent;
+    if(!window._origCheckPenalties) window._origCheckPenalties = window.checkSystemPenalties;
+
+    // Переписываем функцию случайных событий (Полиция/Пробки)
+    window.triggerRandomEvent = function() {
+        // Если VIP активен — просто выходим. Никакой полиции, никакого изменения UI.
+        if (state.premium && state.premium.active) {
+            return; 
+        }
+        // Если не VIP — запускаем оригинал
+        if(window._origTrigger) window._origTrigger();
+    };
+
+    // Переписываем проверку штрафов (Голод/Жажда)
+    window.checkSystemPenalties = function() {
+        if (state.premium && state.premium.active) {
+            return; // Игнорируем штрафы
+        }
+        if(window._origCheckPenalties) window._origCheckPenalties();
+    };
+    // ==========================================
+
+    // 3. ОКНО ДОНАТА
     window.openPremiumModal = function(e) {
         if(e) { e.preventDefault(); e.stopPropagation(); }
         
@@ -1304,7 +1330,6 @@
         if(menu) menu.classList.remove('open');
         const overlay = document.getElementById('side-menu-overlay');
         if(overlay) overlay.classList.remove('open');
-
         const old = document.getElementById('premium-modal');
         if(old) old.remove();
 
@@ -1365,14 +1390,10 @@
             state.premium.itemLimit = limit;
             state.premium.itemsTaken = 0;
             
-            // Лечим и чиним ВСЁ сразу
             state.needs = { energy: 100, water: 100, mood: 100 };
-            if(state.items) {
-                state.items.bike = 100; state.items.bag = 100; 
-                state.items.phone = 100; state.items.gear = 100;
-            }
+            if(state.items) { state.items.bike=100; state.items.bag=100; state.items.phone=100; state.items.gear=100; }
             
-            // Снимаем блокировки
+            // Чистим интерфейс от старых проблем
             const pedal = document.getElementById('pedal-btn');
             if(pedal) {
                 pedal.disabled = false; 
@@ -1382,7 +1403,6 @@
             const bribe = document.getElementById('bribe-btn');
             if(bribe) bribe.style.display = 'none';
 
-            // Убираем просрочку визуально
             state.debtOverdue = false;
 
             saveGame(); 
@@ -1407,7 +1427,7 @@
         }
     };
 
-    // 5. ЦИКЛ GOD MODE (ГЛАВНАЯ ЗАЩИТА)
+    // 5. ЦИКЛ GOD MODE (РЕСУРСЫ)
     window.startPremiumLoop = function() {
         let el = document.getElementById('prem-indicator');
         if(!el) {
@@ -1421,69 +1441,38 @@
             if(state.premium && state.premium.active) {
                 const now = Date.now();
                 if(now < state.premium.endTime) {
-                    // --- VIP АКТИВЕН ---
                     const left = Math.ceil((state.premium.endTime - now)/1000);
                     const m = Math.floor(left/60);
                     const s = left%60;
                     el.style.display = 'block';
                     el.innerHTML = `👑 VIP ${m}:${s.toString().padStart(2,'0')}`;
                     
-                    // 1. БЕСКОНЕЧНЫЕ РЕСУРСЫ
-                    state.needs.energy = 100; 
-                    state.needs.water = 100; 
-                    state.needs.mood = 100;
-
-                    // 2. БЕСКОНЕЧНАЯ ПРОЧНОСТЬ (НОВОЕ!)
-                    // Велик не ломается
-                    if(state.items) {
-                        state.items.bike = 100;
-                        state.items.bag = 100;
-                        state.items.phone = 100;
-                        state.items.gear = 100;
-                    }
+                    // Бесконечные ресурсы
+                    state.needs.energy = 100; state.needs.water = 100; state.needs.mood = 100;
+                    if(state.items) { state.items.bike=100; state.items.bag=100; state.items.phone=100; state.items.gear=100; }
                     
-                    // 3. ДОЛГИ НА ПАУЗЕ
                     if(state.debt > 0) state.debtOverdue = false;
-
-                    // 4. ИММУНИТЕТ К ПОЛИЦИИ
-                    const bribeBtn = document.getElementById('bribe-btn');
-                    if(bribeBtn && bribeBtn.style.display !== 'none') {
-                        bribeBtn.style.display = 'none';
-                        const pBtn = document.getElementById('pedal-btn');
-                        if(pBtn) { pBtn.disabled = false; pBtn.classList.remove('blocked'); }
-                    }
                     
                     requestAnimationFrame(loop);
-
                 } else {
-                    // --- VIP ЗАКОНЧИЛСЯ ---
                     state.premium.active = false;
                     el.style.display = 'none';
-                    showToast('🚨 VIP ИСТЕК! Штрафы включены.', 'warn');
-                    
-                    // Возвращаем суровую реальность
-                    if(state.debt > 0) {
-                        state.debtOverdue = true; 
-                        state.debtTimer = Date.now() - 1000; // Сразу просрочка
-                    }
-                    
+                    showToast('🚨 VIP ИСТЕК!', 'warn');
+                    if(state.debt > 0) { state.debtOverdue = true; state.debtTimer = Date.now() - 1000; }
                     saveGame();
                     if(window.updateUI) window.updateUI();
                 }
-            } else {
-                el.style.display = 'none';
-            }
+            } else { el.style.display = 'none'; }
         }
         loop();
     };
 
-    // 6. РЕНДЕР МАГАЗИНА (ИСПРАВЛЕННЫЙ И НЕУБИВАЕМЫЙ)
+    // 6. РЕНДЕР МАГАЗИНА (БЕЗОПАСНЫЙ)
     window.renderShop = function(c) {
         c.innerHTML = '';
         
-        // Проверка и починка NaN
         if(state.premium && state.premium.active) {
-             if(isNaN(state.premium.itemLimit) || state.premium.itemLimit === undefined) state.premium.itemLimit = 30; // Аварийное значение
+             if(isNaN(state.premium.itemLimit) || state.premium.itemLimit === undefined) state.premium.itemLimit = 30; 
              if(isNaN(state.premium.itemsTaken) || state.premium.itemsTaken === undefined) state.premium.itemsTaken = 0;
         }
 
@@ -1493,25 +1482,18 @@
         const remaining = Math.max(0, limit - taken);
         const isFree = isPrem && remaining > 0;
 
-        // Хедер
         if(isPrem) {
             c.innerHTML += `<div style="background:gold; color:black; padding:10px; text-align:center; border-radius:8px; margin-bottom:15px; font-weight:bold">👑 GOD MODE<br><span style="font-size:11px; font-weight:normal">Халява: <b>${remaining} шт.</b></span></div>`;
         }
 
         let html = '<div class="shop-section"><h3>🎒 Товары</h3>';
-        
-        // Используем ЛОКАЛЬНЫЙ список SAFE_ITEMS, чтобы магазин не был пустым
         Object.keys(SAFE_ITEMS).forEach(k => {
             const item = SAFE_ITEMS[k];
-            
-            // Фильтр бензина
             const isTaxi = state.taxi && state.taxi.active;
             if(!isTaxi && k === 'gas') return; 
 
-            // Цена
             let price = item.cost;
             if(!isPrem) {
-                // Инфляция только для смертных
                 const levelSum = Object.values(state.repairs || {}).reduce((a,b)=>a+b,0);
                 price = price * (1 + (levelSum * 0.1));
             }
@@ -1520,8 +1502,6 @@
             const btnBg = isFree ? 'gold' : 'white';
             const btnColor = isFree ? 'black' : '#0088cc';
             const action = isFree ? `window.buyFree('${k}', this)` : `window.buyItem('${k}', ${price}, this)`;
-            
-            // Количество в инвентаре
             const owned = (state.inventory && state.inventory[k]) ? state.inventory[k] : 0;
 
             html += `
@@ -1530,27 +1510,17 @@
                         <div style="font-weight:bold">${item.name} <span style="font-size:10px; color:#aaa">(x${owned})</span></div>
                         <div class="shop-desc">${item.desc}</div>
                     </div>
-                    <button class="shop-btn" style="background:${btnBg}; color:${btnColor}; border-color:${btnBg}; font-weight:bold" onclick="${action}">
-                        ${priceDisplay}
-                    </button>
+                    <button class="shop-btn" style="background:${btnBg}; color:${btnColor}; border-color:${btnBg}; font-weight:bold" onclick="${action}">${priceDisplay}</button>
                 </div>`;
         });
         html += '</div>';
 
-        // РЕМОНТ (Теперь тоже из SAFE списка)
         html += '<div class="shop-section"><h3>🛠 Сервис</h3>';
-        
         Object.keys(SAFE_REPAIRS).forEach(k => {
             const info = SAFE_REPAIRS[k];
-            // Показываем текущее состояние
             const health = (state.items && state.items[k] !== undefined) ? Math.floor(state.items[k]) : 0;
-            
             let cost = info.cost;
-            if(!isPrem) {
-                const lvl = (state.repairs && state.repairs[k]) ? state.repairs[k] : 0;
-                cost = (cost + (lvl * 5));
-            }
-
+            if(!isPrem) { const lvl = (state.repairs && state.repairs[k]) ? state.repairs[k] : 0; cost = (cost + (lvl * 5)); }
             const btnText = isPrem ? 'FREE FIX' : `-${cost.toFixed(0)} PLN`;
             const btnStyle = isPrem ? 'background:#00e676; color:white; border:none' : '';
             const action = isPrem ? `window.buyRepairPrem('${k}', this)` : `window.buyRepair('${k}', ${cost}, this)`;
@@ -1564,7 +1534,6 @@
                     <button class="shop-btn" style="${btnStyle}" onclick="${action}">${btnText}</button>
                 </div>`;
         });
-
         html += '</div>';
         c.innerHTML += html;
     };
@@ -1575,14 +1544,10 @@
             if(!state.inventory) state.inventory = {};
             state.inventory[k] = (state.inventory[k]||0)+1;
             state.premium.itemsTaken++;
-            
             const t = btn.textContent; btn.textContent = "ВЗЯЛ";
             setTimeout(()=>{ btn.textContent = t; window.renderShop(document.getElementById('modal-body')); }, 250);
             saveGame(); if(window.updateUI) window.updateUI();
-        } else {
-            showToast('Лимит халявы исчерпан!', 'warn');
-            window.renderShop(document.getElementById('modal-body'));
-        }
+        } else { showToast('Лимит халявы исчерпан!', 'warn'); window.renderShop(document.getElementById('modal-body')); }
     };
 
     window.buyRepairPrem = function(k, btn) {
@@ -1601,19 +1566,13 @@
             btn.className = 'menu-item';
             btn.innerHTML = `<i class="fa-solid fa-gem"></i> PREMIUM / ДОНАТ`;
             btn.style.cssText = `background: linear-gradient(45deg, #FFD700, #FFA500); color: black !important; font-weight: 900 !important; border: 1px solid #B8860B; text-align: center; padding: 15px; margin-top: 10px; cursor: pointer; z-index: 99999; animation: pulseGold 3s infinite;`;
-            
             btn.ontouchstart = function(e) { e.preventDefault(); window.openPremiumModal(); };
             btn.onclick = function() { window.openPremiumModal(); };
-
             const statsBtn = Array.from(menu.children).find(el => el.textContent.includes('История'));
-            if(statsBtn) menu.insertBefore(btn, statsBtn.nextSibling);
-            else menu.appendChild(btn);
+            if(statsBtn) menu.insertBefore(btn, statsBtn.nextSibling); else menu.appendChild(btn);
         }
-        
-        // Перезапуск цикла VIP
         if(typeof state !== 'undefined' && state.premium && state.premium.active) {
-            const el = document.getElementById('prem-indicator');
-            if(!el || el.style.display === 'none') window.startPremiumLoop();
+            const el = document.getElementById('prem-indicator'); if(!el || el.style.display === 'none') window.startPremiumLoop();
         }
     }, 500);
 
