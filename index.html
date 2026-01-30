@@ -1261,21 +1261,29 @@
 
 
   
-  <script>
+ <script>
 (function() {
-    console.log(">>> Patch v47 Loaded: CLEAN UI MODE");
+    console.log(">>> Patch v47 Updated: REAL PAYMENT MODE");
 
-    // 1. НАСТРОЙКИ (СБАЛАНСИРОВАННЫЕ)
-    // Оставляем false, чтобы кнопки нажимались. Но визуально убираем слово "Тест".
-    const USE_REAL_PAYMENTS = false; 
+    // 1. НАСТРОЙКИ ОПЛАТЫ
+    // Включаем реальную оплату через Telegram Stars
+    const USE_REAL_PAYMENTS = true; 
 
-    // Место для будущих ссылок (пока пустые)
+    // СЮДА НУЖНО ВСТАВИТЬ ССЫЛКИ ИЗ BOTFATHER (или вашего бота)
+    // Формат ссылок обычно: "https://t.me/$..."
     const INVOICE_LINKS = {
-        'tier1': '', 'tier2': '', 'tier3': '', 
-        'money_s': '', 'money_m': '', 'money_l': ''
+        // Тарифы (Premium)
+        'tier1': '', // Ссылка для 10 Stars (Перерыв)
+        'tier2': '', // Ссылка для 25 Stars (Смена)
+        'tier3': '', // Ссылка для 50 Stars (Элита)
+        
+        // Валюта (Деньги)
+        'money_s': '', // Ссылка для 10 Stars (Заначка)
+        'money_m': '', // Ссылка для 25 Stars (Зарплата)
+        'money_l': ''  // Ссылка для 75 Stars (Инвестор)
     };
 
-    // ТАРИФЫ
+    // ТАРИФЫ (Визуальная часть)
     window.PREMIUM_CFG = {
         tier1: { id: 'tier1', name: '☕ Перерыв', time: 5,  limit: 20, cost: 10 },
         tier2: { id: 'tier2', name: '🚀 Смена',   time: 10, limit: 45, cost: 25 },
@@ -1305,34 +1313,40 @@
         'gear': { name: 'Одежда / Шины', cost: 80 }
     };
 
-    // 3. ЛОГИКА ОПЛАТЫ (ЧИСТАЯ)
+    // 3. ЛОГИКА ОПЛАТЫ (БОЕВАЯ)
     window.processPayment = function(itemId, cost, onSuccess) {
         const tg = window.Telegram.WebApp;
         if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
         if (USE_REAL_PAYMENTS) {
             const url = INVOICE_LINKS[itemId];
-            if (!url) {
-                // Если ссылок нет, имитируем успех (чтобы ты мог играть)
-                // В боевой версии тут будет ошибка.
-                if(confirm(`(Система): Ссылка на оплату не найдена. Провести бесплатно?`)) onSuccess();
+            
+            // Если ссылка не настроена
+            if (!url || url === '') {
+                if(tg.showPopup) tg.showPopup({title: 'Ошибка настройки', message: `Админ не добавил ссылку оплаты для ID: ${itemId}`, buttons: [{type:'ok'}]});
+                else alert(`ADMIN ERROR: No invoice link for ${itemId}`);
                 return;
             }
+
+            // Вызов нативной оплаты Telegram
             tg.openInvoice(url, (status) => {
-                if (status === 'paid') onSuccess();
+                if (status === 'paid') {
+                    // Оплата прошла успешно
+                    onSuccess();
+                } else if (status === 'cancelled') {
+                    // Пользователь закрыл окно оплаты
+                    // Ничего не делаем
+                } else if (status === 'failed') {
+                    if(tg.showPopup) tg.showPopup({title: 'Ошибка', message: 'Оплата не прошла.', buttons: [{type:'ok'}]});
+                } else if (status === 'pending') {
+                    // Редкий статус, можно попросить подождать
+                    if(tg.showPopup) tg.showPopup({title: 'Обработка', message: 'Платеж обрабатывается...', buttons: [{type:'ok'}]});
+                }
             });
+
         } else {
-            // ЭМУЛЯЦИЯ (БЕЗ СЛОВА ТЕСТ)
-            // Выглядит как настоящее подтверждение
-            if(tg.showConfirm) {
-                tg.showConfirm(`⭐️ Оплатить ${cost} Stars?`, (ok) => {
-                    if(ok) {
-                        const btn = document.activeElement;
-                        if(btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-                        setTimeout(onSuccess, 500);
-                    }
-                });
-            } else if(confirm(`⭐️ Подтверждение: Оплатить ${cost} Stars?`)) {
+            // ФОЛЛБЭК (Если вдруг выключим флаг обратно для тестов)
+            if(confirm(`[TEST MODE] Оплатить ${cost} Stars?`)) {
                 setTimeout(onSuccess, 500);
             }
         }
@@ -1407,7 +1421,7 @@
         loop();
     };
 
-    // 7. МЕНЮ (ЧИСТОЕ, БЕЗ СЛОВА TEST)
+    // 7. МЕНЮ
     window.openPremiumModal = function(e) {
         if(e) { e.preventDefault(); e.stopPropagation(); }
         const menu = document.getElementById('side-menu'); if(menu) menu.classList.remove('open');
@@ -1428,7 +1442,7 @@
                 <div style="padding:15px; max-height:70vh; overflow-y:auto;">
                     <div style="font-size:11px; color:#888; text-align:center; margin-bottom:15px;">
                         Оплата через Telegram Stars ⭐
-                    </div>`; // УБРАЛ СЛОВО "TEST"
+                    </div>`;
 
         Object.values(window.PREMIUM_CFG).forEach(t => {
             html += `
