@@ -1474,3 +1474,175 @@
 
 })();
 </script>
+
+
+
+<script>
+(function() {
+    console.log(">>> Patch v48: Wheel Loaded");
+
+    // 1. НАСТРОЙКИ КОЛЕСА
+    const WHEEL_COOLDOWN = 24 * 60 * 60 * 1000; // 24 часа в миллисекундах
+    
+    const PRIZES = [
+        { id: 1, text: "50 PLN",   color: "#ffffff", val: 50,  type: 'money' },
+        { id: 2, text: "ЭНЕРГЕТИК", color: "#00ccff", val: 1,   type: 'item', item: 'energy_drink' },
+        { id: 3, text: "250 PLN",  color: "#00e676", val: 250, type: 'money' },
+        { id: 4, text: "РЕМОНТ",   color: "#ff9100", val: 0,   type: 'repair' },
+        { id: 5, text: "100 PLN",  color: "#ffffff", val: 100, type: 'money' },
+        { id: 6, text: "ДЖЕКПОТ",  color: "#d500f9", val: 1000, type: 'money' }, // 1000 PLN
+        { id: 7, text: "СНИКЕРС",  color: "#ffcc00", val: 1,   type: 'item', item: 'bar' },
+        { id: 8, text: "ПУСТО",    color: "#444444", val: 0,   type: 'none' } 
+    ];
+
+    // 2. ФУНКЦИЯ ОТКРЫТИЯ
+    window.openWheel = function() {
+        // Закрываем меню
+        const menu = document.getElementById('side-menu'); if(menu) menu.classList.remove('open');
+        const overlay = document.getElementById('side-menu-overlay'); if(overlay) overlay.classList.remove('open');
+        const old = document.getElementById('wheel-modal'); if(old) old.remove();
+
+        // Проверяем время
+        const now = Date.now();
+        const lastSpin = state.lastSpin || 0;
+        const diff = now - lastSpin;
+        const canSpin = diff > WHEEL_COOLDOWN;
+        
+        // Время до следующей прокрутки
+        let timerText = "";
+        if(!canSpin) {
+            const left = WHEEL_COOLDOWN - diff;
+            const h = Math.floor(left/(1000*60*60));
+            const m = Math.floor((left % (1000*60*60))/(1000*60));
+            timerText = `Жди: ${h}ч ${m}мин`;
+        } else {
+            timerText = "КРУТИ БЕСПЛАТНО!";
+        }
+
+        // Строим HTML
+        const modal = document.createElement('div');
+        modal.id = 'wheel-modal';
+        modal.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:11000; display:flex; flex-direction:column; justify-content:center; align-items:center; backdrop-filter:blur(5px);";
+        
+        let html = `
+            <div style="color:white; font-size:24px; font-weight:900; margin-bottom:20px; text-shadow:0 0 10px #d500f9;">🎡 КОЛЕСО УДАЧИ</div>
+            
+            <div style="position:relative; width:300px; height:300px; margin-bottom:30px;">
+                <div style="position:absolute; top:-15px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:15px solid transparent; border-right:15px solid transparent; border-top:30px solid red; z-index:5;"></div>
+                
+                <div id="the-wheel" style="width:100%; height:100%; border-radius:50%; border:5px solid white; box-shadow:0 0 20px rgba(255,255,255,0.2); transition: transform 4s cubic-bezier(0.25, 0.1, 0.25, 1); background: conic-gradient(
+                    #333 0% 12.5%, #444 12.5% 25%, #333 25% 37.5%, #444 37.5% 50%, 
+                    #333 50% 62.5%, #444 62.5% 75%, #333 75% 87.5%, #444 87.5% 100%
+                ); position:relative; overflow:hidden;">
+                    ${PRIZES.map((p, i) => {
+                        const rotation = i * 45 + 22.5;
+                        return `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%) rotate(${rotation}deg) translateY(-110px); color:${p.color}; font-weight:bold; font-size:12px; text-shadow:1px 1px 0 #000;">${p.text}</div>`;
+                    }).join('')}
+                </div>
+                
+                <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:50px; height:50px; background:white; border-radius:50%; z-index:4; box-shadow:0 0 10px black; display:flex; align-items:center; justify-content:center; font-weight:bold; color:black;">WOLT</div>
+            </div>
+
+            <button id="spin-btn" onclick="doSpin()" style="background:${canSpin?'#00e676':'#555'}; color:white; padding:15px 40px; border-radius:30px; border:none; font-size:18px; font-weight:bold; box-shadow:0 5px 0 ${canSpin?'#00a653':'#333'}; cursor:${canSpin?'pointer':'default'}; transition:all 0.1s;" ${!canSpin ? 'disabled' : ''}>
+                ${timerText}
+            </button>
+            
+            <div onclick="document.getElementById('wheel-modal').remove()" style="margin-top:20px; color:#aaa; text-decoration:underline; cursor:pointer;">Закрыть</div>
+        `;
+        
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+    };
+
+    // 3. ЛОГИКА ВРАЩЕНИЯ
+    window.doSpin = function() {
+        const btn = document.getElementById('spin-btn');
+        const wheel = document.getElementById('the-wheel');
+        if(btn.disabled) return;
+
+        // Блокируем кнопку
+        btn.disabled = true;
+        btn.textContent = "КРУТИМ...";
+
+        // Случайный сектор (0-7)
+        // Сделаем "Пусто" (id:8, индекс 7) и "Джекпот" (id:6, индекс 5) более редкими
+        // Простая логика: чистый рандом пока что
+        const sectorIndex = Math.floor(Math.random() * 8); 
+        const prize = PRIZES[sectorIndex];
+        
+        // Рассчитываем угол
+        // 1 оборот = 360, сектор = 45 градусов.
+        // Чтобы стрелка (сверху) указала на сектор, нужно повернуть колесо так, чтобы сектор оказался наверху.
+        // Корректировка: 0 градусов в CSS - это 12 часов.
+        // Сектор 0 (0-45 град). Центр сектора 22.5. Чтобы он был наверху (0), нужно повернуть на -22.5.
+        // Но мы крутим ВПЕРЕД (по часовой).
+        
+        const baseRot = 360 * 5; // Минимум 5 оборотов
+        const sectorAngle = 45;
+        // Хитрая математика, чтобы попасть точно в центр сектора
+        const targetAngle = baseRot + (360 - (sectorIndex * sectorAngle)) - (sectorAngle / 2); // Смещение
+
+        wheel.style.transform = `rotate(${targetAngle}deg)`;
+
+        // Звук (вибрация)
+        if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+             window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
+        }
+
+        // Ждем окончания анимации (4 сек)
+        setTimeout(() => {
+            // ВЫДАЧА ПРИЗА
+            let msg = "";
+            if(prize.type === 'money') {
+                state.balance += prize.val;
+                msg = `💰 Ты выиграл ${prize.val} PLN!`;
+            } else if(prize.type === 'item') {
+                state.inventory[prize.item] = (state.inventory[prize.item] || 0) + 1;
+                msg = `🎒 Получено: ${prize.text}!`;
+            } else if(prize.type === 'repair') {
+                if(state.items) { state.items.bike=100; state.items.bag=100; state.items.phone=100; state.items.gear=100; }
+                msg = `🛠 Полный ремонт снаряжения!`;
+            } else {
+                msg = `😢 Пусто! Попробуй завтра.`;
+            }
+
+            // Сохраняем дату
+            state.lastSpin = Date.now();
+            if(window.saveGame) window.saveGame();
+            if(window.updateUI) window.updateUI();
+
+            alert(msg);
+            document.getElementById('wheel-modal').remove();
+
+        }, 4100);
+    };
+
+    // 4. ДОБАВЛЕНИЕ КНОПКИ В МЕНЮ
+    setInterval(() => {
+        const menu = document.getElementById('side-menu');
+        // Ищем, нет ли уже кнопки
+        if (menu && !document.getElementById('wheel-menu-btn')) {
+            const btn = document.createElement('div'); 
+            btn.id = 'wheel-menu-btn'; 
+            btn.className = 'menu-item';
+            
+            // Фиолетовый стиль
+            btn.style.cssText = `color: #d500f9 !important; font-weight: bold; cursor: pointer; display:flex; align-items:center; gap:15px;`;
+            btn.innerHTML = `<i class="fa-solid fa-dharmachakra" style="color:#d500f9"></i> 🎡 Колесо Фортуны`;
+            
+            btn.onclick = window.openWheel;
+
+            // Вставляем ПОСЛЕ кнопки Premium (если она есть) или в начало
+            const premBtn = document.getElementById('prem-menu-btn');
+            if (premBtn) {
+                menu.insertBefore(btn, premBtn.nextSibling);
+            } else {
+                // Если премиум кнопки нет, ищем ID
+                const idDisplay = document.getElementById('player-id-display');
+                if(idDisplay) menu.insertBefore(btn, idDisplay.nextSibling);
+            }
+        }
+    }, 1500);
+
+})();
+</script>
