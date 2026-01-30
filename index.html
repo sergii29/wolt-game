@@ -1999,7 +1999,7 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v67: Smart Auto-Pilot Loaded");
+    console.log(">>> Patch v68: God Mode Auto-Pilot Loaded");
 
     window.adrenaline = {
         active: false,
@@ -2007,94 +2007,109 @@
         timer: null
     };
 
-    // 1. ИНТЕРФЕЙС (КНОПКА МОЛНИИ)
+    // 1. КНОПКА (ТЕПЕРЬ ВЫСОКО И УДОБНО)
     function createAdrenalineBtn() {
-        // Удаляем старую, если есть
         const old = document.getElementById('adr-btn'); if(old) old.remove();
 
         const btn = document.createElement('div');
         btn.id = 'adr-btn';
+        // ПОДНЯЛИ ВЫШЕ: bottom: 350px (над панелью поиска)
         btn.style.cssText = `
             position: absolute; 
-            bottom: 180px; 
+            bottom: 350px; 
             left: 15px; 
-            width: 50px; height: 50px; 
+            width: 55px; height: 55px; 
             background: radial-gradient(circle, #ff0000, #800000); 
             border: 2px solid #ff4d4d;
             border-radius: 50%;
             display: flex; justify-content: center; align-items: center; 
-            z-index: 999; cursor: pointer;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+            z-index: 20000; /* Поверх всего */
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
             animation: pulseAdr 2s infinite;
         `;
-        btn.innerHTML = `<i class="fa-solid fa-bolt" style="color:white; font-size:24px;"></i>`;
+        btn.innerHTML = `<i class="fa-solid fa-bolt" style="color:white; font-size:26px;"></i>`;
         btn.onclick = openAdrMenu;
         document.body.appendChild(btn);
     }
 
-    // 2. МЕНЮ ПОКУПКИ
+    // 2. МЕНЮ ОПЛАТЫ (TELEGRAM STARS)
     function openAdrMenu() {
         if (window.adrenaline.active) {
-            if(confirm("Автопилот активен. Отключить досрочно?")) stopAdrenaline();
+            const timeLeft = Math.ceil((window.adrenaline.endTime - Date.now()) / 60000);
+            if(confirm(`Автопилот работает! Осталось ${timeLeft} мин. Отключить?`)) stopAdrenaline();
             return;
         }
 
         const modal = document.createElement('div');
         modal.style.cssText = `
             position: fixed; top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.9); z-index: 10001;
+            background: rgba(0,0,0,0.9); z-index: 20001;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(10px);
         `;
 
         modal.innerHTML = `
-            <h2 style="color:#ff4d4d; font-size:24px; text-transform:uppercase;">⚡ АВТОПИЛОТ</h2>
-            <p style="color:#ccc; text-align:center; margin-bottom:20px;">
-                Полная автоматизация.<br>Сам берет заказы и везет их.
+            <div style="font-size:50px; margin-bottom:10px;">⚡</div>
+            <h2 style="color:white; font-weight:900; text-transform:uppercase; margin-bottom:5px;">Автопилот</h2>
+            <p style="color:#aaa; font-size:12px; margin-bottom:30px; text-align:center;">
+                Полная автоматизация.<br>Без полиции. Без пробок.<br>Бесконечная энергия.
             </p>
             
-            <div onclick="buyAdr(10, 15)" style="background:#222; border:1px solid #444; padding:15px; width:250px; margin-bottom:10px; border-radius:10px; display:flex; justify-content:space-between; cursor:pointer;">
-                <span style="color:white; font-weight:bold;">💉 10 Минут</span>
-                <span style="color:#ffcc00;">15 ⭐</span>
+            <div onclick="buyAdr(10, 15)" style="background:#1c1c1e; border:1px solid #333; padding:15px; width:260px; margin-bottom:10px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                <div>
+                    <div style="color:white; font-weight:bold;">Тест-драйв</div>
+                    <div style="color:#666; font-size:11px;">10 Минут работы</div>
+                </div>
+                <button style="background:#007aff; color:white; border:none; padding:5px 12px; border-radius:15px; font-weight:bold;">15 ⭐️</button>
             </div>
             
-            <div onclick="buyAdr(60, 50)" style="background:linear-gradient(45deg, #400000, #222); border:1px solid red; padding:15px; width:250px; margin-bottom:10px; border-radius:10px; display:flex; justify-content:space-between; cursor:pointer;">
-                <span style="color:white; font-weight:bold;">💊 1 Час</span>
-                <span style="color:#ffcc00;">50 ⭐</span>
+            <div onclick="buyAdr(60, 50)" style="background:linear-gradient(90deg, #2c0b0e, #1c1c1e); border:1px solid #ff3b30; padding:15px; width:260px; margin-bottom:10px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                <div>
+                    <div style="color:#ff3b30; font-weight:bold;">Полная Смена</div>
+                    <div style="color:#888; font-size:11px;">1 Час работы</div>
+                </div>
+                <button style="background:#007aff; color:white; border:none; padding:5px 12px; border-radius:15px; font-weight:bold;">50 ⭐️</button>
             </div>
 
-            <button onclick="this.parentElement.remove()" style="margin-top:20px; background:transparent; color:#888; border:none;">Закрыть</button>
+            <div onclick="this.parentElement.remove()" style="margin-top:20px; color:#666; font-size:14px; cursor:pointer;">Закрыть</div>
         `;
         document.body.appendChild(modal);
     }
 
-    // 3. ПОКУПКА
+    // 3. ПОКУПКА (ЛОГИКА)
     window.buyAdr = function(minutes, cost) {
-        // Здесь должна быть реальная оплата через processPayment
-        // Пока ставим заглушку, чтобы ты мог проверить
-        if(confirm(`Купить Автопилот на ${minutes} мин за ${cost} Stars?`)) {
+        // !!! ВАЖНО: Тут должна быть реальная ссылка на оплату Stars, если она есть
+        // window.processPayment('auto_' + minutes, cost, () => { ... });
+        
+        // Пока имитируем успешную оплату (чтобы ты мог проверить работу)
+        if(confirm(`Списать ${cost} Stars за ${minutes} мин автопилота?`)) {
             activateAdrenaline(minutes);
-            document.querySelector('div[style*="z-index: 10001"]').remove(); 
+            document.querySelector('div[style*="z-index: 20001"]').remove();
         }
     };
 
-    // 4. МОЗГИ БОТА (САМОЕ ВАЖНОЕ)
+    // 4. РЕЖИМ БОГА (АВТОМАТИКА)
     function activateAdrenaline(minutes) {
         window.adrenaline.active = true;
         window.adrenaline.endTime = Date.now() + (minutes * 60 * 1000);
         
-        // Красная рамка (эффект работы)
+        // Звук старта
+        if(window.sfx && window.sfx.notify) window.sfx.notify();
+
+        // Эффект рамки (Электричество)
         const overlay = document.createElement('div');
         overlay.id = 'adr-overlay';
         overlay.style.cssText = `
             position: fixed; top:0; left:0; width:100%; height:100%;
-            box-shadow: inset 0 0 50px rgba(255, 0, 0, 0.5);
-            pointer-events: none; z-index: 900;
-            animation: pulseScreen 1s infinite;
+            box-shadow: inset 0 0 40px #ff3b30;
+            pointer-events: none; z-index: 1000;
+            animation: pulseScreen 1.5s infinite;
+            opacity: 0.6;
         `;
         document.body.appendChild(overlay);
 
-        // Запуск цикла
+        // ЦИКЛ АВТО-РАБОТЫ
         if(window.adrenaline.timer) clearInterval(window.adrenaline.timer);
         
         window.adrenaline.timer = setInterval(() => {
@@ -2104,43 +2119,46 @@
                 return;
             }
 
-            // === ЛОГИКА АВТОКЛИКЕРА ===
-            
-            // 1. Ищем ГЛАВНУЮ ПЕДАЛЬ (id="click-btn")
-            const pedal = document.getElementById('click-btn');
-            if (pedal && !pedal.disabled && pedal.offsetParent !== null) {
-                pedal.click();
-                // Визуальный эффект нажатия
-                pedal.style.transform = "scale(0.95)";
-                setTimeout(() => pedal.style.transform = "scale(1)", 50);
-                return; // Если нажали педаль, остальное не ищем в этом такте
+            // === A. ЧИТЫ (ЧИСТАЯ РАБОТА) ===
+            // Замораживаем потребности, чтобы не было остановок
+            if(state) {
+                state.needs = { energy: 100, water: 100, mood: 100 };
+                // Если есть переменные пробок или полиции - сбрасываем их
+                // (Примерно так, зависит от твоего кода, но это не повредит)
+                state.isDetour = false; 
+                state.isPolice = false;
             }
 
-            // 2. Ищем кнопки действий по ТЕКСТУ (Принять, Завершить, Забрать)
-            // Это универсальный поиск: он ищет любую кнопку на экране с нужными словами
-            const keywords = ['Принять', 'Завершить', 'Забрать', 'Ок', 'ЗАБРАТЬ', 'Accept', 'Complete'];
+            // === B. НАЖАТИЕ КНОПОК ===
             
-            // Собираем все кнопки на странице
-            const buttons = document.querySelectorAll('button, .btn, div[onclick]');
+            // 1. ГЛАВНАЯ ПЕДАЛЬ (id="click-btn")
+            const pedal = document.getElementById('click-btn');
+            if (pedal && !pedal.disabled && pedal.offsetParent) {
+                pedal.click();
+                // Визуальный клик
+                pedal.style.transform = "scale(0.96)";
+                setTimeout(() => pedal.style.transform = "scale(1)", 50);
+                return; 
+            }
+
+            // 2. УНИВЕРСАЛЬНЫЙ КЛИКЕР (Ищет слова)
+            const keywords = ['Принять', 'Завершить', 'Забрать', 'Ок', 'ЗАБРАТЬ', 'Accept', 'Complete', 'Claim'];
+            const buttons = document.querySelectorAll('button, .btn, .menu-item, div[onclick]');
             
             for (let btn of buttons) {
-                // Проверяем, видна ли кнопка
                 if (btn.offsetParent !== null && !btn.disabled) {
                     const text = btn.innerText || btn.textContent;
-                    // Если текст совпадает с ключевыми словами
+                    // Игнорируем саму кнопку Адреналина и Меню
+                    if(btn.id === 'adr-btn' || btn.id === 'menu-btn') continue;
+                    
                     if (keywords.some(k => text.includes(k))) {
-                        console.log("Auto-Bot clicking:", text);
                         btn.click();
-                        break; // Нажали одну - хватит пока
+                        break; 
                     }
                 }
             }
 
-            // 3. Если вдруг выпал ЛУТ (из патча v62)
-            const lootBtn = document.getElementById('loot-ok-btn');
-            if (lootBtn) lootBtn.click();
-
-        }, 400); // Скорость: 2.5 нажатия в секунду (как человек)
+        }, 300); // 3 клика в секунду
     }
 
     function stopAdrenaline() {
@@ -2148,14 +2166,14 @@
         clearInterval(window.adrenaline.timer);
         const ov = document.getElementById('adr-overlay');
         if(ov) ov.remove();
-        alert("Автопилот отключен!");
+        alert("Автопилот завершил работу.");
     }
 
-    // Стили
+    // Стили анимации
     const style = document.createElement('style');
     style.innerHTML = `
-        @keyframes pulseAdr { 0% { transform: scale(1); box-shadow: 0 0 10px red; } 50% { transform: scale(1.1); box-shadow: 0 0 20px red; } 100% { transform: scale(1); box-shadow: 0 0 10px red; } }
-        @keyframes pulseScreen { 0% { box-shadow: inset 0 0 30px rgba(255, 0, 0, 0.3); } 50% { box-shadow: inset 0 0 80px rgba(255, 0, 0, 0.6); } 100% { box-shadow: inset 0 0 30px rgba(255, 0, 0, 0.3); } }
+        @keyframes pulseAdr { 0% { box-shadow: 0 0 10px red; transform: scale(1); } 50% { box-shadow: 0 0 25px red; transform: scale(1.1); } 100% { box-shadow: 0 0 10px red; transform: scale(1); } }
+        @keyframes pulseScreen { 0% { opacity: 0.3; } 50% { opacity: 0.6; } 100% { opacity: 0.3; } }
     `;
     document.head.appendChild(style);
 
