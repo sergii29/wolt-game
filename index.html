@@ -1799,58 +1799,101 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v57: Crystal UI Loaded");
+    console.log(">>> Patch v58: Winter Mode Loaded");
 
     const style = document.createElement('style');
     style.innerHTML = `
-        /* 1. ДЕЛАЕМ ПАНЕЛЬ ПРОЗРАЧНОЙ КАК ВОДА */
+        /* 1. СТЕКЛЯННАЯ ПАНЕЛЬ (СОХРАНЯЕМ ИЗ v57) */
         .bottom-sheet {
-            /* Всего 15% белого цвета, 85% прозрачности */
             background: rgba(255, 255, 255, 0.15) !important;
-            
-            /* Почти убираем размытие (было 12px, стало 2px) */
             backdrop-filter: blur(2px) !important;
             -webkit-backdrop-filter: blur(2px) !important;
-            
-            /* Тонкая белая линия сверху */
-            border-top: 1px solid rgba(255, 255, 255, 0.5) !important;
-            
-            /* Убираем тень, чтобы не было грязи */
+            border-top: 1px solid rgba(255, 255, 255, 0.6) !important;
             box-shadow: none !important;
         }
 
-        /* 2. ЧТОБЫ ТЕКСТ ЧИТАЛСЯ НА КАРТЕ */
-        /* Делаем черные буквы с мощной белой обводкой */
-        #city-label, #rest-name, #order-dest, #status-label, h3, p, span {
-            color: #000 !important;
+        /* 2. ЛЕДЯНОЙ ТЕКСТ СО СНЕЖНОЙ ШАПКОЙ */
+        #city-label, #rest-name, #order-dest, #status-label, h3, .balance-amount {
+            color: #0d1b2a !important; /* Темно-синий текст */
+            position: relative;
+            z-index: 10;
             font-weight: 900 !important;
+            
+            /* МАГИЯ СНЕГА НА БУКВАХ */
             text-shadow: 
-                2px 0 0 #fff, -2px 0 0 #fff, 
-                0 2px 0 #fff, 0 -2px 0 #fff, 
-                1px 1px 0 #fff, -1px -1px 0 #fff, 
-                1px -1px 0 #fff, -1px 1px 0 #fff !important;
+                0 -3px 0 #ffffff,       /* Снежная шапка сверху */
+                0 -5px 3px #ffffff,     /* Пушистый снег */
+                0 0 10px #00ffff,       /* Ледяное свечение */
+                2px 2px 0 #fff;         /* Контур для читаемости */
+                
+            animation: icePulse 3s infinite alternate;
         }
 
-        /* 3. СЛАЙДЕР (КРАСНЫЙ/ЗЕЛЕНЫЙ) */
-        /* Тоже делаем полупрозрачным */
+        @keyframes icePulse {
+            0% { filter: drop-shadow(0 0 1px cyan); }
+            100% { filter: drop-shadow(0 0 5px blue); }
+        }
+
+        /* 3. ИКОНКИ ТОЖЕ ЗАМЕРЗЛИ */
+        .fa-solid {
+            text-shadow: 0 -2px 2px white;
+        }
+
+        /* 4. СЛАЙДЕР (ЗИМНИЙ) */
         .slider-container {
-            background: rgba(255, 255, 255, 0.3) !important;
-            border: 2px solid rgba(255, 255, 255, 0.6) !important;
+            background: rgba(200, 240, 255, 0.4) !important; /* Голубоватый лед */
+            border: 2px solid #fff !important;
         }
-        
-        .slider-text {
-            color: #333 !important;
-            text-shadow: none !important; /* Внутри слайдера обводка не нужна */
-            font-weight: bold !important;
+
+        /* 5. ПАДАЮЩИЕ СНЕЖИНКИ */
+        .snowflake {
+            position: fixed;
+            top: -20px;
+            color: white;
+            font-size: 1em;
+            font-family: Arial, sans-serif;
+            text-shadow: 0 0 2px #000;
+            z-index: 99999; /* Поверх всего */
+            pointer-events: none; /* Чтобы можно было кликать сквозь них */
+            animation: fall linear forwards;
         }
-        
-        /* 4. ИКОНКА РЕСТОРАНА */
-        #rest-icon {
-            background: rgba(255, 255, 255, 0.8) !important;
-            border: 1px solid #fff;
+
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(360deg); }
         }
     `;
     document.head.appendChild(style);
+
+    // --- ГЕНЕРАТОР СНЕГА (JS) ---
+    function createSnow() {
+        const snowflake = document.createElement('div');
+        snowflake.innerHTML = '❄';
+        snowflake.classList.add('snowflake');
+        
+        // Случайная позиция по ширине
+        snowflake.style.left = Math.random() * 100 + 'vw';
+        
+        // Случайный размер
+        const size = Math.random() * 10 + 10; // от 10px до 20px
+        snowflake.style.fontSize = size + 'px';
+        
+        // Случайная прозрачность
+        snowflake.style.opacity = Math.random() * 0.7 + 0.3;
+        
+        // Случайная скорость падения
+        const duration = Math.random() * 3 + 3; // от 3 до 6 секунд
+        snowflake.style.animationDuration = duration + 's';
+
+        document.body.appendChild(snowflake);
+
+        // Удаляем снежинку, когда она упала
+        setTimeout(() => {
+            snowflake.remove();
+        }, duration * 1000);
+    }
+
+    // Запускаем снегопад (новая снежинка каждые 200 мс)
+    setInterval(createSnow, 200);
 
 })();
 </script>
