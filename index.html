@@ -1799,37 +1799,55 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v56: Glass UI Loaded");
+    console.log(">>> Patch v57: Crystal UI Loaded");
 
-    // Создаем стилей для эффекта стекла
     const style = document.createElement('style');
     style.innerHTML = `
-        /* Делаем нижнюю панель полупрозрачной */
+        /* 1. ДЕЛАЕМ ПАНЕЛЬ ПРОЗРАЧНОЙ КАК ВОДА */
         .bottom-sheet {
-            background: rgba(255, 255, 255, 0.65) !important; /* 65% непрозрачности */
-            backdrop-filter: blur(12px) !important;          /* Эффект размытия фона (как стекло) */
-            -webkit-backdrop-filter: blur(12px) !important;  /* Для iPhone */
-            border-top: 1px solid rgba(255, 255, 255, 0.8) !important; /* Светлая грань сверху */
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.1) !important; /* Мягкая тень */
-            color: #000 !important; /* Текст черный для контраста */
+            /* Всего 15% белого цвета, 85% прозрачности */
+            background: rgba(255, 255, 255, 0.15) !important;
+            
+            /* Почти убираем размытие (было 12px, стало 2px) */
+            backdrop-filter: blur(2px) !important;
+            -webkit-backdrop-filter: blur(2px) !important;
+            
+            /* Тонкая белая линия сверху */
+            border-top: 1px solid rgba(255, 255, 255, 0.5) !important;
+            
+            /* Убираем тень, чтобы не было грязи */
+            box-shadow: none !important;
         }
 
-        /* Улучшаем читаемость текста на прозрачном фоне */
-        #city-label, #rest-name, #order-dest, #status-label {
-            text-shadow: 0 0 15px rgba(255, 255, 255, 1) !important; /* Подсветка текста */
-            font-weight: 800 !important;
+        /* 2. ЧТОБЫ ТЕКСТ ЧИТАЛСЯ НА КАРТЕ */
+        /* Делаем черные буквы с мощной белой обводкой */
+        #city-label, #rest-name, #order-dest, #status-label, h3, p, span {
+            color: #000 !important;
+            font-weight: 900 !important;
+            text-shadow: 
+                2px 0 0 #fff, -2px 0 0 #fff, 
+                0 2px 0 #fff, 0 -2px 0 #fff, 
+                1px 1px 0 #fff, -1px -1px 0 #fff, 
+                1px -1px 0 #fff, -1px 1px 0 #fff !important;
         }
 
-        /* Делаем слайдер тоже немного прозрачным, чтобы не был бельмом */
+        /* 3. СЛАЙДЕР (КРАСНЫЙ/ЗЕЛЕНЫЙ) */
+        /* Тоже делаем полупрозрачным */
         .slider-container {
-            background: rgba(255, 255, 255, 0.5) !important;
-            border: 1px solid rgba(0,0,0,0.1) !important;
+            background: rgba(255, 255, 255, 0.3) !important;
+            border: 2px solid rgba(255, 255, 255, 0.6) !important;
         }
-
-        /* Чтобы иконка ресторана (бургер) выделялась */
+        
+        .slider-text {
+            color: #333 !important;
+            text-shadow: none !important; /* Внутри слайдера обводка не нужна */
+            font-weight: bold !important;
+        }
+        
+        /* 4. ИКОНКА РЕСТОРАНА */
         #rest-icon {
-            background: rgba(255, 255, 255, 0.9) !important;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.8) !important;
+            border: 1px solid #fff;
         }
     `;
     document.head.appendChild(style);
