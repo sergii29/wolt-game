@@ -1261,18 +1261,11 @@
 
 
   
-// ============================================================
-// --- PATCH v47 FIX: FORCE BUTTON & PAYMENTS ---
-// Key: WARSZAWA_FOREVER
-// ============================================================
-
+<script>
 (function() {
-    console.log(">>> Patch v47 FIX Loaded");
+    console.log(">>> PATCH V47: FINAL FIX (BUTTON + PAYMENTS)");
 
-    // 1. НАСТРОЙКИ (БОЕВОЙ РЕЖИМ)
-    const USE_REAL_PAYMENTS = true; 
-
-    // ТВОИ ССЫЛКИ
+    // 1. ТВОИ ССЫЛКИ (УЖЕ ВСТАВЛЕНЫ)
     const INVOICE_LINKS = {
         'tier1': 'https://t.me/$p_u59Iwq6VOyBQAA7UM9ZdWS6KQ',
         'tier2': 'https://t.me/$qF0lgowq6VOzBQAABRdV00am4SY',
@@ -1282,60 +1275,38 @@
         'money_l': 'https://t.me/$4YB9VYwq6VO3BQAAMJk1Dd_yzBk',
     };
 
-    // ТАРИФЫ
+    // 2. НАСТРОЙКИ
+    const USE_REAL_PAYMENTS = true;
+    
+    // КОНФИГ ТОВАРОВ
     window.PREMIUM_CFG = {
         tier1: { id: 'tier1', name: '☕ Перерыв', time: 5,  limit: 20, cost: 10 },
         tier2: { id: 'tier2', name: '🚀 Смена',   time: 10, limit: 45, cost: 25 },
         tier3: { id: 'tier3', name: '👑 Элита',   time: 25, limit: 100, cost: 50 } 
     };
-
     window.CASH_PACKS = [
         { id: 'money_s', cost: 10, val: 500,   name: '🆘 Заначка' },
         { id: 'money_m', cost: 25, val: 2500,  name: '💼 Зарплата' },
         { id: 'money_l', cost: 75, val: 15000, name: '💎 Инвестор' }
     ];
 
-    // БАЗА ТОВАРОВ
-    const SAFE_ITEMS = {
-        'water': { name: 'Вода (0.5л)', cost: 2.0, desc: 'Восстанавливает воду' },
-        'bar': { name: 'Сникерс', cost: 4.5, desc: 'Энергия и настроение' },
-        'energy_drink': { name: 'Red Bull', cost: 7.0, desc: 'Мощный заряд энергии' },
-        'coffee': { name: 'Латте', cost: 9.0, desc: 'Для настроения' },
-        'chocolate': { name: 'Шоколадка', cost: 6.5, desc: 'Подарок клиенту' },
-        'gas': { name: 'Бензин (10л)', cost: 12.0, desc: 'Только для Такси' }
-    };
-
-    const SAFE_REPAIRS = {
-        'bike': { name: 'Велосипед / Авто', cost: 100 },
-        'bag': { name: 'Сумка / Салон', cost: 40 },
-        'phone': { name: 'Связь / Электроника', cost: 20 },
-        'gear': { name: 'Одежда / Шины', cost: 80 }
-    };
-
-    // --- ЛОГИКА ОПЛАТЫ ---
+    // 3. ФУНКЦИЯ ОПЛАТЫ
     window.processPayment = function(itemId, cost, onSuccess) {
         const tg = window.Telegram.WebApp;
-        if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-
         if (USE_REAL_PAYMENTS) {
             const url = INVOICE_LINKS[itemId];
-            if (!url) {
-                if(tg.showPopup) tg.showPopup({title: 'Ошибка', message: `Нет ссылки для ${itemId}`, buttons: [{type:'ok'}]});
-                else alert(`Error: Link missing for ${itemId}`);
-                return;
-            }
+            if (!url) { alert(`ОШИБКА: Нет ссылки для ${itemId}`); return; }
             tg.openInvoice(url, (status) => {
                 if (status === 'paid') onSuccess();
-                else if (status === 'failed') {
-                    if(tg.showPopup) tg.showPopup({title: 'Ошибка', message: 'Оплата не прошла.', buttons: [{type:'ok'}]});
-                }
+                else if (status === 'failed') tg.showAlert('Оплата не прошла');
             });
         } else {
-            if(confirm(`(TEST MODE) Оплатить ${cost} Stars?`)) onSuccess();
+            // Тест (на всякий случай)
+            if(confirm(`TEST PAY ${cost}?`)) onSuccess();
         }
     };
 
-    // --- ПОКУПКИ ---
+    // 4. ПОКУПКА ПРЕМИУМА
     window.buyPrem = function(id, cost, time, limit) {
         window.processPayment(id, cost, () => {
             const now = Date.now();
@@ -1344,48 +1315,81 @@
             state.premium.endTime = now + (time * 60 * 1000);
             state.premium.itemLimit = limit; 
             state.premium.itemsTaken = 0;
+            
+            // Лечим и чиним всё
             state.needs = { energy: 100, water: 100, mood: 100 };
             if(state.items) { state.items.bike=100; state.items.bag=100; state.items.phone=100; state.items.gear=100; }
             state.debtOverdue = false; 
-            const pedal = document.getElementById('pedal-btn');
-            if(pedal) { pedal.disabled = false; pedal.classList.remove('blocked'); if(currentOrder) pedal.textContent = (state.taxi && state.taxi.active) ? 'ГАЗ В ПОЛ' : 'ЖМИ ГАЗ (PEDAL)'; }
-            const bribe = document.getElementById('bribe-btn'); if(bribe) bribe.style.display = 'none';
+
             saveGame(); 
-            if(window.syncToCloud) window.syncToCloud(true); 
             if(window.updateUI) window.updateUI();
             document.getElementById('premium-modal').remove();
             
             const tg = window.Telegram.WebApp;
-            if(tg.showPopup) tg.showPopup({title: 'Успешно!', message: `👑 GOD MODE активирован!`, buttons: [{type:'ok'}]});
-            else showToast('👑 GOD MODE: ВКЛЮЧЕН!', 'success');
+            if(tg.showAlert) tg.showAlert('👑 GOD MODE: ВКЛЮЧЕН!');
+            else alert('GOD MODE ON');
+            
             window.startPremiumLoop();
         });
     };
 
+    // 5. ПОКУПКА ДЕНЕГ
     window.buyMoney = function(id, val, cost) {
         window.processPayment(id, cost, () => {
             state.balance += val; 
             saveGame(); 
-            if(window.syncToCloud) window.syncToCloud(true); 
             if(window.updateUI) window.updateUI();
             document.getElementById('premium-modal').remove();
+            
             const tg = window.Telegram.WebApp;
-            if(tg.showPopup) tg.showPopup({title: 'Успешно!', message: `Зачислено: +${val} PLN`, buttons: [{type:'ok'}]});
-            else showToast(`💸 +${val} PLN`, 'success');
+            if(tg.showAlert) tg.showAlert(`💸 Зачислено: +${val} PLN`);
+            else alert(`+${val} PLN`);
         });
     };
 
-    // --- ЗАЩИТА ---
-    if(!window._origCheckDebt) window._origCheckDebt = window.checkDebt;
-    window.checkDebt = function() { if(state.premium && state.premium.active) { state.debtOverdue = false; return; } if(window._origCheckDebt) window._origCheckDebt(); };
-    if(!window._origUpdateUI) window._origUpdateUI = window.updateUI;
-    window.updateUI = function() { if(window._origUpdateUI) window._origUpdateUI(); if(state.premium && state.premium.active) { const g = document.getElementById('garnishment-info'); if(g) g.style.display = 'none'; const w = document.getElementById('debt-warning'); if(w) w.style.display = 'none'; } };
-    if(!window._origTrigger) window._origTrigger = window.triggerRandomEvent;
-    window.triggerRandomEvent = function() { if (state.premium && state.premium.active) return; if(window._origTrigger) window._origTrigger(); };
-    if(!window._origCheckPenalties) window._origCheckPenalties = window.checkSystemPenalties;
-    window.checkSystemPenalties = function() { if (state.premium && state.premium.active) return; if(window._origCheckPenalties) window._origCheckPenalties(); };
+    // 6. ОТКРЫТИЕ ОКНА
+    window.openPremiumModal = function() {
+        const old = document.getElementById('premium-modal'); if(old) old.remove();
+        
+        // Закрываем меню (чтобы не мешало)
+        const menu = document.getElementById('side-menu'); if(menu) menu.classList.remove('open');
+        const overlay = document.getElementById('side-menu-overlay'); if(overlay) overlay.classList.remove('open');
 
-    // --- ЦИКЛ ПРЕМИУМА ---
+        const modal = document.createElement('div');
+        modal.id = 'premium-modal';
+        modal.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10001; display:flex; justify-content:center; align-items:center; backdrop-filter:blur(5px);";
+        modal.onclick = (ev) => { if(ev.target === modal) modal.remove(); };
+
+        let html = `
+            <div style="background:#1a1a1a; width:90%; max-width:350px; border-radius:16px; border:1px solid #FFD700; overflow:hidden; box-shadow:0 0 20px rgba(255, 215, 0, 0.2);">
+                <div style="background:linear-gradient(45deg, #FFD700, #FFA500); padding:15px; display:flex; justify-content:space-between; align-items:center; color:black;">
+                    <h2 style="margin:0; font-size:18px; font-weight:900">PREMIUM ⭐</h2>
+                    <div onclick="document.getElementById('premium-modal').remove()" style="font-weight:bold; font-size:20px; cursor:pointer;">✕</div>
+                </div>
+                <div style="padding:15px; max-height:70vh; overflow-y:auto;">
+                    <div style="font-size:11px; color:#888; text-align:center; margin-bottom:15px;">Оплата через Telegram Stars</div>`;
+
+        // Кнопки тарифов
+        Object.values(window.PREMIUM_CFG).forEach(t => {
+            html += `
+                <div style="background:#222; border:1px solid #333; border-radius:10px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div><div style="color:#FFD700; font-weight:bold; font-size:15px;">${t.name}</div><div style="font-size:11px; color:#aaa;">⏱ ${t.time} мин | 🎒 ${t.limit} шт.</div></div>
+                    <button onclick="window.buyPrem('${t.id}', ${t.cost}, ${t.time}, ${t.limit})" style="background:#0088cc; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; font-size:14px;">${t.cost} ⭐</button>
+                </div>`;
+        });
+        
+        // Кнопки денег
+        html += `<div style="border-top:1px solid #333; margin:15px 0 15px 0;"></div><div style="font-size:12px; font-weight:bold; color:#00e676; margin-bottom:10px;">💸 ПОПОЛНЕНИЕ</div>`;
+        window.CASH_PACKS.forEach(c => {
+            html += `<div style="background:#222; border:1px solid #333; border-radius:10px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div style="color:#00e676; font-weight:bold;">+${c.val} PLN</div><button onclick="window.buyMoney('${c.id}', ${c.val}, ${c.cost})" style="background:#0088cc; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold;">${c.cost} ⭐</button></div>`;
+        });
+
+        html += `</div></div>`; 
+        modal.innerHTML = html; 
+        document.body.appendChild(modal);
+    };
+
+    // 7. ИНДИКАТОР ПРЕМИУМА
     window.startPremiumLoop = function() {
         let el = document.getElementById('prem-indicator');
         if(!el) { 
@@ -1403,138 +1407,70 @@
                     const s = left%60;
                     el.style.display = 'block'; 
                     el.innerHTML = `👑 VIP ${m}:${s.toString().padStart(2,'0')}`;
-                    state.needs.energy = 100; state.needs.water = 100; state.needs.mood = 100;
-                    if(state.items) { state.items.bike=100; state.items.bag=100; state.items.phone=100; state.items.gear=100; }
-                    if(state.debt > 0) state.debtOverdue = false; 
+                    
+                    // Бесконечные ресурсы
+                    state.needs = {energy:100, water:100, mood:100};
+                    if(state.items) {state.items.bike=100; state.items.bag=100;}
+                    
                     requestAnimationFrame(loop);
                 } else {
                     state.premium.active = false; 
                     el.style.display = 'none'; 
-                    showToast('🚨 VIP ИСТЕК!', 'warn');
-                    if(state.debt > 0) { state.debtOverdue = true; state.debtTimer = Date.now() - 1000; }
-                    saveGame(); if(window.updateUI) window.updateUI();
+                    saveGame(); window.updateUI();
                 }
             } else { el.style.display = 'none'; }
         }
         loop();
     };
 
-    // --- МЕНЮ (MODAL) ---
-    window.openPremiumModal = function(e) {
-        if(e) { e.preventDefault(); e.stopPropagation(); }
-        const menu = document.getElementById('side-menu'); if(menu) menu.classList.remove('open');
-        const overlay = document.getElementById('side-menu-overlay'); if(overlay) overlay.classList.remove('open');
-        const old = document.getElementById('premium-modal'); if(old) old.remove();
-
-        const modal = document.createElement('div');
-        modal.id = 'premium-modal';
-        modal.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10001; display:flex; justify-content:center; align-items:center; backdrop-filter:blur(5px);";
-        modal.onclick = (ev) => { if(ev.target === modal) modal.remove(); };
-
-        let html = `
-            <div style="background:#1a1a1a; width:90%; max-width:350px; border-radius:16px; border:1px solid #FFD700; overflow:hidden; box-shadow:0 0 20px rgba(255, 215, 0, 0.2);">
-                <div style="background:linear-gradient(45deg, #FFD700, #FFA500); padding:15px; display:flex; justify-content:space-between; align-items:center; color:black;">
-                    <h2 style="margin:0; font-size:18px; font-weight:900"><i class="fa-solid fa-crown"></i> PREMIUM</h2>
-                    <div onclick="document.getElementById('premium-modal').remove()" style="font-weight:bold; font-size:20px; cursor:pointer;">✕</div>
-                </div>
-                <div style="padding:15px; max-height:70vh; overflow-y:auto;">
-                    <div style="font-size:11px; color:#888; text-align:center; margin-bottom:15px;">Оплата через Telegram Stars ⭐</div>`;
-
-        Object.values(window.PREMIUM_CFG).forEach(t => {
-            html += `
-                <div style="background:#222; border:1px solid #333; border-radius:10px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <div><div style="color:#FFD700; font-weight:bold; font-size:15px;">${t.name}</div><div style="font-size:11px; color:#aaa;">⏱ ${t.time} мин | 🎒 ${t.limit} шт.</div></div>
-                    <button onclick="window.buyPrem('${t.id}', ${t.cost}, ${t.time}, ${t.limit})" style="background:#0088cc; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; font-size:14px;">${t.cost} ⭐</button>
-                </div>`;
-        });
-        html += `<div style="border-top:1px solid #333; margin:15px 0 15px 0;"></div><div style="font-size:12px; font-weight:bold; color:#00e676; margin-bottom:10px;">💸 ПОПОЛНЕНИЕ</div>`;
-        window.CASH_PACKS.forEach(c => {
-            html += `<div style="background:#222; border:1px solid #333; border-radius:10px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div style="color:#00e676; font-weight:bold;">+${c.val} PLN</div><button onclick="window.buyMoney('${c.id}', ${c.val}, ${c.cost})" style="background:#0088cc; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold;">${c.cost} ⭐</button></div>`;
-        });
-        html += `</div></div>`; modal.innerHTML = html; document.body.appendChild(modal);
-    };
-
-    // 8. РЕНДЕР МАГАЗИНА
-    window.renderShop = function(c) {
-        c.innerHTML = '';
-        if(state.premium && state.premium.active) {
-             if(isNaN(state.premium.itemLimit)) state.premium.itemLimit = 30; 
-             if(isNaN(state.premium.itemsTaken)) state.premium.itemsTaken = 0;
-        }
-        const isPrem = state.premium && state.premium.active && state.premium.endTime > Date.now();
-        const limit = state.premium ? (state.premium.itemLimit || 0) : 0;
-        const taken = state.premium ? (state.premium.itemsTaken || 0) : 0;
-        const remaining = Math.max(0, limit - taken);
-        const isFree = isPrem && remaining > 0;
-
-        if(isPrem) { c.innerHTML += `<div style="background:gold; color:black; padding:10px; text-align:center; border-radius:8px; margin-bottom:15px; font-weight:bold">👑 GOD MODE<br><span style="font-size:11px; font-weight:normal">Халява: <b>${remaining} шт.</b></span></div>`; }
-        
-        let html = '<div class="shop-section"><h3>🎒 Товары</h3>';
-        Object.keys(SAFE_ITEMS).forEach(k => {
-            const item = SAFE_ITEMS[k]; const isTaxi = state.taxi && state.taxi.active; if(!isTaxi && k === 'gas') return; 
-            let price = item.cost; if(!isPrem) { const l = Object.values(state.repairs || {}).reduce((a,b)=>a+b,0); price = price * (1 + (l * 0.1)); }
-            const priceDisplay = isFree ? `<span style="text-decoration:line-through; opacity:0.5">${price.toFixed(1)}</span> FREE` : `${price.toFixed(1)} PLN`;
-            const btnBg = isFree ? 'gold' : 'white'; const btnColor = isFree ? 'black' : '#0088cc';
-            const action = isFree ? `window.buyFree('${k}', this)` : `window.buyItem('${k}', ${price}, this)`;
-            const owned = (state.inventory && state.inventory[k]) ? state.inventory[k] : 0;
-            html += `<div class="shop-card" style="${isFree ? 'border:1px solid gold' : ''}"><div><div style="font-weight:bold">${item.name} <span style="font-size:10px; color:#aaa">(x${owned})</span></div><div class="shop-desc">${item.desc}</div></div><button class="shop-btn" style="background:${btnBg}; color:${btnColor}; border-color:${btnBg}; font-weight:bold" onclick="${action}">${priceDisplay}</button></div>`;
-        });
-        html += '</div>';
-
-        html += '<div class="shop-section"><h3>🛠 Сервис</h3>';
-        Object.keys(SAFE_REPAIRS).forEach(k => {
-            const info = SAFE_REPAIRS[k]; const health = (state.items && state.items[k] !== undefined) ? Math.floor(state.items[k]) : 0;
-            let cost = info.cost; if(!isPrem) { const lvl = (state.repairs && state.repairs[k]) ? state.repairs[k] : 0; cost = (cost + (lvl * 5)); }
-            const btnText = isPrem ? 'FREE FIX' : `-${cost.toFixed(0)} PLN`; const btnStyle = isPrem ? 'background:#00e676; color:white; border:none' : '';
-            const action = isPrem ? `window.buyRepairPrem('${k}', this)` : `window.buyRepair('${k}', ${cost}, this)`;
-            html += `<div class="shop-card" style="border-color:${isPrem?'#00e676':'#eee'}"><div><div style="font-weight:bold">${info.name}</div><div class="shop-desc" style="color:${health<50?'red':'#666'}">Состояние: ${health}%</div></div><button class="shop-btn" style="${btnStyle}" onclick="${action}">${btnText}</button></div>`;
-        });
-        html += '</div>'; c.innerHTML += html;
-    };
-    
-    window.buyFree = function(k, btn) {
-        if(state.premium.itemsTaken < state.premium.itemLimit) {
-            if(!state.inventory) state.inventory = {}; state.inventory[k] = (state.inventory[k]||0)+1; state.premium.itemsTaken++;
-            const t = btn.textContent; btn.textContent = "ВЗЯЛ"; setTimeout(()=>{ btn.textContent = t; window.renderShop(document.getElementById('modal-body')); }, 250);
-            saveGame(); if(window.updateUI) window.updateUI();
-        } else { showToast('Лимит халявы исчерпан!', 'warn'); window.renderShop(document.getElementById('modal-body')); }
-    };
-    window.buyRepairPrem = function(k, btn) {
-        if(state.items) state.items[k] = 100;
-        btn.textContent = "ГОТОВО"; setTimeout(()=>{ window.renderShop(document.getElementById('modal-body')); }, 250);
-        saveGame(); if(window.updateUI) window.updateUI();
-    };
-
-    // 9. КНОПКА В МЕНЮ (ПРИНУДИТЕЛЬНО)
-    setInterval(() => {
+    // 8. ПРИНУДИТЕЛЬНАЯ ВСТАВКА КНОПКИ (САМОЕ ВАЖНОЕ)
+    const btnCheckInterval = setInterval(() => {
         const menu = document.getElementById('side-menu');
-        // Если меню есть, а кнопки нет
-        if (menu && !document.getElementById('prem-menu-btn')) {
-            const btn = document.createElement('div'); 
-            btn.id = 'prem-menu-btn'; 
-            btn.className = 'menu-item';
-            btn.innerHTML = `<i class="fa-solid fa-gem"></i> PREMIUM / ДОНАТ`;
-            btn.style.cssText = `background: linear-gradient(45deg, #FFD700, #FFA500); color: black !important; font-weight: 900 !important; border: 1px solid #B8860B; text-align: center; padding: 15px; margin-top: 10px; cursor: pointer; z-index: 99999; animation: pulseGold 3s infinite;`;
-            btn.ontouchstart = function(e) { e.preventDefault(); window.openPremiumModal(); }; 
-            btn.onclick = function() { window.openPremiumModal(); };
-            
-            // Вставляем сразу ПОСЛЕ отображения ID (вверху меню)
-            const idDisplay = document.getElementById('player-id-display');
-            if(idDisplay && idDisplay.parentNode === menu) {
-                 menu.insertBefore(btn, idDisplay.nextSibling);
-            } else {
-                 menu.appendChild(btn); // Или в конец, если не нашли ID
-            }
-        }
-        
-        // Цикл индикатора
-        if(typeof state !== 'undefined' && state.premium && state.premium.active) {
-            const el = document.getElementById('prem-indicator'); if(!el || el.style.display === 'none') window.startPremiumLoop();
-        }
-    }, 1000);
+        if (!menu) return; // Если меню еще не прогрузилось, ждем
 
-    const style = document.createElement('style'); 
-    style.innerHTML = `@keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }`; 
-    document.head.appendChild(style);
+        // Проверяем, есть ли уже кнопка
+        if (document.getElementById('prem-menu-btn')) return;
+
+        console.log("Adding Premium Button...");
+        
+        const btn = document.createElement('div'); 
+        btn.id = 'prem-menu-btn'; 
+        btn.className = 'menu-item';
+        // Желтый стиль
+        btn.style.cssText = `background: linear-gradient(45deg, #FFD700, #FFA500) !important; color: black !important; font-weight: 900 !important; border: 1px solid #B8860B; text-align: center; padding: 15px; margin: 10px 0; cursor: pointer; display:block; animation: pulseGold 3s infinite;`;
+        
+        btn.innerHTML = `<i class="fa-solid fa-gem"></i> PREMIUM / ДОНАТ`;
+        
+        // Обработчики клика
+        btn.onclick = function(e) { 
+            e.preventDefault(); 
+            e.stopPropagation();
+            window.openPremiumModal(); 
+        };
+        btn.ontouchstart = function(e) {
+            e.preventDefault(); 
+            e.stopPropagation();
+            window.openPremiumModal();
+        };
+
+        // ВСТАВЛЯЕМ СРАЗУ ПОСЛЕ ID ИГРОКА (ВВЕРХ МЕНЮ)
+        const idDisplay = document.getElementById('player-id-display');
+        if (idDisplay && idDisplay.parentNode === menu) {
+            menu.insertBefore(btn, idDisplay.nextSibling);
+        } else {
+            // Если ID не найден, вставляем в самое начало меню
+            menu.prepend(btn);
+        }
+
+        // Если кнопка добавлена, запускаем проверку индикатора
+        if(state.premium && state.premium.active) window.startPremiumLoop();
+
+    }, 1000); // Проверяем каждую секунду
+
+    // Стиль анимации
+    const s = document.createElement('style');
+    s.innerHTML = `@keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }`;
+    document.head.appendChild(s);
 
 })();
+</script>
