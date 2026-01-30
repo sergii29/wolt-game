@@ -815,8 +815,8 @@
         }
 
         function missOrder() {
-            state.isSearching = true; currentOrder = null; state.balance -= 0.10; 
-            showToast('Заказ упущен! Штраф -0.10 PLN', 'warn'); saveGame(); updateUI(); 
+            state.isSearching = true; currentOrder = null; state.balance -= 1.0;
+            showToast('Заказ упущен! Штраф -1.0 PLN', 'warn'); saveGame(); updateUI(); 
             clearMapVisuals();
             startSearching();
         }
