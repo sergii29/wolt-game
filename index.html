@@ -1939,50 +1939,55 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v64: UI Fix Loaded");
+    console.log(">>> Patch v65: Contrast Fix Loaded");
 
     const style = document.createElement('style');
     style.innerHTML = `
-        /* 1. ПРИНУДИТЕЛЬНАЯ ПРОЗРАЧНОСТЬ */
+        /* === 1. НИЖНЯЯ ПАНЕЛЬ (СТЕКЛО + ЧЕРНЫЙ ТЕКСТ) === */
         .bottom-sheet {
-            /* Почти полная прозрачность (10% белого) */
-            background: rgba(255, 255, 255, 0.1) !important; 
-            
-            /* Легкое размытие (чтобы не было как молоко) */
-            backdrop-filter: blur(2px) !important;
-            -webkit-backdrop-filter: blur(2px) !important;
-            
+            background: rgba(255, 255, 255, 0.15) !important; /* Прозрачная */
+            backdrop-filter: blur(3px) !important;           /* Легкое размытие */
+            -webkit-backdrop-filter: blur(3px) !important;
             border-top: 1px solid rgba(255, 255, 255, 0.6) !important;
+        }
+
+        /* Красим в черный ТОЛЬКО то, что внутри нижней панели */
+        .bottom-sheet, .bottom-sheet h3, .bottom-sheet p, .bottom-sheet span, .bottom-sheet div {
+            color: #000000 !important;
+            text-shadow: 
+                1px 1px 0 #fff, -1px 1px 0 #fff, 
+                1px -1px 0 #fff, -1px -1px 0 #fff !important; /* Белая обводка */
+            font-weight: 900 !important;
+        }
+
+        /* === 2. ВЕРХНЯЯ ПАНЕЛЬ (БЕЛЫЙ ТЕКСТ + ТЕНЬ) === */
+        
+        /* Цифры баланса, проценты, иконки сверху */
+        .balance-amount, .balance-label, .stat-item, .stat-value, .stat-icon, .top-bar-text {
+            color: #FFFFFF !important;       /* Белый цвет */
+            text-shadow: 0 2px 4px #000000 !important; /* Черная тень для контраста */
+            font-weight: bold !important;
+            fill: #FFFFFF !important;        /* Для SVG иконок */
+        }
+
+        /* Сам контейнер баланса (фон) */
+        .balance-display {
+            background: rgba(0, 0, 0, 0.6) !important; /* Темная подложка */
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
             box-shadow: none !important;
         }
 
-        /* 2. ТЕКСТ (ЧЕРНЫЙ + ЖИРНЫЙ + ОБВОДКА) */
-        /* Чтобы читалось на любой карте */
-        #city-label, #rest-name, #order-dest, #status-label, h3, p, span, div {
-            /* Если это текст внутри панели */
-            color: #000 !important; 
-        }
-        
-        /* Специально для заголовков и важных цифр */
-        #city-label, #rest-name, #order-dest, #status-label, .balance-amount {
-            font-weight: 900 !important;
-            text-shadow: 
-                1px 1px 0 #fff, 
-               -1px 1px 0 #fff, 
-               1px -1px 0 #fff, 
-              -1px -1px 0 #fff !important;
-        }
-
-        /* 3. КНОПКИ И СЛАЙДЕРЫ (СДЕЛАТЬ ВИДИМЫМИ) */
+        /* === 3. КНОПКИ === */
+        /* Слайдер внизу должен быть видным */
         .slider-container {
             background: #ffffff !important;
             border: 2px solid #333 !important;
-            opacity: 0.9 !important;
+            opacity: 0.95 !important;
         }
         
-        .pedal-btn {
-            opacity: 1 !important;
-            z-index: 9999 !important;
+        .slider-text {
+            color: #000 !important;
+            text-shadow: none !important;
         }
     `;
     document.head.appendChild(style);
