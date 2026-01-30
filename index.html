@@ -1933,3 +1933,59 @@
 })();
 </script>
 
+
+
+
+
+<script>
+(function() {
+    console.log(">>> Patch v64: UI Fix Loaded");
+
+    const style = document.createElement('style');
+    style.innerHTML = `
+        /* 1. ПРИНУДИТЕЛЬНАЯ ПРОЗРАЧНОСТЬ */
+        .bottom-sheet {
+            /* Почти полная прозрачность (10% белого) */
+            background: rgba(255, 255, 255, 0.1) !important; 
+            
+            /* Легкое размытие (чтобы не было как молоко) */
+            backdrop-filter: blur(2px) !important;
+            -webkit-backdrop-filter: blur(2px) !important;
+            
+            border-top: 1px solid rgba(255, 255, 255, 0.6) !important;
+            box-shadow: none !important;
+        }
+
+        /* 2. ТЕКСТ (ЧЕРНЫЙ + ЖИРНЫЙ + ОБВОДКА) */
+        /* Чтобы читалось на любой карте */
+        #city-label, #rest-name, #order-dest, #status-label, h3, p, span, div {
+            /* Если это текст внутри панели */
+            color: #000 !important; 
+        }
+        
+        /* Специально для заголовков и важных цифр */
+        #city-label, #rest-name, #order-dest, #status-label, .balance-amount {
+            font-weight: 900 !important;
+            text-shadow: 
+                1px 1px 0 #fff, 
+               -1px 1px 0 #fff, 
+               1px -1px 0 #fff, 
+              -1px -1px 0 #fff !important;
+        }
+
+        /* 3. КНОПКИ И СЛАЙДЕРЫ (СДЕЛАТЬ ВИДИМЫМИ) */
+        .slider-container {
+            background: #ffffff !important;
+            border: 2px solid #333 !important;
+            opacity: 0.9 !important;
+        }
+        
+        .pedal-btn {
+            opacity: 1 !important;
+            z-index: 9999 !important;
+        }
+    `;
+    document.head.appendChild(style);
+
+})();
+</script>
