@@ -2506,3 +2506,86 @@
 
 })();
 </script>
+
+
+
+
+
+
+
+
+
+
+
+<script>
+(function() {
+    console.log(">>> Patch v81: Emergency Shop Loaded");
+
+    // 1. ПРИНУДИТЕЛЬНЫЙ Z-INDEX ДЛЯ МОДАЛОК
+    // Чтобы магазин всегда был поверх карты и панели заказа
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .modal { z-index: 99999 !important; } 
+        #emergency-shop-btn {
+            position: absolute;
+            top: -50px; /* Над панелью заказа */
+            right: 10px;
+            background: #ff9100;
+            color: black;
+            border: 2px solid white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+    `;
+    document.head.appendChild(style);
+
+    // 2. ВНЕДРЕНИЕ КНОПКИ В ПАНЕЛЬ ЗАКАЗА
+    setInterval(() => {
+        // Ищем панель активного заказа
+        const activePanel = document.getElementById('active-order-view');
+        
+        // Если панель видна (идет доставка)
+        if (activePanel && activePanel.style.display !== 'none') {
+            
+            // Если кнопки еще нет - добавляем
+            if (!document.getElementById('emergency-shop-btn')) {
+                const btn = document.createElement('div');
+                btn.id = 'emergency-shop-btn';
+                btn.innerHTML = `<i class="fa-solid fa-store"></i> <span>Магазин</span>`;
+                
+                btn.onclick = function(e) {
+                    e.stopPropagation(); // Чтобы клик не прошел сквозь кнопку
+                    
+                    // Принудительно открываем магазин
+                    if(window.openModal) {
+                        window.openModal('shop');
+                    } else {
+                        // Резервный способ, если openModal недоступен
+                        const modal = document.getElementById('modal-shop');
+                        if(modal) {
+                            modal.style.display = 'flex';
+                            if(window.renderShop) window.renderShop(document.getElementById('modal-body'));
+                        }
+                    }
+                };
+                
+                // Вставляем кнопку внутрь панели
+                activePanel.appendChild(btn);
+            }
+        }
+    }, 500); // Проверяем каждые полсекунды
+
+    // 3. ФИКС ЗАКРЫТИЯ (Чтобы после магазина мы вернулись к заказу, а не вылетели)
+    // Обычно кнопка закрытия модалки просто делает display:none. Это нам подходит.
+
+})();
+</script>
