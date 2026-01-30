@@ -2174,34 +2174,22 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v77: Intern System Loaded");
+    console.log(">>> Patch v78: Smart Intern Loaded");
 
-    // 1. НАСТРОЙКИ СТАЖЕРА
-    const INTERN_COST = 250;       // Цена найма
+    // 1. НАСТРОЙКИ
+    const INTERN_COST = 250;
     const INTERN_DURATION = 20;    // Минуты
-    const WORK_INTERVAL = 45000;   // Каждые 45 сек (в мс)
-
-    // Фразы стажера
-    const PHRASES = {
-        success: ["Доставил пиццу!", "Заказ закрыт.", "Клиент доволен.", "Бегу к следующему!", "Фух, успел."],
-        fail: ["Заблудился в центре...", "Уронил колу... Прости, босс.", "Полиция проверяет документы...", "Отдыхаю на лавочке.", "У меня перекур."],
-        crit: ["Ого! Щедрые чаевые!", "Клиент в восторге!", "Нашел короткий путь!", "Двойной заказ!"]
-    };
+    const WORK_INTERVAL = 45000;   // 45 сек
 
     // 2. ИНИЦИАЛИЗАЦИЯ
     if (!state.intern) {
-        state.intern = {
-            active: false,
-            endTime: 0,
-            nextWorkTime: 0
-        };
+        state.intern = { active: false, endTime: 0, nextWorkTime: 0, profit: 0 };
     }
 
     // 3. ФУНКЦИЯ НАЙМА
     window.hireIntern = function() {
         if (state.intern.active && Date.now() < state.intern.endTime) {
-            const left = Math.ceil((state.intern.endTime - Date.now()) / 60000);
-            alert(`Стажер уже работает! Осталось ${left} мин.`);
+            alert(`Стажер уже работает!`);
             return;
         }
 
@@ -2210,114 +2198,129 @@
             return;
         }
 
-        // Оплата
+        // Списываем деньги
         state.balance -= INTERN_COST;
         
-        // Запуск
+        // Настраиваем стажера
         const now = Date.now();
         state.intern.active = true;
         state.intern.endTime = now + (INTERN_DURATION * 60 * 1000);
         state.intern.nextWorkTime = now + WORK_INTERVAL;
+        
+        // ! ВАЖНО: Начинаем с минуса (стоимость найма)
+        state.intern.profit = -INTERN_COST;
 
-        // Сохранение
-        if(window.saveGame) window.saveGame();
-        if(window.updateUI) window.updateUI();
-        if(window.updateMenuState) window.updateMenuState(); // Обновит меню
-
-        // Эффекты
+        saveGame(); updateUI(); updateMenuState();
+        
         if(window.sfx && window.sfx.coin) window.sfx.coin();
-        window.showToast("🤝 Стажер нанят! Жди прибыль.", "success");
+        window.showToast(`🤝 Стажер нанят! Баланс ROI: ${-INTERN_COST}`, "success");
     };
 
-    // 4. РАБОЧИЙ ЦИКЛ (ЗАПУСКАЕТСЯ КАЖДУЮ СЕКУНДУ)
+    // 4. РАБОЧИЙ ПРОЦЕСС
     setInterval(() => {
         if (!state.intern.active) return;
+        
+        // Фикс для старых сохранений (если profit не был записан)
+        if (typeof state.intern.profit === 'undefined') state.intern.profit = 0;
 
         const now = Date.now();
 
-        // Если контракт кончился
+        // Конец смены
         if (now > state.intern.endTime) {
             state.intern.active = false;
-            window.showToast("👋 Смена стажера закончена.", "info");
-            if(window.saveGame) window.saveGame();
-            if(window.updateMenuState) window.updateMenuState();
+            const finalProfit = state.intern.profit;
+            const resultMsg = finalProfit > 0 
+                ? `💰 ИТОГ: Чистая прибыль +${finalProfit} PLN!` 
+                : `📉 ИТОГ: Убыток ${finalProfit} PLN. Уволь его!`;
+            
+            window.showToast(resultMsg, finalProfit > 0 ? "success" : "warn");
+            
+            // Запись в историю
+            state.history.push({ 
+                rest: "Стажер (Итог)", 
+                pay: finalProfit, 
+                tip: 0, 
+                total: finalProfit 
+            });
+            
+            saveGame(); updateMenuState();
             return;
         }
 
-        // Время работать?
+        // Время работать
         if (now > state.intern.nextWorkTime) {
-            // Планируем следующую работу
             state.intern.nextWorkTime = now + WORK_INTERVAL;
             
-            // Рандом: Как поработал?
             const roll = Math.random();
             let earn = 0;
             let msg = "";
-            let type = "success";
 
             if (roll < 0.30) { 
-                // 30% НЕУДАЧА (0 денег)
-                msg = PHRASES.fail[Math.floor(Math.random() * PHRASES.fail.length)];
-                type = "info"; // Просто инфо, не успех
-            } 
-            else if (roll < 0.90) {
-                // 60% УСПЕХ (10-20 PLN)
-                earn = Math.floor(10 + Math.random() * 10);
-                msg = PHRASES.success[Math.floor(Math.random() * PHRASES.success.length)];
-            } 
-            else {
-                // 10% КРИТ (50 PLN)
+                // Неудача
+                msg = "Тупит...";
+            } else if (roll < 0.90) {
+                // Успех
+                earn = Math.floor(15 + Math.random() * 10); // 15-25 PLN
+                msg = "Доставил";
+            } else {
+                // Крит
                 earn = 50;
-                msg = PHRASES.crit[Math.floor(Math.random() * PHRASES.crit.length)];
-                type = "success"; // Зеленый тост
-                // Звук монетки только на крите
+                msg = "ЧАЕВЫЕ!";
                 if(window.sfx && window.sfx.coin) window.sfx.coin();
             }
 
-            // Начисление
             if (earn > 0) {
                 state.balance += earn;
-                window.showToast(`👨‍🎓 Стажер: +${earn} PLN (${msg})`, type);
-                // Лог в историю (опционально, чтобы не засорять)
-                // if(state.history) state.history.push({ rest: "Стажер", pay: earn, tip: 0, total: earn });
+                state.intern.profit += earn; // Обновляем ROI
+                window.showToast(`👨‍🎓 +${earn} (${msg}) | Баланс: ${state.intern.profit}`, "success");
             } else {
-                window.showToast(`👨‍🎓 Стажер: ${msg}`, "warn");
+                window.showToast(`👨‍🎓 0 PLN (${msg})`, "info");
             }
 
-            if(window.saveGame) window.saveGame();
-            if(window.updateUI) window.updateUI();
+            saveGame(); updateUI();
         }
-
     }, 1000);
 
-    // 5. КНОПКА В МЕНЮ (АВТОМАТИЧЕСКАЯ)
+    // 5. УМНАЯ КНОПКА В МЕНЮ (ROI DISPLAY)
     const btnCheck = setInterval(() => {
         const menu = document.getElementById('side-menu');
-        if (menu && !document.getElementById('intern-btn')) {
-            const btn = document.createElement('div');
+        if(!menu) return;
+
+        let btn = document.getElementById('intern-btn');
+        if (!btn) {
+            btn = document.createElement('div');
             btn.id = 'intern-btn';
             btn.className = 'menu-item';
-            btn.innerHTML = updateInternBtnText();
             btn.onclick = window.hireIntern;
-            
-            // Вставляем после "Банка"
+            // Вставляем после Банка
             const bankBtn = document.querySelector('div[onclick="openModal(\'bank\')"]');
             if(bankBtn) bankBtn.parentNode.insertBefore(btn, bankBtn.nextSibling);
             else menu.appendChild(btn);
-        } else if (document.getElementById('intern-btn')) {
-            // Обновляем текст (показываем таймер)
-            document.getElementById('intern-btn').innerHTML = updateInternBtnText();
         }
-    }, 1000);
 
-    function updateInternBtnText() {
+        // ОБНОВЛЕНИЕ ТЕКСТА КНОПКИ
         if (state.intern && state.intern.active && Date.now() < state.intern.endTime) {
             const left = Math.ceil((state.intern.endTime - Date.now()) / 60000);
-            return `<i class="fa-solid fa-user-clock" style="color:#00e676"></i> Стажер работает (${left}м)`;
+            const profit = state.intern.profit || 0;
+            
+            // Цвет: Красный если в минусе, Зеленый если в плюсе
+            const color = profit >= 0 ? '#00e676' : '#ff3d00';
+            const sign = profit > 0 ? '+' : '';
+            
+            btn.innerHTML = `
+                <div style="display:flex; justify-content:space-between; width:100%; align-items:center">
+                    <span><i class="fa-solid fa-user-clock" style="color:${color}"></i> Стажер (${left}м)</span>
+                    <span style="font-weight:bold; color:${color}; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px">
+                        ${sign}${profit} PLN
+                    </span>
+                </div>`;
+            btn.style.borderLeft = `3px solid ${color}`; // Индикатор сбоку
         } else {
-            return `<i class="fa-solid fa-user-graduate"></i> Нанять Стажера (250₽)`;
+            btn.innerHTML = `<i class="fa-solid fa-user-graduate"></i> Нанять Стажера (250₽)`;
+            btn.style.borderLeft = 'none';
         }
-    }
+
+    }, 1000);
 
 })();
 </script>
