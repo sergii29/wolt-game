@@ -2516,76 +2516,173 @@
 
 
 
-
 <script>
 (function() {
-    console.log(">>> Patch v81: Emergency Shop Loaded");
+    console.log(">>> Patch v82: Tactical Backpack Loaded");
 
-    // 1. ПРИНУДИТЕЛЬНЫЙ Z-INDEX ДЛЯ МОДАЛОК
-    // Чтобы магазин всегда был поверх карты и панели заказа
-    const style = document.createElement('style');
-    style.innerHTML = `
-        .modal { z-index: 99999 !important; } 
-        #emergency-shop-btn {
-            position: absolute;
-            top: -50px; /* Над панелью заказа */
-            right: 10px;
-            background: #ff9100;
-            color: black;
-            border: 2px solid white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            z-index: 10001;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
-    `;
-    document.head.appendChild(style);
+    // 1. ИНИЦИАЛИЗАЦИЯ РЮКЗАКА
+    if (!state.backpack) {
+        state.backpack = {
+            snickers: 2, // Дадим 2 шт бесплатно для старта
+            water: 2,
+            coffee: 0
+        };
+    }
 
-    // 2. ВНЕДРЕНИЕ КНОПКИ В ПАНЕЛЬ ЗАКАЗА
-    setInterval(() => {
-        // Ищем панель активного заказа
-        const activePanel = document.getElementById('active-order-view');
+    // 2. ФУНКЦИИ БЫСТРОГО ИСПОЛЬЗОВАНИЯ
+    window.useItem = function(type) {
+        const ITEMS = {
+            'snickers': { cost: 15, energy: 15, name: '🍫 Сникерс' },
+            'water':    { cost: 5,  water: 20,  name: '💧 Вода' },
+            'coffee':   { cost: 25, energy: 10, mood: 10, name: '☕ Кофе' }
+        };
+
+        const item = ITEMS[type];
         
-        // Если панель видна (идет доставка)
-        if (activePanel && activePanel.style.display !== 'none') {
+        // Если есть в запасе
+        if (state.backpack[type] > 0) {
+            // Тратим
+            state.backpack[type]--;
             
-            // Если кнопки еще нет - добавляем
-            if (!document.getElementById('emergency-shop-btn')) {
-                const btn = document.createElement('div');
-                btn.id = 'emergency-shop-btn';
-                btn.innerHTML = `<i class="fa-solid fa-store"></i> <span>Магазин</span>`;
+            // Восстанавливаем
+            if(item.energy) state.needs.energy = Math.min(state.needs.energy + item.energy, 100); // Или 150 если жилье
+            if(item.water) state.needs.water = Math.min(state.needs.water + item.water, 100);
+            if(item.mood) state.needs.mood = Math.min(state.needs.mood + item.mood, 100);
+
+            window.showToast(`Использован: ${item.name}`, "success");
+            if(window.sfx && window.sfx.coin) window.sfx.coin(); // Звук
+
+        } else {
+            // Если нет - предлагаем купить (АВТО-ПОКУПКА)
+            if (state.balance >= item.cost) {
+                state.balance -= item.cost;
+                // Сразу применяем (как будто купил и съел)
+                if(item.energy) state.needs.energy = Math.min(state.needs.energy + item.energy, 100);
+                if(item.water) state.needs.water = Math.min(state.needs.water + item.water, 100);
+                if(item.mood) state.needs.mood = Math.min(state.needs.mood + item.mood, 100);
                 
-                btn.onclick = function(e) {
-                    e.stopPropagation(); // Чтобы клик не прошел сквозь кнопку
-                    
-                    // Принудительно открываем магазин
-                    if(window.openModal) {
-                        window.openModal('shop');
-                    } else {
-                        // Резервный способ, если openModal недоступен
-                        const modal = document.getElementById('modal-shop');
-                        if(modal) {
-                            modal.style.display = 'flex';
-                            if(window.renderShop) window.renderShop(document.getElementById('modal-body'));
-                        }
-                    }
-                };
-                
-                // Вставляем кнопку внутрь панели
-                activePanel.appendChild(btn);
+                window.showToast(`Куплен и съеден: ${item.name} (-${item.cost})`, "info");
+            } else {
+                window.showToast("❌ Нет денег и нет запасов!", "warn");
             }
         }
-    }, 500); // Проверяем каждые полсекунды
 
-    // 3. ФИКС ЗАКРЫТИЯ (Чтобы после магазина мы вернулись к заказу, а не вылетели)
-    // Обычно кнопка закрытия модалки просто делает display:none. Это нам подходит.
+        saveGame(); updateUI(); updateBackpackUI();
+    };
+
+    // 3. ФУНКЦИЯ ПОКУПКИ В ЗАПАС (Кнопка "+")
+    window.stockItem = function(type, e) {
+        if(e) e.stopPropagation(); // Чтобы не сработало использование
+
+        const COSTS = { 'snickers': 15, 'water': 5, 'coffee': 25 };
+        const price = COSTS[type];
+
+        if(state.balance >= price) {
+            state.balance -= price;
+            state.backpack[type]++;
+            window.showToast(`В рюкзак: +1 ${type}`, "success");
+            saveGame(); updateUI(); updateBackpackUI();
+        } else {
+            window.showToast("Не хватает денег", "warn");
+        }
+    };
+
+    // 4. ИНТЕРФЕЙС
+    function createBackpackBtn() {
+        const btn = document.createElement('div');
+        btn.id = 'backpack-btn';
+        btn.style.cssText = `
+            position: fixed; 
+            top: 120px; right: 15px; /* Справа, под балансом */
+            width: 50px; height: 50px;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid #aaa;
+            border-radius: 12px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 24px; cursor: pointer; z-index: 11000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+        `;
+        btn.innerHTML = `🎒`;
+        
+        // Меню рюкзака (скрыто по умолчанию)
+        const menu = document.createElement('div');
+        menu.id = 'backpack-menu';
+        menu.style.cssText = `
+            position: absolute;
+            top: 60px; right: 0;
+            width: 160px;
+            background: rgba(20,20,20, 0.95);
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 10px;
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+        `;
+        
+        btn.appendChild(menu);
+        
+        // Клик по кнопке - открыть/закрыть
+        btn.onclick = (e) => {
+            if(e.target !== btn && !btn.contains(e.target)) return;
+            // Если клик был по самой кнопке, а не внутри меню
+            if(e.target.id === 'backpack-btn' || e.target.innerText === '🎒') {
+                const isHidden = menu.style.display === 'none';
+                menu.style.display = isHidden ? 'flex' : 'none';
+                if(isHidden) updateBackpackUI();
+            }
+        };
+
+        document.body.appendChild(btn);
+    }
+
+    // 5. ОБНОВЛЕНИЕ СОДЕРЖИМОГО МЕНЮ
+    window.updateBackpackUI = function() {
+        const menu = document.getElementById('backpack-menu');
+        if(!menu) return;
+
+        // Данные для отрисовки
+        const list = [
+            { id: 'snickers', icon: '🍫', name: 'Сникерс', count: state.backpack.snickers },
+            { id: 'water',    icon: '💧', name: 'Вода',    count: state.backpack.water },
+            { id: 'coffee',   icon: '☕', name: 'Кофе',    count: state.backpack.coffee }
+        ];
+
+        let html = '';
+        list.forEach(item => {
+            const hasStock = item.count > 0;
+            const countColor = hasStock ? '#00e676' : '#777';
+            
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#333; padding:5px 8px; border-radius:6px;">
+                    <div onclick="window.useItem('${item.id}')" style="cursor:pointer; display:flex; align-items:center; flex-grow:1;">
+                        <span style="font-size:18px; margin-right:5px;">${item.icon}</span>
+                        <span style="font-size:12px; font-weight:bold; color:white;">x<span style="color:${countColor}">${item.count}</span></span>
+                    </div>
+                    
+                    <div onclick="window.stockItem('${item.id}', event)" style="
+                        width:20px; height:20px; background:#009de0; color:white;
+                        border-radius:50%; display:flex; justify-content:center; align-items:center;
+                        font-size:14px; font-weight:bold; cursor:pointer; margin-left:5px;
+                    ">+</div>
+                </div>
+            `;
+        });
+        
+        // Добавим подпись
+        html += `<div style="text-align:center; font-size:10px; color:#aaa; margin-top:5px;">Нажми на товар, чтобы съесть</div>`;
+
+        menu.innerHTML = html;
+    }
+
+    // Запуск
+    const checkLoop = setInterval(() => {
+        if(!document.getElementById('backpack-btn')) {
+            createBackpackBtn();
+        }
+    }, 1000);
 
 })();
 </script>
