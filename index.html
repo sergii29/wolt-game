@@ -1799,11 +1799,11 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v58: Winter Mode Loaded");
+    console.log(">>> Patch v59: Clean Winter Loaded");
 
     const style = document.createElement('style');
     style.innerHTML = `
-        /* 1. СТЕКЛЯННАЯ ПАНЕЛЬ (СОХРАНЯЕМ ИЗ v57) */
+        /* 1. СТЕКЛЯННАЯ ПАНЕЛЬ */
         .bottom-sheet {
             background: rgba(255, 255, 255, 0.15) !important;
             backdrop-filter: blur(2px) !important;
@@ -1812,88 +1812,47 @@
             box-shadow: none !important;
         }
 
-        /* 2. ЛЕДЯНОЙ ТЕКСТ СО СНЕЖНОЙ ШАПКОЙ */
+        /* 2. ЛЕДЯНОЙ ТЕКСТ (СТАТИЧНЫЙ) */
         #city-label, #rest-name, #order-dest, #status-label, h3, .balance-amount {
-            color: #0d1b2a !important; /* Темно-синий текст */
+            color: #0d1b2a !important; /* Темно-синий */
             position: relative;
             z-index: 10;
             font-weight: 900 !important;
             
-            /* МАГИЯ СНЕГА НА БУКВАХ */
+            /* Снежная шапка на буквах + Ледяное свечение */
             text-shadow: 
-                0 -3px 0 #ffffff,       /* Снежная шапка сверху */
-                0 -5px 3px #ffffff,     /* Пушистый снег */
-                0 0 10px #00ffff,       /* Ледяное свечение */
-                2px 2px 0 #fff;         /* Контур для читаемости */
+                0 -2px 0 #ffffff,       /* Снег сверху */
+                0 0 10px #00ffff,       /* Свечение */
+                2px 2px 0 #fff;         /* Белая обводка */
                 
-            animation: icePulse 3s infinite alternate;
+            /* Медленная пульсация холода */
+            animation: icePulse 4s infinite alternate;
         }
 
         @keyframes icePulse {
             0% { filter: drop-shadow(0 0 1px cyan); }
-            100% { filter: drop-shadow(0 0 5px blue); }
+            100% { filter: drop-shadow(0 0 3px blue); }
         }
 
-        /* 3. ИКОНКИ ТОЖЕ ЗАМЕРЗЛИ */
+        /* 3. ИКОНКИ */
         .fa-solid {
-            text-shadow: 0 -2px 2px white;
+            text-shadow: 0 -2px 2px white; /* Легкий иней */
         }
 
-        /* 4. СЛАЙДЕР (ЗИМНИЙ) */
+        /* 4. СЛАЙДЕР (ГОЛУБОЙ ЛЕД) */
         .slider-container {
-            background: rgba(200, 240, 255, 0.4) !important; /* Голубоватый лед */
+            background: rgba(200, 240, 255, 0.4) !important;
             border: 2px solid #fff !important;
         }
-
-        /* 5. ПАДАЮЩИЕ СНЕЖИНКИ */
-        .snowflake {
-            position: fixed;
-            top: -20px;
-            color: white;
-            font-size: 1em;
-            font-family: Arial, sans-serif;
-            text-shadow: 0 0 2px #000;
-            z-index: 99999; /* Поверх всего */
-            pointer-events: none; /* Чтобы можно было кликать сквозь них */
-            animation: fall linear forwards;
-        }
-
-        @keyframes fall {
-            to { transform: translateY(110vh) rotate(360deg); }
+        
+        .slider-text {
+            color: #000 !important;
+            font-weight: bold !important;
         }
     `;
     document.head.appendChild(style);
 
-    // --- ГЕНЕРАТОР СНЕГА (JS) ---
-    function createSnow() {
-        const snowflake = document.createElement('div');
-        snowflake.innerHTML = '❄';
-        snowflake.classList.add('snowflake');
-        
-        // Случайная позиция по ширине
-        snowflake.style.left = Math.random() * 100 + 'vw';
-        
-        // Случайный размер
-        const size = Math.random() * 10 + 10; // от 10px до 20px
-        snowflake.style.fontSize = size + 'px';
-        
-        // Случайная прозрачность
-        snowflake.style.opacity = Math.random() * 0.7 + 0.3;
-        
-        // Случайная скорость падения
-        const duration = Math.random() * 3 + 3; // от 3 до 6 секунд
-        snowflake.style.animationDuration = duration + 's';
-
-        document.body.appendChild(snowflake);
-
-        // Удаляем снежинку, когда она упала
-        setTimeout(() => {
-            snowflake.remove();
-        }, duration * 1000);
-    }
-
-    // Запускаем снегопад (новая снежинка каждые 200 мс)
-    setInterval(createSnow, 200);
+    // Убрал функцию генерации снега. Теперь чисто.
 
 })();
 </script>
