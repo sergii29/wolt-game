@@ -1799,98 +1799,97 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v53: Perfect Fit Loaded");
+    console.log(">>> Patch v54: Force Zoom Out Loaded");
 
-    // 1. ЕДИНАЯ ФУНКЦИЯ ФОКУСИРОВКИ
+    // 1. ФУНКЦИЯ "ПОКАЗАТЬ ВСЁ"
     window.fitRouteToScreen = function() {
         if (!window.map) return;
         
-        // Собираем все объекты на карте (линии маршрута и точки)
+        // Собираем все объекты (маршрут + точки)
         let bounds = L.latLngBounds([]);
-        let hasObjects = false;
+        let found = false;
 
         window.map.eachLayer(layer => {
-            // Берем только линии и маркеры (игнорируем фон карты)
+            // Ищем линии и маркеры
             if ((layer instanceof L.Polyline || layer instanceof L.Marker) && !layer._url) {
-                if(layer.getBounds) { bounds.extend(layer.getBounds()); hasObjects = true; }
-                else if(layer.getLatLng) { bounds.extend(layer.getLatLng()); hasObjects = true; }
+                if(layer.getBounds) { bounds.extend(layer.getBounds()); found = true; }
+                else if(layer.getLatLng) { bounds.extend(layer.getLatLng()); found = true; }
             }
         });
 
-        if (hasObjects && bounds.isValid()) {
-            // === ГЛАВНАЯ МАГИЯ ===
-            // Мы вычисляем высоту "мертвой зоны" снизу.
-            // Берем 50% от высоты экрана (это твоя панель заказа).
-            const bottomDeadZone = window.innerHeight * 0.5; 
+        if (found && bounds.isValid()) {
+            // === ГЛАВНАЯ НАСТРОЙКА ===
+            // Вычисляем отступ снизу (55% от высоты экрана)
+            // Это заставит карту думать, что нижняя часть занята, и сдвинуть маршрут ВВЕРХ.
+            const bottomPadding = window.innerHeight * 0.55;
 
             window.map.fitBounds(bounds, {
-                // [paddingLeft, paddingTop]
-                paddingTopLeft: [50, 100], 
+                // Отступы: [Справа, Снизу]
+                paddingBottomRight: [50, bottomPadding], 
                 
-                // [paddingRight, paddingBottom]
-                // Ставим ОГРОМНЫЙ отступ снизу, чтобы маршрут вытолкнуло вверх
-                paddingBottomRight: [50, bottomDeadZone], 
+                // Отступы: [Слева, Сверху]
+                paddingTopLeft: [50, 100],
                 
-                // Ограничиваем зум, чтобы не утыкаться носом в асфальт
-                maxZoom: 15, 
+                // !!! ГЛАВНОЕ: Ограничиваем зум !!!
+                // 13 - это достаточно далеко, чтобы видеть полгорода.
+                // Это не даст карте приблизиться слишком сильно, даже если маршрут короткий.
+                maxZoom: 13, 
                 
-                // Плавная анимация
                 animate: true,
-                duration: 1.2
+                duration: 1.0
             });
-            console.log("Map fitted to TOP HALF of screen.");
+            console.log("Map forced to ZOOM OUT and shift UP.");
         } else {
-            // Если маршрута нет, ищем игрока
+            // Если маршрута нет, просто показываем игрока (тоже издалека)
             if(window.mapVisuals && window.mapVisuals.player) {
-                window.map.setView(window.mapVisuals.player.getLatLng(), 15);
+                window.map.setView(window.mapVisuals.player.getLatLng(), 13);
             }
         }
     };
 
-    // 2. АВТОМАТИЧЕСКАЯ ПОДСТРОЙКА ПРИ ЗАКАЗЕ
+    // 2. ЗАПУСК ПРИ ВЗЯТИИ ЗАКАЗА (МНОГО РАЗ)
     const originalAccept = window.acceptOrder; 
     if(window.acceptOrder) {
         window.acceptOrder = function() {
             if(originalAccept) originalAccept.apply(this, arguments);
             
-            // Делаем несколько попыток, чтобы поймать момент отрисовки маршрута
-            setTimeout(window.fitRouteToScreen, 500);  // Сразу
-            setTimeout(window.fitRouteToScreen, 1500); // Чуть погодя (если интернет тупит)
-            setTimeout(window.fitRouteToScreen, 3000); // Контрольный
+            // "Долбим" карту командами, чтобы она точно послушалась, 
+            // даже если маршрут грузится медленно
+            setTimeout(window.fitRouteToScreen, 500);
+            setTimeout(window.fitRouteToScreen, 1000);
+            setTimeout(window.fitRouteToScreen, 2000);
+            setTimeout(window.fitRouteToScreen, 3000);
         };
     }
 
-    // 3. КНОПКА "ПРИЦЕЛ" (РУЧНАЯ КОРРЕКЦИЯ)
+    // 3. КНОПКА "ПРИЦЕЛ" (РУЧНАЯ)
     function addFocusBtn() {
         if(document.getElementById('focus-btn')) document.getElementById('focus-btn').remove();
 
         const btn = document.createElement('div');
         btn.id = 'focus-btn';
-        // Располагаем под Радио (примерно 200px сверху)
         btn.style.cssText = `
             position: absolute; 
             top: 200px; 
             right: 15px; 
             width: 45px; 
             height: 45px; 
-            background: rgba(255, 255, 255, 0.9); 
-            color: #333;
+            background: white; 
+            color: black;
             border-radius: 50%;
             display: flex; 
             justify-content: center; 
             align-items: center; 
             z-index: 998; 
             cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             font-size: 20px;
-            border: 2px solid #ccc;
+            border: 2px solid #333;
         `;
-        btn.innerHTML = `<i class="fa-solid fa-expand"></i>`; // Иконка "Расширить/Вместить"
+        btn.innerHTML = `<i class="fa-solid fa-expand"></i>`;
         
         btn.onclick = function() {
-            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
-                 window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
-            }
+            if(window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
             window.fitRouteToScreen();
         };
 
