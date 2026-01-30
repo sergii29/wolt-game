@@ -2518,38 +2518,26 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v84: Red Backpack Loaded");
+    console.log(">>> Patch v86: Original Suitcase Restored");
 
-    // 1. УБИВАЕМ СТАРЫЙ ЧЕМОДАН
-    // Ищем кнопку с иконкой чемодана в нижней части экрана
-    const killOldSuitcase = setInterval(() => {
-        // Ищем все иконки чемоданов
-        const icons = document.querySelectorAll('.fa-briefcase, .fa-suitcase');
-        icons.forEach(icon => {
-            // Если это НАШ новый рюкзак - не трогаем
-            if (icon.closest('#red-backpack-btn')) return;
+    // 1. УДАЛЯЕМ КРАСНЫЙ РЮКЗАК (Если остался)
+    const redBtn = document.getElementById('red-backpack-btn');
+    if (redBtn) redBtn.remove();
+    
+    // Очищаем интервалы прошлого патча (чтобы красный не появился снова)
+    // (В JS нельзя просто "очистить все", но новый код перекроет старый, если ты удалил v85)
 
-            // Находим родительскую кнопку
-            const btn = icon.closest('button') || icon.closest('.btn') || icon.closest('div[onclick]');
-            
-            // Если кнопка найдена и она где-то внизу экрана (top > 500px или внутри bottom-panel)
-            if (btn) {
-                const rect = btn.getBoundingClientRect();
-                if (rect.top > window.innerHeight / 2) { // Если она во второй половине экрана
-                    btn.style.display = 'none'; // Скрываем нафиг
-                    btn.style.visibility = 'hidden';
-                    btn.style.pointerEvents = 'none'; // Чтобы случайно не нажалась
-                }
-            }
-        });
-    }, 500);
-
-    // 2. ДАННЫЕ РЮКЗАКА
-    if (!state.backpack) {
-        state.backpack = { snickers: 2, water: 2, coffee: 0 };
+    // 2. СИНХРОНИЗАЦИЯ ИНВЕНТАРЯ (На всякий случай)
+    if (state.backpack) {
+        if (!state.inventory) state.inventory = {};
+        state.inventory.water = (state.inventory.water || 0) + (state.backpack.water || 0);
+        state.inventory.snickers = (state.inventory.snickers || 0) + (state.backpack.snickers || 0);
+        state.inventory.coffee = (state.inventory.coffee || 0) + (state.backpack.coffee || 0);
+        delete state.backpack;
     }
+    if (!state.inventory) state.inventory = { water: 0, snickers: 0, coffee: 0 };
 
-    // 3. ЛОГИКА (ЕСТЬ/ПИТЬ)
+    // 3. ФУНКЦИИ ИСПОЛЬЗОВАНИЯ (Те же самые)
     window.useItem = function(type) {
         const ITEMS = {
             'snickers': { cost: 15, energy: 15, name: '🍫 Сникерс' },
@@ -2557,114 +2545,122 @@
             'coffee':   { cost: 25, energy: 10, mood: 10, name: '☕ Кофе' }
         };
         const item = ITEMS[type];
-        
-        if (state.backpack[type] > 0) {
-            state.backpack[type]--;
-            // Применяем эффекты
-            if(item.energy) state.needs.energy = Math.min(state.needs.energy + item.energy, 100);
-            if(item.water) state.needs.water = Math.min(state.needs.water + item.water, 100);
-            if(item.mood) state.needs.mood = Math.min(state.needs.mood + item.mood, 100);
-            
+        const stock = state.inventory[type] || 0;
+
+        if (stock > 0) {
+            state.inventory[type]--; // Тратим запас
+            applyEffect(item);
             window.showToast(`Съел: ${item.name}`, "success");
             if(window.sfx && window.sfx.coin) window.sfx.coin();
         } else {
-            // Авто-покупка
             if (state.balance >= item.cost) {
                 state.balance -= item.cost;
-                if(item.energy) state.needs.energy = Math.min(state.needs.energy + item.energy, 100);
-                if(item.water) state.needs.water = Math.min(state.needs.water + item.water, 100);
-                if(item.mood) state.needs.mood = Math.min(state.needs.mood + item.mood, 100);
+                applyEffect(item);
                 window.showToast(`Купил и съел: ${item.name}`, "info");
             } else {
-                window.showToast("Нет денег!", "warn");
+                window.showToast("Нет денег и запасов!", "warn");
             }
         }
-        saveGame(); updateUI(); updateRedBackpackUI();
+        saveGame(); updateUI(); updateInventoryMenu();
     };
 
-    // Докупка в инвентарь (+)
+    function applyEffect(item) {
+        if(item.energy) state.needs.energy = Math.min(state.needs.energy + item.energy, 100);
+        if(item.water) state.needs.water = Math.min(state.needs.water + item.water, 100);
+        if(item.mood) state.needs.mood = Math.min(state.needs.mood + item.mood, 100);
+    }
+
     window.stockItem = function(type, e) {
         if(e) e.stopPropagation();
         const COSTS = { 'snickers': 15, 'water': 5, 'coffee': 25 };
         if(state.balance >= COSTS[type]) {
             state.balance -= COSTS[type];
-            state.backpack[type]++;
+            state.inventory[type] = (state.inventory[type] || 0) + 1;
             window.showToast("+1 в запас", "success");
-            saveGame(); updateUI(); updateRedBackpackUI();
+            saveGame(); updateUI(); updateInventoryMenu();
         }
     };
 
-    // 4. СОЗДАЕМ КРАСНЫЙ РЮКЗАК (ВНИЗУ СПРАВА)
-    function createRedBackpack() {
-        const btn = document.createElement('div');
-        btn.id = 'red-backpack-btn';
-        
-        // СТИЛЬ: Красная кнопка, внизу справа (над педалью)
-        btn.style.cssText = `
-            position: fixed; 
-            bottom: 120px; right: 20px; /* Позиция "вместо старого чемодана" */
-            width: 60px; height: 60px;
-            background: radial-gradient(circle, #ff3d00, #d50000);
-            border: 2px solid #ff8a50;
-            border-radius: 14px;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 28px; cursor: pointer; z-index: 11000;
-            box-shadow: 0 5px 15px rgba(255, 61, 0, 0.4);
-            transition: transform 0.1s;
-        `;
-        btn.innerHTML = `🎒`; // Иконка рюкзака
-        
-        // Нажатие (эффект)
-        btn.onmousedown = () => btn.style.transform = "scale(0.9)";
-        btn.onmouseup = () => btn.style.transform = "scale(1)";
-
-        // МЕНЮ (Выпадает ВЛЕВО, чтобы было удобно)
-        const menu = document.createElement('div');
-        menu.id = 'red-backpack-menu';
+    // 4. ОЖИВЛЕНИЕ СТАРОЙ КНОПКИ
+    // Мы создаем меню заранее, но скрываем его
+    const menuId = 'native-inventory-menu';
+    let menu = document.getElementById(menuId);
+    if (!menu) {
+        menu = document.createElement('div');
+        menu.id = menuId;
+        // Меню будет всплывать снизу, над кнопкой
         menu.style.cssText = `
-            position: absolute;
-            bottom: 5px; right: 70px; /* Слева от кнопки */
-            width: 160px;
-            background: rgba(20, 20, 20, 0.95);
-            border: 1px solid #ff3d00;
+            position: fixed;
+            bottom: 90px; /* Высота примерная, над нижней панелью */
+            right: 20px;
+            width: 180px;
+            background: rgba(20, 20, 20, 0.98);
+            border: 1px solid #444;
             border-radius: 12px;
-            padding: 8px;
-            display: none;
+            padding: 10px;
+            display: none; /* Скрыто */
             flex-direction: column;
-            gap: 6px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            gap: 8px;
+            z-index: 12000;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
         `;
-        
-        btn.appendChild(menu);
-        
-        // Открытие/Закрытие
-        btn.onclick = (e) => {
-            if(e.target.innerText === '+' || e.target.classList.contains('stock-btn')) return;
-            const isHidden = menu.style.display === 'none';
-            menu.style.display = isHidden ? 'flex' : 'none';
-            if(isHidden) updateRedBackpackUI();
-        };
-
-        document.body.appendChild(btn);
+        document.body.appendChild(menu);
     }
 
+    // Ищем кнопку с чемоданом и вешаем на нее открытие меню
+    setInterval(() => {
+        // Ищем все иконки чемодана
+        const icons = document.querySelectorAll('.fa-briefcase, .fa-suitcase');
+        
+        icons.forEach(icon => {
+            // Ищем родительскую кнопку (тег button или div)
+            const btn = icon.closest('button') || icon.closest('.btn') || icon.closest('div[onclick]');
+            
+            if (btn) {
+                // 1. Делаем видимой (если прошлые патчи скрыли)
+                btn.style.display = ''; 
+                btn.style.visibility = '';
+                btn.style.pointerEvents = '';
+                
+                // 2. Вешаем наше событие
+                // Важно: переписываем onclick, чтобы не открывалась старая логика
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const menu = document.getElementById(menuId);
+                    if (menu.style.display === 'none') {
+                        menu.style.display = 'flex';
+                        updateInventoryMenu();
+                        
+                        // Позиционируем меню ровно над кнопкой
+                        const rect = btn.getBoundingClientRect();
+                        menu.style.bottom = (window.innerHeight - rect.top + 10) + 'px';
+                        menu.style.right = (window.innerWidth - rect.right) + 'px';
+                        
+                    } else {
+                        menu.style.display = 'none';
+                    }
+                };
+            }
+        });
+    }, 1000); // Проверяем каждую секунду, вдруг интерфейс перерисовался
+
     // 5. ОТРИСОВКА МЕНЮ
-    window.updateRedBackpackUI = function() {
-        const menu = document.getElementById('red-backpack-menu');
+    window.updateInventoryMenu = function() {
+        const menu = document.getElementById(menuId);
         if(!menu) return;
 
         const list = [
-            { id: 'snickers', icon: '🍫', count: state.backpack.snickers },
-            { id: 'water',    icon: '💧', count: state.backpack.water },
-            { id: 'coffee',   icon: '☕', count: state.backpack.coffee }
+            { id: 'snickers', icon: '🍫', count: state.inventory.snickers || 0 },
+            { id: 'water',    icon: '💧', count: state.inventory.water || 0 },
+            { id: 'coffee',   icon: '☕', count: state.inventory.coffee || 0 }
         ];
 
         let html = '';
         list.forEach(item => {
             const has = item.count > 0;
-            const color = has ? '#00e676' : '#777';
-            
+            const color = has ? '#00e676' : '#555';
             html += `
                 <div style="display:flex; justify-content:space-between; align-items:center; background:#333; padding:8px; border-radius:8px;">
                     <div onclick="window.useItem('${item.id}')" style="cursor:pointer; flex-grow:1; display:flex; align-items:center;">
@@ -2672,26 +2668,29 @@
                         <b style="color:${color}; font-size:14px;">x${item.count}</b>
                     </div>
                     <div class="stock-btn" onclick="window.stockItem('${item.id}', event)" style="
-                        width:24px; height:24px; background:#2979ff; color:white;
+                        width:24px; height:24px; background:#009de0; color:white;
                         border-radius:50%; display:flex; justify-content:center; align-items:center;
                         font-weight:bold; cursor:pointer; margin-left:5px;
                     ">+</div>
                 </div>
             `;
         });
+        // Кнопка закрыть (на всякий случай)
+        html += `<div onclick="document.getElementById('${menuId}').style.display='none'" style="text-align:center; color:#777; font-size:10px; margin-top:5px; cursor:pointer">Закрыть</div>`;
         
-        // Кнопка "Закрыть" (если неудобно кликать)
-        // html += `<div style="text-align:center; font-size:10px; color:#aaa; margin-top:5px;">Жми иконку чтобы съесть</div>`;
-
         menu.innerHTML = html;
-    }
+    };
 
-    // ЗАПУСК
-    const checkLoop = setInterval(() => {
-        if(!document.getElementById('red-backpack-btn')) {
-            createRedBackpack();
+    // Закрытие меню при клике в пустоту
+    document.addEventListener('click', function(e) {
+        const menu = document.getElementById(menuId);
+        if (menu && menu.style.display === 'flex') {
+            // Если клик не по меню и не по кнопке с чемоданом
+            if (!menu.contains(e.target) && !e.target.closest('.fa-briefcase') && !e.target.closest('.fa-suitcase')) {
+                menu.style.display = 'none';
+            }
         }
-    }, 1000);
+    });
 
 })();
 </script>
