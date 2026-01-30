@@ -1799,89 +1799,83 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v50: Smart Camera Loaded");
+    console.log(">>> Patch v51: Smart Fit Loaded");
 
-    // 1. ФУНКЦИЯ УМНОЙ ФОКУСИРОВКИ
+    // 1. УМНАЯ КАМЕРА (С УЧЕТОМ ПОЛОВИНЫ ЭКРАНА)
     window.fitRouteToScreen = function() {
         if (!window.map) return;
         
-        // Ищем маршрут (линию) или маркеры на карте
-        let layers = [];
+        // Собираем границы всех линий (маршрута) и маркеров на карте
+        let bounds = L.latLngBounds([]);
+        let foundSomething = false;
+
         window.map.eachLayer(layer => {
-            if (layer instanceof L.Polyline || layer instanceof L.Marker) {
-                // Игнорируем фоновую карту (TileLayer)
-                if(!layer._url) layers.push(layer);
+            // Ищем линии (Polyline) и Маркеры
+            if ((layer instanceof L.Polyline || layer instanceof L.Marker)) {
+                // Исключаем саму карту и фоновые слои
+                if(!layer._url && layer.getBounds) {
+                    bounds.extend(layer.getBounds());
+                    foundSomething = true;
+                } else if (layer instanceof L.Marker && layer.getLatLng) {
+                    bounds.extend(layer.getLatLng());
+                    foundSomething = true;
+                }
             }
         });
 
-        if (layers.length > 0) {
-            // Создаем границы, включающие все объекты (тебя и цель)
-            const group = L.featureGroup(layers);
-            const bounds = group.getBounds();
+        if (foundSomething && bounds.isValid()) {
+            // САМОЕ ВАЖНОЕ: ВЫЧИСЛЯЕМ ВЫСОТУ ОТСТУПА
+            // Мы берем высоту экрана и делим на 2.2. 
+            // Это значит, что карта будет думать, что нижняя половина экрана занята.
+            const bottomPadding = window.innerHeight / 2.2; 
 
-            if (bounds.isValid()) {
-                // ГЛАВНЫЙ ФОКУС: PADDING
-                // paddingBottomRight: [0, 350] -> Отступ снизу 350px (под панель)
-                // paddingTopLeft: [0, 80] -> Отступ сверху 80px (под шапку)
-                window.map.fitBounds(bounds, {
-                    paddingBottomRight: [0, 350], 
-                    paddingTopLeft: [0, 80],
-                    animate: true,
-                    duration: 1.0
-                });
-                console.log("Camera auto-fitted with padding.");
-            }
+            window.map.fitBounds(bounds, {
+                paddingBottomRight: [50, bottomPadding], // Отступ СНИЗУ (большой) и Справа
+                paddingTopLeft: [50, 100],               // Отступ СВЕРХУ (под меню) и Слева
+                maxZoom: 16,                             // Не приближать слишком близко
+                animate: true,
+                duration: 1.5
+            });
+            console.log(`Camera fitted with bottom padding: ${bottomPadding}px`);
         } else {
-            // Если маршрута нет, просто центрируем на игроке (Варшава)
-            // Но со сдвигом, чтобы центр был визуально выше
-            const center = window.map.getCenter();
-            // Смещаем карту чуть вниз, чтобы "центр" оказался выше
-            // Это сложная математика, но fitBounds надежнее.
+            // Если маршрута нет, просто находим игрока
+            if(window.mapVisuals && window.mapVisuals.player) {
+                window.map.setView(window.mapVisuals.player.getLatLng(), 15);
+            }
         }
     };
 
-    // 2. ПЕРЕХВАТЫВАЕМ ВЗЯТИЕ ЗАКАЗА
-    // Сохраняем оригинальную функцию (если она есть)
-    const originalStartSearch = window.startSearch;
-    const originalAccept = window.acceptOrder; // Если такая есть в коде
-
-    // Когда заказ найден/начат
+    // 2. АВТОМАТИКА ПРИ ЗАКАЗЕ
+    // Мы будем пытаться сфокусировать камеру несколько раз после взятия заказа,
+    // потому что маршрут может рисоваться с задержкой (пока интернет прогрузит).
+    
+    const originalAccept = window.acceptOrder; 
     if(window.acceptOrder) {
         window.acceptOrder = function() {
-            // Выполняем старую логику (чтобы ничего не сломать)
-            originalAccept.apply(this, arguments);
+            // Запускаем старую логику
+            if(originalAccept) originalAccept.apply(this, arguments);
             
-            // Ждем 0.5 сек, пока нарисуется маршрут, и фокусим камеру
-            setTimeout(window.fitRouteToScreen, 500);
+            // Пытаемся сфокусировать 3 раза с интервалом, чтобы точно поймать маршрут
+            setTimeout(window.fitRouteToScreen, 500);  // через 0.5 сек
+            setTimeout(window.fitRouteToScreen, 1500); // через 1.5 сек
+            setTimeout(window.fitRouteToScreen, 3000); // через 3.0 сек (контрольный)
         };
     }
 
-    // Добавляем проверку в цикл поиска (на случай если маршрут рисуется там)
-    // Раз в секунду, если есть активный заказ, проверяем "первый ли это фокус"
-    let lastOrderState = null;
-    setInterval(() => {
-        // Если появился currentOrder, а раньше не было -> Фокус
-        if (window.currentOrder && !lastOrderState) {
-            setTimeout(window.fitRouteToScreen, 800);
-        }
-        lastOrderState = window.currentOrder;
-    }, 1000);
-
-
-    // 3. ДОБАВЛЯЕМ КНОПКУ ФОКУСИРОВКИ НА ЭКРАН
+    // 3. КНОПКА ФОКУСА (ПРИЦЕЛ)
+    // Она будет под радио
     function addFocusBtn() {
-        if(document.getElementById('focus-btn')) return;
+        if(document.getElementById('focus-btn')) document.getElementById('focus-btn').remove();
 
         const btn = document.createElement('div');
         btn.id = 'focus-btn';
-        // Располагаем справа, чуть ниже радио
         btn.style.cssText = `
             position: absolute; 
             top: 200px; 
             right: 15px; 
             width: 45px; 
             height: 45px; 
-            background: white; 
+            background: rgba(255, 255, 255, 0.9); 
             color: #333;
             border-radius: 50%;
             display: flex; 
@@ -1891,20 +1885,27 @@
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             font-size: 20px;
+            border: 2px solid #ccc;
         `;
         btn.innerHTML = `<i class="fa-solid fa-crosshairs"></i>`;
         
         btn.onclick = function() {
-            // При нажатии - виброотклик и фокус
-            if(window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+                 window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            }
             window.fitRouteToScreen();
         };
 
         document.body.appendChild(btn);
     }
 
-    // Запускаем кнопку
+    // Запуск
     addFocusBtn();
+    // Также запускаем проверку раз в 2 секунды, если мы в пути, но карта "улетела"
+    setInterval(() => {
+        // Если есть активный заказ и игрок ничего не трогает 10 секунд... (сложно реализовать без событий)
+        // Просто оставим ручную кнопку и авто-старт.
+    }, 5000);
 
 })();
 </script>
