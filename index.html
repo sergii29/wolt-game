@@ -2518,31 +2518,38 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v83: UI Cleaner Loaded");
+    console.log(">>> Patch v84: Red Backpack Loaded");
 
-    // 1. УДАЛЕНИЕ СТАРОЙ КНОПКИ (СЛОМАННОЙ)
-    // Ищем любые иконки чемодана/портфеля внизу и скрываем их
-    const killOldButton = setInterval(() => {
-        const oldIcons = document.querySelectorAll('.fa-briefcase, .fa-suitcase');
-        oldIcons.forEach(icon => {
-            // Не трогаем наш новый рюкзак
-            if (icon.closest('#backpack-btn')) return;
+    // 1. УБИВАЕМ СТАРЫЙ ЧЕМОДАН
+    // Ищем кнопку с иконкой чемодана в нижней части экрана
+    const killOldSuitcase = setInterval(() => {
+        // Ищем все иконки чемоданов
+        const icons = document.querySelectorAll('.fa-briefcase, .fa-suitcase');
+        icons.forEach(icon => {
+            // Если это НАШ новый рюкзак - не трогаем
+            if (icon.closest('#red-backpack-btn')) return;
+
+            // Находим родительскую кнопку
+            const btn = icon.closest('button') || icon.closest('.btn') || icon.closest('div[onclick]');
             
-            // Скрываем родительскую кнопку старого чемодана
-            const btn = icon.closest('div') || icon.closest('button');
+            // Если кнопка найдена и она где-то внизу экрана (top > 500px или внутри bottom-panel)
             if (btn) {
-                btn.style.display = 'none';
-                console.log("Old broken button removed.");
+                const rect = btn.getBoundingClientRect();
+                if (rect.top > window.innerHeight / 2) { // Если она во второй половине экрана
+                    btn.style.display = 'none'; // Скрываем нафиг
+                    btn.style.visibility = 'hidden';
+                    btn.style.pointerEvents = 'none'; // Чтобы случайно не нажалась
+                }
             }
         });
-    }, 1000);
+    }, 500);
 
     // 2. ДАННЫЕ РЮКЗАКА
     if (!state.backpack) {
         state.backpack = { snickers: 2, water: 2, coffee: 0 };
     }
 
-    // 3. ЛОГИКА ЕДЫ (Как и было)
+    // 3. ЛОГИКА (ЕСТЬ/ПИТЬ)
     window.useItem = function(type) {
         const ITEMS = {
             'snickers': { cost: 15, energy: 15, name: '🍫 Сникерс' },
@@ -2553,9 +2560,11 @@
         
         if (state.backpack[type] > 0) {
             state.backpack[type]--;
+            // Применяем эффекты
             if(item.energy) state.needs.energy = Math.min(state.needs.energy + item.energy, 100);
             if(item.water) state.needs.water = Math.min(state.needs.water + item.water, 100);
             if(item.mood) state.needs.mood = Math.min(state.needs.mood + item.mood, 100);
+            
             window.showToast(`Съел: ${item.name}`, "success");
             if(window.sfx && window.sfx.coin) window.sfx.coin();
         } else {
@@ -2570,9 +2579,10 @@
                 window.showToast("Нет денег!", "warn");
             }
         }
-        saveGame(); updateUI(); updateBackpackUI();
+        saveGame(); updateUI(); updateRedBackpackUI();
     };
 
+    // Докупка в инвентарь (+)
     window.stockItem = function(type, e) {
         if(e) e.stopPropagation();
         const COSTS = { 'snickers': 15, 'water': 5, 'coffee': 25 };
@@ -2580,59 +2590,68 @@
             state.balance -= COSTS[type];
             state.backpack[type]++;
             window.showToast("+1 в запас", "success");
-            saveGame(); updateUI(); updateBackpackUI();
+            saveGame(); updateUI(); updateRedBackpackUI();
         }
     };
 
-    // 4. НОВАЯ КНОПКА (УДОБНОЕ МЕСТО)
-    function createBackpackBtn() {
+    // 4. СОЗДАЕМ КРАСНЫЙ РЮКЗАК (ВНИЗУ СПРАВА)
+    function createRedBackpack() {
         const btn = document.createElement('div');
-        btn.id = 'backpack-btn';
+        btn.id = 'red-backpack-btn';
+        
+        // СТИЛЬ: Красная кнопка, внизу справа (над педалью)
         btn.style.cssText = `
             position: fixed; 
-            bottom: 220px; right: 15px; /* НАД ПЕДАЛЬЮ (Удобно жать пальцем) */
-            width: 55px; height: 55px;
-            background: rgba(30, 30, 30, 0.9);
-            border: 2px solid #555;
-            border-radius: 12px;
+            bottom: 120px; right: 20px; /* Позиция "вместо старого чемодана" */
+            width: 60px; height: 60px;
+            background: radial-gradient(circle, #ff3d00, #d50000);
+            border: 2px solid #ff8a50;
+            border-radius: 14px;
             display: flex; justify-content: center; align-items: center;
-            font-size: 26px; cursor: pointer; z-index: 11000;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            font-size: 28px; cursor: pointer; z-index: 11000;
+            box-shadow: 0 5px 15px rgba(255, 61, 0, 0.4);
+            transition: transform 0.1s;
         `;
-        btn.innerHTML = `🎒`;
+        btn.innerHTML = `🎒`; // Иконка рюкзака
         
-        // Меню (открывается ВЛЕВО, чтобы не уходить за экран)
+        // Нажатие (эффект)
+        btn.onmousedown = () => btn.style.transform = "scale(0.9)";
+        btn.onmouseup = () => btn.style.transform = "scale(1)";
+
+        // МЕНЮ (Выпадает ВЛЕВО, чтобы было удобно)
         const menu = document.createElement('div');
-        menu.id = 'backpack-menu';
+        menu.id = 'red-backpack-menu';
         menu.style.cssText = `
             position: absolute;
-            bottom: 0; right: 65px; /* Слева от кнопки */
-            width: 150px;
-            background: rgba(20,20,20, 0.95);
-            border: 1px solid #444;
-            border-radius: 10px;
+            bottom: 5px; right: 70px; /* Слева от кнопки */
+            width: 160px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #ff3d00;
+            border-radius: 12px;
             padding: 8px;
             display: none;
             flex-direction: column;
-            gap: 5px;
-            backdrop-filter: blur(5px);
+            gap: 6px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         `;
         
         btn.appendChild(menu);
         
+        // Открытие/Закрытие
         btn.onclick = (e) => {
             if(e.target.innerText === '+' || e.target.classList.contains('stock-btn')) return;
             const isHidden = menu.style.display === 'none';
             menu.style.display = isHidden ? 'flex' : 'none';
-            if(isHidden) updateBackpackUI();
+            if(isHidden) updateRedBackpackUI();
         };
 
         document.body.appendChild(btn);
     }
 
-    // 5. ОБНОВЛЕНИЕ UI
-    window.updateBackpackUI = function() {
-        const menu = document.getElementById('backpack-menu');
+    // 5. ОТРИСОВКА МЕНЮ
+    window.updateRedBackpackUI = function() {
+        const menu = document.getElementById('red-backpack-menu');
         if(!menu) return;
 
         const list = [
@@ -2643,22 +2662,35 @@
 
         let html = '';
         list.forEach(item => {
-            const color = item.count > 0 ? '#00e676' : '#555';
+            const has = item.count > 0;
+            const color = has ? '#00e676' : '#777';
+            
             html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; background:#333; padding:6px; border-radius:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#333; padding:8px; border-radius:8px;">
                     <div onclick="window.useItem('${item.id}')" style="cursor:pointer; flex-grow:1; display:flex; align-items:center;">
-                        <span style="margin-right:5px;">${item.icon}</span> 
-                        <b style="color:${color}">x${item.count}</b>
+                        <span style="font-size:20px; margin-right:8px;">${item.icon}</span> 
+                        <b style="color:${color}; font-size:14px;">x${item.count}</b>
                     </div>
-                    <div class="stock-btn" onclick="window.stockItem('${item.id}', event)" style="width:20px; height:20px; background:#009de0; border-radius:50%; text-align:center; font-weight:bold; cursor:pointer;">+</div>
+                    <div class="stock-btn" onclick="window.stockItem('${item.id}', event)" style="
+                        width:24px; height:24px; background:#2979ff; color:white;
+                        border-radius:50%; display:flex; justify-content:center; align-items:center;
+                        font-weight:bold; cursor:pointer; margin-left:5px;
+                    ">+</div>
                 </div>
             `;
         });
+        
+        // Кнопка "Закрыть" (если неудобно кликать)
+        // html += `<div style="text-align:center; font-size:10px; color:#aaa; margin-top:5px;">Жми иконку чтобы съесть</div>`;
+
         menu.innerHTML = html;
     }
 
+    // ЗАПУСК
     const checkLoop = setInterval(() => {
-        if(!document.getElementById('backpack-btn')) createBackpackBtn();
+        if(!document.getElementById('red-backpack-btn')) {
+            createRedBackpack();
+        }
     }, 1000);
 
 })();
