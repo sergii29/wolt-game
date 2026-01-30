@@ -1799,17 +1799,18 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v52: Force Top View");
+    console.log(">>> Patch v53: Perfect Fit Loaded");
 
-    // 1. ФУНКЦИЯ ЦЕНТРИРОВАНИЯ
+    // 1. ЕДИНАЯ ФУНКЦИЯ ФОКУСИРОВКИ
     window.fitRouteToScreen = function() {
         if (!window.map) return;
         
-        // 1. Собираем границы объектов (линия маршрута + точки)
+        // Собираем все объекты на карте (линии маршрута и точки)
         let bounds = L.latLngBounds([]);
         let hasObjects = false;
 
         window.map.eachLayer(layer => {
+            // Берем только линии и маркеры (игнорируем фон карты)
             if ((layer instanceof L.Polyline || layer instanceof L.Marker) && !layer._url) {
                 if(layer.getBounds) { bounds.extend(layer.getBounds()); hasObjects = true; }
                 else if(layer.getLatLng) { bounds.extend(layer.getLatLng()); hasObjects = true; }
@@ -1817,88 +1818,62 @@
         });
 
         if (hasObjects && bounds.isValid()) {
-            // ШАГ 1: Просто вмещаем маршрут в экран (без отступов)
-            // Добавляем чуть-чуть padding со всех сторон (50px), чтобы края не прилипали
-            window.map.fitBounds(bounds, { padding: [50, 50], animate: false });
+            // === ГЛАВНАЯ МАГИЯ ===
+            // Мы вычисляем высоту "мертвой зоны" снизу.
+            // Берем 50% от высоты экрана (это твоя панель заказа).
+            const bottomDeadZone = window.innerHeight * 0.5; 
 
-            // ШАГ 2: ПРИНУДИТЕЛЬНЫЙ СДВИГ (PAN)
-            // Мы знаем, что маршрут сейчас ровно по центру экрана.
-            // Но снизу у нас панель (примерно 40-50% экрана).
-            // Нам нужно поднять маршрут ВВЕРХ.
-            // Для этого мы сдвигаем "камеру" ВНИЗ.
-            
-            // Вычисляем сдвиг: 25% от высоты экрана
-            const shiftY = window.innerHeight * 0.25; 
-            
-            // PanBy(x, y) -> сдвигает карту на x, y пикселей.
-            // Если y > 0 (положительный), карта едет вниз -> контент едет ВВЕРХ.
-            // Точнее: центр смещается.
-            
-            // Ждем мгновение после fitBounds и сдвигаем
-            setTimeout(() => {
-                 // Сдвигаем на 25% высоты ВНИЗ (значит центр сместится на юг, а маршрут окажется на севере экрана)
-                 // Проверим: panBy([0, 100]) сдвигает карту так, что то, что было в центре, уезжает вниз? 
-                 // Нет, panBy сдвигает "вид". Если мы сдвигаем вид вниз, мы видим то, что было сверху.
-                 // Нам нужно, чтобы то, что БЫЛО в центре, стало ВЫШЕ центра.
-                 // Значит, нам нужно "посмотреть ниже". 
-                 // Короче, опытным путем: положительный Y в panBy поднимает объекты вверх? Нет.
-                 // Давай проще: panBy([0, 200]) сдвигает карту на 200px вправо-вниз.
-                 // Значит, точка, которая была (0,0) станет (200,200).
-                 // Значит, контент уезжает ВНИЗ.
-                 // А нам надо, чтобы контент уехал ВВЕРХ.
-                 // Значит, пишем ОТРИЦАТЕЛЬНЫЙ Y? Нет, тогда снизу будет пустота.
-                 
-                 // Давай используем setView.
-                 // Получаем текущий центр.
-                 const center = window.map.getCenter();
-                 // Переводим в пиксели
-                 const point = window.map.latLngToContainerPoint(center);
-                 // Нам нужно, чтобы этот центр оказался выше? Нет, мы хотим, чтобы центр карты сместился НИЖЕ,
-                 // чтобы наш маршрут оказался в ВЕРХНЕЙ части вида.
-                 // Значит, НОВЫЙ центр карты должен быть ЮЖНЕЕ (ниже по карте).
-                 
-                 // Добавляем к Y пикселей (идем вниз по экрану)
-                 const newPoint = L.point(point.x, point.y + shiftY);
-                 const newCenter = window.map.containerPointToLatLng(newPoint);
-                 
-                 // Плавно едем к новому центру
-                 window.map.panTo(newCenter, { animate: true, duration: 0.8 });
-                 
-            }, 100); // Небольшая задержка после зума
-            
+            window.map.fitBounds(bounds, {
+                // [paddingLeft, paddingTop]
+                paddingTopLeft: [50, 100], 
+                
+                // [paddingRight, paddingBottom]
+                // Ставим ОГРОМНЫЙ отступ снизу, чтобы маршрут вытолкнуло вверх
+                paddingBottomRight: [50, bottomDeadZone], 
+                
+                // Ограничиваем зум, чтобы не утыкаться носом в асфальт
+                maxZoom: 15, 
+                
+                // Плавная анимация
+                animate: true,
+                duration: 1.2
+            });
+            console.log("Map fitted to TOP HALF of screen.");
         } else {
-            // Если маршрута нет, центрируем на игроке
+            // Если маршрута нет, ищем игрока
             if(window.mapVisuals && window.mapVisuals.player) {
                 window.map.setView(window.mapVisuals.player.getLatLng(), 15);
             }
         }
     };
 
-    // 2. АВТО-ЗАПУСК
+    // 2. АВТОМАТИЧЕСКАЯ ПОДСТРОЙКА ПРИ ЗАКАЗЕ
     const originalAccept = window.acceptOrder; 
     if(window.acceptOrder) {
         window.acceptOrder = function() {
             if(originalAccept) originalAccept.apply(this, arguments);
-            // Пытаемся поймать момент появления маршрута
-            setTimeout(window.fitRouteToScreen, 600);
-            setTimeout(window.fitRouteToScreen, 2000);
+            
+            // Делаем несколько попыток, чтобы поймать момент отрисовки маршрута
+            setTimeout(window.fitRouteToScreen, 500);  // Сразу
+            setTimeout(window.fitRouteToScreen, 1500); // Чуть погодя (если интернет тупит)
+            setTimeout(window.fitRouteToScreen, 3000); // Контрольный
         };
     }
 
-    // 3. КНОПКА ПРИЦЕЛА (ВЕРНУЛ ПОД РАДИО)
+    // 3. КНОПКА "ПРИЦЕЛ" (РУЧНАЯ КОРРЕКЦИЯ)
     function addFocusBtn() {
         if(document.getElementById('focus-btn')) document.getElementById('focus-btn').remove();
 
         const btn = document.createElement('div');
         btn.id = 'focus-btn';
-        // 200px от верха - как раз под радио (оно на 140px)
+        // Располагаем под Радио (примерно 200px сверху)
         btn.style.cssText = `
             position: absolute; 
             top: 200px; 
             right: 15px; 
             width: 45px; 
             height: 45px; 
-            background: rgba(255, 255, 255, 0.95); 
+            background: rgba(255, 255, 255, 0.9); 
             color: #333;
             border-radius: 50%;
             display: flex; 
@@ -1908,9 +1883,9 @@
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
             font-size: 20px;
-            border: 1px solid #ccc;
+            border: 2px solid #ccc;
         `;
-        btn.innerHTML = `<i class="fa-solid fa-crosshairs"></i>`;
+        btn.innerHTML = `<i class="fa-solid fa-expand"></i>`; // Иконка "Расширить/Вместить"
         
         btn.onclick = function() {
             if(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
