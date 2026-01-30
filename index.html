@@ -1799,18 +1799,17 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v54: Force Zoom Out Loaded");
+    console.log(">>> Patch v55: Ultra Zoom Out Loaded");
 
-    // 1. ФУНКЦИЯ "ПОКАЗАТЬ ВСЁ"
+    // 1. ФУНКЦИЯ "СУПЕР ОТДАЛЕНИЕ"
     window.fitRouteToScreen = function() {
         if (!window.map) return;
         
-        // Собираем все объекты (маршрут + точки)
         let bounds = L.latLngBounds([]);
         let found = false;
 
+        // Ищем все объекты на карте
         window.map.eachLayer(layer => {
-            // Ищем линии и маркеры
             if ((layer instanceof L.Polyline || layer instanceof L.Marker) && !layer._url) {
                 if(layer.getBounds) { bounds.extend(layer.getBounds()); found = true; }
                 else if(layer.getLatLng) { bounds.extend(layer.getLatLng()); found = true; }
@@ -1818,51 +1817,53 @@
         });
 
         if (found && bounds.isValid()) {
-            // === ГЛАВНАЯ НАСТРОЙКА ===
-            // Вычисляем отступ снизу (55% от высоты экрана)
-            // Это заставит карту думать, что нижняя часть занята, и сдвинуть маршрут ВВЕРХ.
-            const bottomPadding = window.innerHeight * 0.55;
+            // === АГРЕССИВНАЯ НАСТРОЙКА ===
+            
+            // Мы блокируем 65% экрана снизу.
+            // Карте остается только узкая полоска сверху (35%).
+            // Ей ПРИДЕТСЯ отдалиться очень сильно, чтобы маршрут туда влез.
+            const bottomPadding = window.innerHeight * 0.65;
 
             window.map.fitBounds(bounds, {
-                // Отступы: [Справа, Снизу]
+                // Отступы: [Справа, Снизу (ОГРОМНЫЙ)]
                 paddingBottomRight: [50, bottomPadding], 
                 
                 // Отступы: [Слева, Сверху]
-                paddingTopLeft: [50, 100],
+                paddingTopLeft: [50, 80],
                 
-                // !!! ГЛАВНОЕ: Ограничиваем зум !!!
-                // 13 - это достаточно далеко, чтобы видеть полгорода.
-                // Это не даст карте приблизиться слишком сильно, даже если маршрут короткий.
-                maxZoom: 13, 
+                // ЗАПРЕЩАЕМ ПРИБЛИЖАТЬСЯ
+                // 12 - это вид "из космоса" (почти весь город).
+                // Даже если маршрут короткий, карта не приблизится ближе этого значения.
+                maxZoom: 12, 
                 
                 animate: true,
-                duration: 1.0
+                duration: 1.5
             });
-            console.log("Map forced to ZOOM OUT and shift UP.");
+            console.log("Map forced to ULTRA ZOOM OUT.");
         } else {
-            // Если маршрута нет, просто показываем игрока (тоже издалека)
+            // Если маршрута нет - просто общий вид
             if(window.mapVisuals && window.mapVisuals.player) {
-                window.map.setView(window.mapVisuals.player.getLatLng(), 13);
+                window.map.setView(window.mapVisuals.player.getLatLng(), 12);
             }
         }
     };
 
-    // 2. ЗАПУСК ПРИ ВЗЯТИИ ЗАКАЗА (МНОГО РАЗ)
+    // 2. ДОЛБИМ КАРТУ КОМАНДАМИ (ЧТОБЫ НАВЕРНЯКА)
     const originalAccept = window.acceptOrder; 
     if(window.acceptOrder) {
         window.acceptOrder = function() {
             if(originalAccept) originalAccept.apply(this, arguments);
             
-            // "Долбим" карту командами, чтобы она точно послушалась, 
-            // даже если маршрут грузится медленно
+            // Вызываем функцию 4 раза с разной задержкой.
+            // Если маршрут длинный и грузится долго, последний вызов (3 сек) его точно поймает.
             setTimeout(window.fitRouteToScreen, 500);
             setTimeout(window.fitRouteToScreen, 1000);
             setTimeout(window.fitRouteToScreen, 2000);
-            setTimeout(window.fitRouteToScreen, 3000);
+            setTimeout(window.fitRouteToScreen, 3500);
         };
     }
 
-    // 3. КНОПКА "ПРИЦЕЛ" (РУЧНАЯ)
+    // 3. КНОПКА ПРИЦЕЛА
     function addFocusBtn() {
         if(document.getElementById('focus-btn')) document.getElementById('focus-btn').remove();
 
@@ -1886,10 +1887,10 @@
             font-size: 20px;
             border: 2px solid #333;
         `;
-        btn.innerHTML = `<i class="fa-solid fa-expand"></i>`;
+        btn.innerHTML = `<i class="fa-solid fa-compress"></i>`; // Иконка "Сжать"
         
         btn.onclick = function() {
-            if(window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+            if(window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
             window.fitRouteToScreen();
         };
 
