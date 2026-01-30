@@ -1799,60 +1799,67 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v59: Clean Winter Loaded");
+    console.log(">>> Patch v61: Strict Clean UI Loaded");
 
     const style = document.createElement('style');
     style.innerHTML = `
-        /* 1. СТЕКЛЯННАЯ ПАНЕЛЬ */
+        /* 1. СТЕКЛЯННАЯ ПАНЕЛЬ (ЧИСТАЯ) */
         .bottom-sheet {
-            background: rgba(255, 255, 255, 0.15) !important;
-            backdrop-filter: blur(2px) !important;
-            -webkit-backdrop-filter: blur(2px) !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.6) !important;
+            background: rgba(255, 255, 255, 0.2) !important; /* Прозрачность */
+            backdrop-filter: blur(5px) !important;          /* Легкое размытие для читаемости */
+            -webkit-backdrop-filter: blur(5px) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.8) !important;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1) !important;
+        }
+
+        /* 2. ТЕКСТ ВНИЗУ (ЧЕРНЫЙ, ЧЕТКИЙ, БЕЗ СВЕЧЕНИЯ) */
+        #city-label, #rest-name, #order-dest, #status-label, h3, p, span {
+            color: #000000 !important;       /* Строгий черный цвет */
+            font-weight: 900 !important;     /* Жирный шрифт */
+            text-shadow:                     /* Тонкая белая обводка для контраста */
+                1px 1px 0 #fff, 
+               -1px 1px 0 #fff, 
+               1px -1px 0 #fff, 
+              -1px -1px 0 #fff !important;
+            animation: none !important;      /* Убираем пульсацию */
+            filter: none !important;         /* Убираем размытие */
+        }
+
+        /* 3. БАЛАНС ВВЕРХУ (БЕЛЫЙ, ЧЕТКИЙ) */
+        .balance-amount, .balance-label {
+            color: #ffffff !important;       /* Чистый белый */
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; /* Обычная тень для читаемости */
+            animation: none !important;
+            filter: none !important;
+        }
+        
+        /* Фон баланса (сделаем потемнее для контраста) */
+        .balance-display {
+            background: rgba(0, 0, 0, 0.85) !important;
+            border: 1px solid #444 !important;
             box-shadow: none !important;
         }
 
-        /* 2. ЛЕДЯНОЙ ТЕКСТ (СТАТИЧНЫЙ) */
-        #city-label, #rest-name, #order-dest, #status-label, h3, .balance-amount {
-            color: #0d1b2a !important; /* Темно-синий */
-            position: relative;
-            z-index: 10;
-            font-weight: 900 !important;
-            
-            /* Снежная шапка на буквах + Ледяное свечение */
-            text-shadow: 
-                0 -2px 0 #ffffff,       /* Снег сверху */
-                0 0 10px #00ffff,       /* Свечение */
-                2px 2px 0 #fff;         /* Белая обводка */
-                
-            /* Медленная пульсация холода */
-            animation: icePulse 4s infinite alternate;
-        }
-
-        @keyframes icePulse {
-            0% { filter: drop-shadow(0 0 1px cyan); }
-            100% { filter: drop-shadow(0 0 3px blue); }
-        }
-
-        /* 3. ИКОНКИ */
-        .fa-solid {
-            text-shadow: 0 -2px 2px white; /* Легкий иней */
-        }
-
-        /* 4. СЛАЙДЕР (ГОЛУБОЙ ЛЕД) */
+        /* 4. СЛАЙДЕР (ЧИСТЫЙ БЕЛЫЙ) */
         .slider-container {
-            background: rgba(200, 240, 255, 0.4) !important;
-            border: 2px solid #fff !important;
+            background: #ffffff !important;  /* Просто белый фон */
+            border: 1px solid #ccc !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
         }
         
         .slider-text {
-            color: #000 !important;
+            color: #333 !important;          /* Темно-серый текст */
+            text-shadow: none !important;    /* Никаких теней */
             font-weight: bold !important;
+        }
+        
+        /* 5. КНОПКА ПРИНЯТЬ/ГАЗ (УБИРАЕМ ЛИШНИЕ ЭФФЕКТЫ) */
+        .pedal-btn {
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2) !important;
+            text-shadow: none !important;
         }
     `;
     document.head.appendChild(style);
-
-    // Убрал функцию генерации снега. Теперь чисто.
 
 })();
 </script>
