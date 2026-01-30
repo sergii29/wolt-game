@@ -1629,9 +1629,9 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v49: Radio Loaded");
+    console.log(">>> Patch v49: Radio Loaded (Lower pos)");
 
-    // 1. СПИСОК СТАНЦИЙ (Проверенные HTTPS потоки)
+    // 1. СПИСОК СТАНЦИЙ
     const STATIONS = [
         { name: "🚗 Nightride FM", url: "https://stream.nightride.fm/nightride.m4a", style: "color:cyan; text-shadow:0 0 5px cyan" },
         { name: "🎹 Lofi HipHop",  url: "https://play.streamafrica.net/lofi", style: "color:#ff9100; text-shadow:0 0 5px #ff9100" },
@@ -1641,20 +1641,19 @@
     let currentStationIdx = 0;
     let isPlaying = false;
     let audioObj = new Audio();
-    audioObj.crossOrigin = "anonymous"; // Чтобы работало с разных серверов
+    audioObj.crossOrigin = "anonymous"; 
 
     // 2. СОЗДАНИЕ ИНТЕРФЕЙСА
     function createRadioUI() {
-        // Если уже есть - удаляем (для перезагрузки)
         const old = document.getElementById('warsaw-fm-widget');
         if(old) old.remove();
 
         const widget = document.createElement('div');
         widget.id = 'warsaw-fm-widget';
-        // Стиль: Плашка справа под кнопкой статистики
+        // ИЗМЕНЕНО: top: 140px (было 70px)
         widget.style.cssText = `
             position: absolute; 
-            top: 70px; 
+            top: 140px; 
             right: 15px; 
             width: 45px; 
             height: 45px; 
@@ -1671,15 +1670,14 @@
             overflow: hidden;
         `;
 
-        // Иконка ноты
         widget.innerHTML = `<i class="fa-solid fa-music" style="color:white; font-size:20px;"></i>`;
         
-        // Расширенное меню (скрыто по умолчанию)
         const player = document.createElement('div');
         player.id = 'warsaw-fm-player';
+        // ИЗМЕНЕНО: top: 140px (чтобы меню открывалось рядом с кнопкой)
         player.style.cssText = `
             position: absolute;
-            top: 70px;
+            top: 140px;
             right: 70px;
             width: 200px;
             background: rgba(20, 20, 20, 0.95);
@@ -1687,14 +1685,13 @@
             border-radius: 15px;
             padding: 10px;
             z-index: 999;
-            display: none; /* Скрыто */
+            display: none; 
             flex-direction: column;
             gap: 5px;
             backdrop-filter: blur(5px);
             box-shadow: 0 0 15px rgba(0, 204, 255, 0.2);
         `;
 
-        // HTML Плеера
         player.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
                 <span style="font-size:10px; color:#888; letter-spacing:1px; font-weight:bold">WARSAW FM 📻</span>
@@ -1728,25 +1725,13 @@
         document.body.appendChild(widget);
         document.body.appendChild(player);
 
-        // --- ЛОГИКА --- //
+        // ЛОГИКА
+        widget.onclick = function() { player.style.display = 'flex'; widget.style.display = 'none'; };
+        document.getElementById('fm-close').onclick = function() { player.style.display = 'none'; widget.style.display = 'flex'; };
 
-        // Открыть плеер
-        widget.onclick = function() {
-            player.style.display = 'flex';
-            widget.style.display = 'none';
-        };
-
-        // Закрыть плеер
-        document.getElementById('fm-close').onclick = function() {
-            player.style.display = 'none';
-            widget.style.display = 'flex';
-        };
-
-        // Play / Pause
         const playBtn = document.getElementById('fm-play');
         const stationLabel = document.getElementById('fm-station-name');
         const viz = document.getElementById('fm-visualizer');
-        const icon = widget.querySelector('i');
 
         function togglePlay() {
             if(isPlaying) {
@@ -1758,9 +1743,7 @@
                 widget.style.animation = 'none';
                 widget.style.borderColor = '#555';
             } else {
-                // Если поток пустой (первый запуск), грузим
                 if(!audioObj.src) audioObj.src = STATIONS[currentStationIdx].url;
-                
                 audioObj.play().then(() => {
                     isPlaying = true;
                     playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
@@ -1769,16 +1752,10 @@
                     widget.style.animation = 'pulseRadio 1.5s infinite';
                     widget.style.borderColor = '#00ccff';
                     updateStyle();
-                }).catch(e => {
-                    console.error("Audio error", e);
-                    alert("Ошибка потока. Попробуйте другую станцию.");
-                });
+                }).catch(e => { alert("Ошибка потока. Попробуйте другую станцию."); });
             }
         }
-
         playBtn.onclick = togglePlay;
-
-        // Next / Prev
         document.getElementById('fm-next').onclick = () => changeStation(1);
         document.getElementById('fm-prev').onclick = () => changeStation(-1);
 
@@ -1786,56 +1763,31 @@
             currentStationIdx += dir;
             if(currentStationIdx >= STATIONS.length) currentStationIdx = 0;
             if(currentStationIdx < 0) currentStationIdx = STATIONS.length - 1;
-
             const s = STATIONS[currentStationIdx];
             stationLabel.textContent = s.name;
             updateStyle();
-
             audioObj.src = s.url;
-            if(isPlaying) {
-                audioObj.play();
-            }
+            if(isPlaying) audioObj.play();
         }
 
         function updateStyle() {
             const s = STATIONS[currentStationIdx];
             stationLabel.style.cssText = s.style + "; font-size:14px; font-weight:bold; text-align:center; margin-bottom:10px;";
         }
+        document.getElementById('fm-volume').oninput = function(e) { audioObj.volume = e.target.value; };
 
-        // Громкость
-        document.getElementById('fm-volume').oninput = function(e) {
-            audioObj.volume = e.target.value;
-        };
-
-        // Визуализация (Фейковая CSS анимация)
         let vizInterval;
         function startVizAnim() {
             const bars = document.querySelectorAll('#fm-visualizer .bar');
-            vizInterval = setInterval(() => {
-                bars.forEach(b => {
-                    b.style.height = Math.floor(Math.random() * 80 + 20) + '%';
-                });
-            }, 100);
+            vizInterval = setInterval(() => { bars.forEach(b => { b.style.height = Math.floor(Math.random() * 80 + 20) + '%'; }); }, 100);
         }
-        function stopVizAnim() {
-            clearInterval(vizInterval);
-            document.querySelectorAll('#fm-visualizer .bar').forEach(b => b.style.height = '20%');
-        }
+        function stopVizAnim() { clearInterval(vizInterval); document.querySelectorAll('#fm-visualizer .bar').forEach(b => b.style.height = '20%'); }
     }
 
-    // Запуск стилей анимации виджета
     const style = document.createElement('style');
-    style.innerHTML = `
-        @keyframes pulseRadio { 
-            0% { box-shadow: 0 0 0 0 rgba(0, 204, 255, 0.4); } 
-            70% { box-shadow: 0 0 0 10px rgba(0, 204, 255, 0); } 
-            100% { box-shadow: 0 0 0 0 rgba(0, 204, 255, 0); } 
-        }
-    `;
+    style.innerHTML = `@keyframes pulseRadio { 0% { box-shadow: 0 0 0 0 rgba(0, 204, 255, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(0, 204, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 204, 255, 0); } }`;
     document.head.appendChild(style);
 
-    // Инициализация
     createRadioUI();
-
 })();
 </script>
