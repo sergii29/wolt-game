@@ -1799,64 +1799,133 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v61: Strict Clean UI Loaded");
+    console.log(">>> Patch v62: Loot System Loaded");
 
+    // 1. ИНИЦИАЛИЗАЦИЯ ИНВЕНТАРЯ (Если его нет)
+    if(!state.inventory) state.inventory = {};
+    // Убедимся, что счетчики деталей существуют, чтобы не было NaN
+    ['part_alloy', 'part_chip', 'part_engine'].forEach(k => {
+        if(!state.inventory[k]) state.inventory[k] = 0;
+    });
+
+    // 2. НАСТРОЙКИ ШАНСОВ (0.01 = 1%)
+    // ТЫ ПРОСИЛ СЛОЖНО -> ВОТ ЭТО СЛОЖНО
+    const DROP_RATES = {
+        'part_alloy':  { chance: 0.040, name: '🔩 Титановый Сплав', color: '#a0a0a0' }, // 4%
+        'part_chip':   { chance: 0.015, name: '💾 Нейрочип AI',     color: '#00ccff' }, // 1.5%
+        'part_engine': { chance: 0.002, name: '☢️ Ядро Двигателя',  color: '#ff3d00' }  // 0.2% (СУПЕР РЕДКОСТЬ)
+    };
+
+    // 3. СЛЕЖКА ЗА ЗАКАЗАМИ
+    let lastOrderCount = -1;
+
+    // Запускаем "Смотрящего"
+    setInterval(() => {
+        // Если игра еще не загрузилась полностью
+        if(!state || !state.career) return;
+
+        // Первый запуск (синхронизация)
+        if (lastOrderCount === -1) {
+            lastOrderCount = state.career.totalOrders;
+            return;
+        }
+
+        // ЕСЛИ КОЛИЧЕСТВО ЗАКАЗОВ ИЗМЕНИЛОСЬ (ЗНАЧИТ, ТЫ СДАЛ ЗАКАЗ)
+        if (state.career.totalOrders > lastOrderCount) {
+            // Обновляем счетчик
+            lastOrderCount = state.career.totalOrders;
+            
+            // КИДАЕМ КУБИКИ!
+            rollForLoot();
+        }
+    }, 1000); // Проверяем каждую секунду
+
+    // 4. ГЕНЕРАТОР ЛУТА
+    function rollForLoot() {
+        const roll = Math.random(); // Число от 0.0 до 1.0
+        console.log("Rolling for loot... Result:", roll.toFixed(4));
+
+        // Проверяем с самой редкой детали к частой
+        
+        // 1. Двигатель (0.0 - 0.002)
+        if (roll < DROP_RATES['part_engine'].chance) {
+            giveItem('part_engine');
+            return;
+        }
+        
+        // 2. Чип (сдвигаем диапазон)
+        // Чтобы шансы не пересекались, проверяем следующий порог
+        const chipThreshold = DROP_RATES['part_engine'].chance + DROP_RATES['part_chip'].chance;
+        if (roll < chipThreshold) {
+            giveItem('part_chip');
+            return;
+        }
+
+        // 3. Сплав
+        const alloyThreshold = chipThreshold + DROP_RATES['part_alloy'].chance;
+        if (roll < alloyThreshold) {
+            giveItem('part_alloy');
+            return;
+        }
+        
+        // Если ничего не выпало - тишина. Это хардкор.
+    }
+
+    // 5. ВЫДАЧА И АНИМАЦИЯ
+    function giveItem(itemId) {
+        const item = DROP_RATES[itemId];
+        
+        // Добавляем в инвентарь
+        state.inventory[itemId] = (state.inventory[itemId] || 0) + 1;
+        
+        // Сохраняем немедленно
+        if(window.saveGame) window.saveGame();
+        if(window.updateUI) window.updateUI();
+
+        // ПОКАЗЫВАЕМ КРАСИВОЕ ОКНО
+        showLootModal(item);
+    }
+
+    function showLootModal(item) {
+        // Звук успеха (вибрация)
+        if(window.Telegram?.WebApp?.HapticFeedback) {
+             window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        }
+
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 20000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px); animation: fadeIn 0.3s ease;
+        `;
+
+        modal.innerHTML = `
+            <div style="font-size:80px; animation: bounceIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);">🎁</div>
+            <div style="color:white; font-size:24px; font-weight:bold; margin-top:20px; text-transform:uppercase; letter-spacing:2px;">Редкая находка!</div>
+            <div style="color:${item.color}; font-size:28px; font-weight:900; margin-top:10px; text-shadow: 0 0 20px ${item.color}; text-align:center; padding:0 20px;">
+                ${item.name}
+            </div>
+            <div style="color:#aaa; font-size:14px; margin-top:30px;">Найдено при доставке</div>
+            
+            <button id="loot-ok-btn" style="margin-top:40px; padding:15px 50px; background:${item.color}; color:black; border:none; border-radius:30px; font-weight:bold; font-size:18px; cursor:pointer; box-shadow: 0 0 20px ${item.color};">ЗАБРАТЬ</button>
+        `;
+
+        document.body.appendChild(modal);
+
+        document.getElementById('loot-ok-btn').onclick = function() {
+            modal.remove();
+        };
+    }
+
+    // CSS Анимации для лута
     const style = document.createElement('style');
     style.innerHTML = `
-        /* 1. СТЕКЛЯННАЯ ПАНЕЛЬ (ЧИСТАЯ) */
-        .bottom-sheet {
-            background: rgba(255, 255, 255, 0.2) !important; /* Прозрачность */
-            backdrop-filter: blur(5px) !important;          /* Легкое размытие для читаемости */
-            -webkit-backdrop-filter: blur(5px) !important;
-            border-top: 1px solid rgba(255, 255, 255, 0.8) !important;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.1) !important;
-        }
-
-        /* 2. ТЕКСТ ВНИЗУ (ЧЕРНЫЙ, ЧЕТКИЙ, БЕЗ СВЕЧЕНИЯ) */
-        #city-label, #rest-name, #order-dest, #status-label, h3, p, span {
-            color: #000000 !important;       /* Строгий черный цвет */
-            font-weight: 900 !important;     /* Жирный шрифт */
-            text-shadow:                     /* Тонкая белая обводка для контраста */
-                1px 1px 0 #fff, 
-               -1px 1px 0 #fff, 
-               1px -1px 0 #fff, 
-              -1px -1px 0 #fff !important;
-            animation: none !important;      /* Убираем пульсацию */
-            filter: none !important;         /* Убираем размытие */
-        }
-
-        /* 3. БАЛАНС ВВЕРХУ (БЕЛЫЙ, ЧЕТКИЙ) */
-        .balance-amount, .balance-label {
-            color: #ffffff !important;       /* Чистый белый */
-            text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important; /* Обычная тень для читаемости */
-            animation: none !important;
-            filter: none !important;
-        }
-        
-        /* Фон баланса (сделаем потемнее для контраста) */
-        .balance-display {
-            background: rgba(0, 0, 0, 0.85) !important;
-            border: 1px solid #444 !important;
-            box-shadow: none !important;
-        }
-
-        /* 4. СЛАЙДЕР (ЧИСТЫЙ БЕЛЫЙ) */
-        .slider-container {
-            background: #ffffff !important;  /* Просто белый фон */
-            border: 1px solid #ccc !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
-        }
-        
-        .slider-text {
-            color: #333 !important;          /* Темно-серый текст */
-            text-shadow: none !important;    /* Никаких теней */
-            font-weight: bold !important;
-        }
-        
-        /* 5. КНОПКА ПРИНЯТЬ/ГАЗ (УБИРАЕМ ЛИШНИЕ ЭФФЕКТЫ) */
-        .pedal-btn {
-            box-shadow: 0 4px 0 rgba(0,0,0,0.2) !important;
-            text-shadow: none !important;
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes bounceIn { 
+            0% { transform: scale(0); } 
+            50% { transform: scale(1.2); } 
+            100% { transform: scale(1); } 
         }
     `;
     document.head.appendChild(style);
