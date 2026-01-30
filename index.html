@@ -1999,7 +1999,7 @@
 
 <script>
 (function() {
-    console.log(">>> Patch v68: God Mode Auto-Pilot Loaded");
+    console.log(">>> Patch v69: Tesla Autopilot Loaded");
 
     window.adrenaline = {
         active: false,
@@ -2007,89 +2007,46 @@
         timer: null
     };
 
-    // 1. КНОПКА (ТЕПЕРЬ ВЫСОКО И УДОБНО)
+    // 1. КНОПКА (УДОБНАЯ, ВЫСОКАЯ)
     function createAdrenalineBtn() {
         const old = document.getElementById('adr-btn'); if(old) old.remove();
 
         const btn = document.createElement('div');
         btn.id = 'adr-btn';
-        // ПОДНЯЛИ ВЫШЕ: bottom: 350px (над панелью поиска)
         btn.style.cssText = `
             position: absolute; 
             bottom: 350px; 
             left: 15px; 
-            width: 55px; height: 55px; 
+            width: 60px; height: 60px; 
             background: radial-gradient(circle, #ff0000, #800000); 
             border: 2px solid #ff4d4d;
             border-radius: 50%;
             display: flex; justify-content: center; align-items: center; 
-            z-index: 20000; /* Поверх всего */
-            cursor: pointer;
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
-            animation: pulseAdr 2s infinite;
+            z-index: 20000; cursor: pointer;
+            box-shadow: 0 0 25px rgba(255, 0, 0, 0.9);
+            animation: pulseAdr 1.5s infinite;
         `;
-        btn.innerHTML = `<i class="fa-solid fa-bolt" style="color:white; font-size:26px;"></i>`;
+        btn.innerHTML = `<i class="fa-solid fa-bolt" style="color:white; font-size:30px;"></i>`;
         btn.onclick = openAdrMenu;
         document.body.appendChild(btn);
     }
 
-    // 2. МЕНЮ ОПЛАТЫ (TELEGRAM STARS)
+    // 2. МЕНЮ
     function openAdrMenu() {
         if (window.adrenaline.active) {
             const timeLeft = Math.ceil((window.adrenaline.endTime - Date.now()) / 60000);
-            if(confirm(`Автопилот работает! Осталось ${timeLeft} мин. Отключить?`)) stopAdrenaline();
+            if(confirm(`Автопилот активен (${timeLeft} мин). Выключить?`)) stopAdrenaline();
             return;
         }
-
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed; top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.9); z-index: 20001;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            backdrop-filter: blur(10px);
-        `;
-
-        modal.innerHTML = `
-            <div style="font-size:50px; margin-bottom:10px;">⚡</div>
-            <h2 style="color:white; font-weight:900; text-transform:uppercase; margin-bottom:5px;">Автопилот</h2>
-            <p style="color:#aaa; font-size:12px; margin-bottom:30px; text-align:center;">
-                Полная автоматизация.<br>Без полиции. Без пробок.<br>Бесконечная энергия.
-            </p>
-            
-            <div onclick="buyAdr(10, 15)" style="background:#1c1c1e; border:1px solid #333; padding:15px; width:260px; margin-bottom:10px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-                <div>
-                    <div style="color:white; font-weight:bold;">Тест-драйв</div>
-                    <div style="color:#666; font-size:11px;">10 Минут работы</div>
-                </div>
-                <button style="background:#007aff; color:white; border:none; padding:5px 12px; border-radius:15px; font-weight:bold;">15 ⭐️</button>
-            </div>
-            
-            <div onclick="buyAdr(60, 50)" style="background:linear-gradient(90deg, #2c0b0e, #1c1c1e); border:1px solid #ff3b30; padding:15px; width:260px; margin-bottom:10px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-                <div>
-                    <div style="color:#ff3b30; font-weight:bold;">Полная Смена</div>
-                    <div style="color:#888; font-size:11px;">1 Час работы</div>
-                </div>
-                <button style="background:#007aff; color:white; border:none; padding:5px 12px; border-radius:15px; font-weight:bold;">50 ⭐️</button>
-            </div>
-
-            <div onclick="this.parentElement.remove()" style="margin-top:20px; color:#666; font-size:14px; cursor:pointer;">Закрыть</div>
-        `;
-        document.body.appendChild(modal);
+        
+        // Простое меню покупки
+        if(confirm("⚡ ВКЛЮЧИТЬ АВТОПИЛОТ?\n\nЦена: 50 Stars / час\n\nКурьер будет работать сам, без штрафов и остановок.")) {
+            // Имитация оплаты
+            activateAdrenaline(60); 
+        }
     }
 
-    // 3. ПОКУПКА (ЛОГИКА)
-    window.buyAdr = function(minutes, cost) {
-        // !!! ВАЖНО: Тут должна быть реальная ссылка на оплату Stars, если она есть
-        // window.processPayment('auto_' + minutes, cost, () => { ... });
-        
-        // Пока имитируем успешную оплату (чтобы ты мог проверить работу)
-        if(confirm(`Списать ${cost} Stars за ${minutes} мин автопилота?`)) {
-            activateAdrenaline(minutes);
-            document.querySelector('div[style*="z-index: 20001"]').remove();
-        }
-    };
-
-    // 4. РЕЖИМ БОГА (АВТОМАТИКА)
+    // 3. МОЗГИ БОТА (ИСПРАВЛЕННЫЕ)
     function activateAdrenaline(minutes) {
         window.adrenaline.active = true;
         window.adrenaline.endTime = Date.now() + (minutes * 60 * 1000);
@@ -2097,68 +2054,82 @@
         // Звук старта
         if(window.sfx && window.sfx.notify) window.sfx.notify();
 
-        // Эффект рамки (Электричество)
+        // Красная рамка (чтобы видеть, что работает)
         const overlay = document.createElement('div');
         overlay.id = 'adr-overlay';
         overlay.style.cssText = `
             position: fixed; top:0; left:0; width:100%; height:100%;
-            box-shadow: inset 0 0 40px #ff3b30;
-            pointer-events: none; z-index: 1000;
-            animation: pulseScreen 1.5s infinite;
-            opacity: 0.6;
+            border: 4px solid red;
+            pointer-events: none; z-index: 99999;
+            opacity: 0.5;
         `;
         document.body.appendChild(overlay);
 
-        // ЦИКЛ АВТО-РАБОТЫ
+        // ЦИКЛ РАБОТЫ (ОЧЕНЬ БЫСТРЫЙ - 50 мс)
         if(window.adrenaline.timer) clearInterval(window.adrenaline.timer);
         
         window.adrenaline.timer = setInterval(() => {
-            const now = Date.now();
-            if (now > window.adrenaline.endTime) {
+            // Проверка времени
+            if (Date.now() > window.adrenaline.endTime) {
                 stopAdrenaline();
                 return;
             }
 
-            // === A. ЧИТЫ (ЧИСТАЯ РАБОТА) ===
-            // Замораживаем потребности, чтобы не было остановок
-            if(state) {
-                state.needs = { energy: 100, water: 100, mood: 100 };
-                // Если есть переменные пробок или полиции - сбрасываем их
-                // (Примерно так, зависит от твоего кода, но это не повредит)
-                state.isDetour = false; 
+            // === A. ЧИТЫ НА РЕСУРСЫ (БЕССМЕРТИЕ) ===
+            // Принудительно ставим 100, чтобы не было штрафов за усталость
+            if(window.state) {
+                state.energy = 100;
+                state.water = 100;
+                state.mood = 100;
+                // Убираем флаги проблем, если они есть
+                state.isDetour = false;
                 state.isPolice = false;
             }
 
-            // === B. НАЖАТИЕ КНОПОК ===
+            // === B. УМНЫЙ КЛИКЕР ===
             
-            // 1. ГЛАВНАЯ ПЕДАЛЬ (id="click-btn")
+            // 1. ГЛАВНАЯ ПЕДАЛЬ (Приоритет №1)
             const pedal = document.getElementById('click-btn');
-            if (pedal && !pedal.disabled && pedal.offsetParent) {
+            // Жмем, только если она видна и активна
+            if (pedal && !pedal.disabled && pedal.offsetParent !== null) {
                 pedal.click();
-                // Визуальный клик
-                pedal.style.transform = "scale(0.96)";
-                setTimeout(() => pedal.style.transform = "scale(1)", 50);
-                return; 
+                return; // Если жмем педаль, остальное не ищем, чтобы не сбить ритм
             }
 
-            // 2. УНИВЕРСАЛЬНЫЙ КЛИКЕР (Ищет слова)
-            const keywords = ['Принять', 'Завершить', 'Забрать', 'Ок', 'ЗАБРАТЬ', 'Accept', 'Complete', 'Claim'];
-            const buttons = document.querySelectorAll('button, .btn, .menu-item, div[onclick]');
+            // 2. ПОИСК КНОПОК ПРИНЯТИЯ (Приоритет №2)
+            // Ищем кнопки только с "хорошими" словами
+            const goodWords = ['Принять', 'Забрать', 'Завершить', 'Ок', 'Accept', 'Claim', 'Complete', 'Взять'];
             
-            for (let btn of buttons) {
+            // Собираем все кнопки
+            const allBtns = document.querySelectorAll('button, .btn, .menu-item, div[onclick]');
+            
+            for (let btn of allBtns) {
+                // Пропускаем саму кнопку молнии и меню
+                if(btn.id === 'adr-btn' || btn.id === 'menu-btn') continue;
+                
+                // Проверяем видимость
                 if (btn.offsetParent !== null && !btn.disabled) {
-                    const text = btn.innerText || btn.textContent;
-                    // Игнорируем саму кнопку Адреналина и Меню
-                    if(btn.id === 'adr-btn' || btn.id === 'menu-btn') continue;
+                    const text = (btn.innerText || btn.textContent).trim();
                     
-                    if (keywords.some(k => text.includes(k))) {
+                    // Если это кнопка отказа/штрафа - ИГНОРИРУЕМ
+                    if (text.includes('Отмена') || text.includes('Штраф') || text.includes('Нет') || text.includes('Отказ')) {
+                        continue;
+                    }
+
+                    // Если текст совпадает с хорошими словами -> ЖМЕМ
+                    if (goodWords.some(w => text.includes(w))) {
+                        console.log("Autopilot pressing:", text);
                         btn.click();
                         break; 
                     }
                 }
             }
+            
+            // 3. ЛУТ (ИЗ ПАТЧА v62)
+            const lootBtn = document.getElementById('loot-ok-btn');
+            if(lootBtn) lootBtn.click();
 
-        }, 300); // 3 клика в секунду
+        }, 50); // !!! СКОРОСТЬ: 20 нажатий в секунду !!!
     }
 
     function stopAdrenaline() {
@@ -2166,14 +2137,13 @@
         clearInterval(window.adrenaline.timer);
         const ov = document.getElementById('adr-overlay');
         if(ov) ov.remove();
-        alert("Автопилот завершил работу.");
+        alert("Автопилот завершил смену.");
     }
 
-    // Стили анимации
+    // Анимация кнопки
     const style = document.createElement('style');
     style.innerHTML = `
-        @keyframes pulseAdr { 0% { box-shadow: 0 0 10px red; transform: scale(1); } 50% { box-shadow: 0 0 25px red; transform: scale(1.1); } 100% { box-shadow: 0 0 10px red; transform: scale(1); } }
-        @keyframes pulseScreen { 0% { opacity: 0.3; } 50% { opacity: 0.6; } 100% { opacity: 0.3; } }
+        @keyframes pulseAdr { 0% { transform: scale(1); box-shadow: 0 0 15px red; } 50% { transform: scale(1.1); box-shadow: 0 0 30px red; } 100% { transform: scale(1); box-shadow: 0 0 15px red; } }
     `;
     document.head.appendChild(style);
 
