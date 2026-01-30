@@ -1262,17 +1262,17 @@
 
   
 // ============================================================
-// --- PATCH v47 FINAL: REAL PAYMENTS & CLEAN UI ---
+// --- PATCH v47 FIX: FORCE BUTTON & PAYMENTS ---
 // Key: WARSZAWA_FOREVER
 // ============================================================
 
 (function() {
-    console.log(">>> Patch v47 Loaded: REAL PAYMENTS ACTIVE");
+    console.log(">>> Patch v47 FIX Loaded");
 
     // 1. НАСТРОЙКИ (БОЕВОЙ РЕЖИМ)
     const USE_REAL_PAYMENTS = true; 
 
-    // ТВОИ РАБОЧИЕ ССЫЛКИ
+    // ТВОИ ССЫЛКИ
     const INVOICE_LINKS = {
         'tier1': 'https://t.me/$p_u59Iwq6VOyBQAA7UM9ZdWS6KQ',
         'tier2': 'https://t.me/$qF0lgowq6VOzBQAABRdV00am4SY',
@@ -1282,7 +1282,7 @@
         'money_l': 'https://t.me/$4YB9VYwq6VO3BQAAMJk1Dd_yzBk',
     };
 
-    // ТАРИФЫ (Визуальная настройка)
+    // ТАРИФЫ
     window.PREMIUM_CFG = {
         tier1: { id: 'tier1', name: '☕ Перерыв', time: 5,  limit: 20, cost: 10 },
         tier2: { id: 'tier2', name: '🚀 Смена',   time: 10, limit: 45, cost: 25 },
@@ -1295,7 +1295,7 @@
         { id: 'money_l', cost: 75, val: 15000, name: '💎 Инвестор' }
     ];
 
-    // 2. БАЗА ТОВАРОВ (БЕЗОПАСНАЯ)
+    // БАЗА ТОВАРОВ
     const SAFE_ITEMS = {
         'water': { name: 'Вода (0.5л)', cost: 2.0, desc: 'Восстанавливает воду' },
         'bar': { name: 'Сникерс', cost: 4.5, desc: 'Энергия и настроение' },
@@ -1312,41 +1312,30 @@
         'gear': { name: 'Одежда / Шины', cost: 80 }
     };
 
-    // 3. ПРОЦЕССИНГ ОПЛАТЫ (TELEGRAM NATIVE)
+    // --- ЛОГИКА ОПЛАТЫ ---
     window.processPayment = function(itemId, cost, onSuccess) {
         const tg = window.Telegram.WebApp;
         if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
         if (USE_REAL_PAYMENTS) {
             const url = INVOICE_LINKS[itemId];
-            
-            if (!url || url === '') {
-                // Если ссылка сломана или не найдена
-                if(tg.showPopup) tg.showPopup({title: 'Ошибка', message: `Ссылка для товара ${itemId} не настроена.`, buttons: [{type:'ok'}]});
+            if (!url) {
+                if(tg.showPopup) tg.showPopup({title: 'Ошибка', message: `Нет ссылки для ${itemId}`, buttons: [{type:'ok'}]});
                 else alert(`Error: Link missing for ${itemId}`);
                 return;
             }
-
-            // Вызов окна оплаты Stars
             tg.openInvoice(url, (status) => {
-                if (status === 'paid') {
-                    // УСПЕХ!
-                    onSuccess();
-                } else if (status === 'failed') {
+                if (status === 'paid') onSuccess();
+                else if (status === 'failed') {
                     if(tg.showPopup) tg.showPopup({title: 'Ошибка', message: 'Оплата не прошла.', buttons: [{type:'ok'}]});
-                } else {
-                    // cancelled или pending - просто игнорируем
-                    console.log("Invoice status:", status);
                 }
             });
-
         } else {
-            // ФОЛЛБЭК ДЛЯ ТЕСТОВ (На всякий случай)
             if(confirm(`(TEST MODE) Оплатить ${cost} Stars?`)) onSuccess();
         }
     };
 
-    // 4. МЕНЕДЖЕР ПОКУПОК
+    // --- ПОКУПКИ ---
     window.buyPrem = function(id, cost, time, limit) {
         window.processPayment(id, cost, () => {
             const now = Date.now();
@@ -1355,28 +1344,20 @@
             state.premium.endTime = now + (time * 60 * 1000);
             state.premium.itemLimit = limit; 
             state.premium.itemsTaken = 0;
-            
-            // Лечим персонажа при покупке
             state.needs = { energy: 100, water: 100, mood: 100 };
             if(state.items) { state.items.bike=100; state.items.bag=100; state.items.phone=100; state.items.gear=100; }
-            state.debtOverdue = false; // Снимаем блокировку коллекторов
-            
-            // Разблокируем интерфейс
+            state.debtOverdue = false; 
             const pedal = document.getElementById('pedal-btn');
             if(pedal) { pedal.disabled = false; pedal.classList.remove('blocked'); if(currentOrder) pedal.textContent = (state.taxi && state.taxi.active) ? 'ГАЗ В ПОЛ' : 'ЖМИ ГАЗ (PEDAL)'; }
             const bribe = document.getElementById('bribe-btn'); if(bribe) bribe.style.display = 'none';
-            
-            // Сохраняем
             saveGame(); 
             if(window.syncToCloud) window.syncToCloud(true); 
             if(window.updateUI) window.updateUI();
-            
             document.getElementById('premium-modal').remove();
             
             const tg = window.Telegram.WebApp;
-            if(tg.showPopup) tg.showPopup({title: 'Успешно!', message: `👑 GOD MODE активирован на ${time} мин!`, buttons: [{type:'ok'}]});
+            if(tg.showPopup) tg.showPopup({title: 'Успешно!', message: `👑 GOD MODE активирован!`, buttons: [{type:'ok'}]});
             else showToast('👑 GOD MODE: ВКЛЮЧЕН!', 'success');
-            
             window.startPremiumLoop();
         });
     };
@@ -1387,45 +1368,24 @@
             saveGame(); 
             if(window.syncToCloud) window.syncToCloud(true); 
             if(window.updateUI) window.updateUI();
-            
             document.getElementById('premium-modal').remove();
-            
             const tg = window.Telegram.WebApp;
-            if(tg.showPopup) tg.showPopup({title: 'Оплата прошла!', message: `Зачислено: +${val} PLN`, buttons: [{type:'ok'}]});
+            if(tg.showPopup) tg.showPopup({title: 'Успешно!', message: `Зачислено: +${val} PLN`, buttons: [{type:'ok'}]});
             else showToast(`💸 +${val} PLN`, 'success');
         });
     };
 
-    // 5. ЗАЩИТА ОТ ШТРАФОВ (SILENT MODE)
-    // Подменяем функции игры, чтобы они проверяли премиум перед штрафами
+    // --- ЗАЩИТА ---
     if(!window._origCheckDebt) window._origCheckDebt = window.checkDebt;
-    window.checkDebt = function() { 
-        if(state.premium && state.premium.active) { state.debtOverdue = false; return; } 
-        if(window._origCheckDebt) window._origCheckDebt(); 
-    };
-
+    window.checkDebt = function() { if(state.premium && state.premium.active) { state.debtOverdue = false; return; } if(window._origCheckDebt) window._origCheckDebt(); };
     if(!window._origUpdateUI) window._origUpdateUI = window.updateUI;
-    window.updateUI = function() { 
-        if(window._origUpdateUI) window._origUpdateUI(); 
-        if(state.premium && state.premium.active) { 
-            const g = document.getElementById('garnishment-info'); if(g) g.style.display = 'none'; 
-            const w = document.getElementById('debt-warning'); if(w) w.style.display = 'none'; 
-        } 
-    };
-
+    window.updateUI = function() { if(window._origUpdateUI) window._origUpdateUI(); if(state.premium && state.premium.active) { const g = document.getElementById('garnishment-info'); if(g) g.style.display = 'none'; const w = document.getElementById('debt-warning'); if(w) w.style.display = 'none'; } };
     if(!window._origTrigger) window._origTrigger = window.triggerRandomEvent;
-    window.triggerRandomEvent = function() { 
-        if (state.premium && state.premium.active) return; // Нет пробок в премиуме
-        if(window._origTrigger) window._origTrigger(); 
-    };
-
+    window.triggerRandomEvent = function() { if (state.premium && state.premium.active) return; if(window._origTrigger) window._origTrigger(); };
     if(!window._origCheckPenalties) window._origCheckPenalties = window.checkSystemPenalties;
-    window.checkSystemPenalties = function() { 
-        if (state.premium && state.premium.active) return; // Нет штрафов за голод
-        if(window._origCheckPenalties) window._origCheckPenalties(); 
-    };
+    window.checkSystemPenalties = function() { if (state.premium && state.premium.active) return; if(window._origCheckPenalties) window._origCheckPenalties(); };
 
-    // 6. ЦИКЛ ПРЕМИУМА (Индикатор)
+    // --- ЦИКЛ ПРЕМИУМА ---
     window.startPremiumLoop = function() {
         let el = document.getElementById('prem-indicator');
         if(!el) { 
@@ -1443,31 +1403,25 @@
                     const s = left%60;
                     el.style.display = 'block'; 
                     el.innerHTML = `👑 VIP ${m}:${s.toString().padStart(2,'0')}`;
-                    
-                    // Бесконечные статы
                     state.needs.energy = 100; state.needs.water = 100; state.needs.mood = 100;
                     if(state.items) { state.items.bike=100; state.items.bag=100; state.items.phone=100; state.items.gear=100; }
                     if(state.debt > 0) state.debtOverdue = false; 
-                    
                     requestAnimationFrame(loop);
                 } else {
                     state.premium.active = false; 
                     el.style.display = 'none'; 
                     showToast('🚨 VIP ИСТЕК!', 'warn');
                     if(state.debt > 0) { state.debtOverdue = true; state.debtTimer = Date.now() - 1000; }
-                    saveGame(); 
-                    if(window.updateUI) window.updateUI();
+                    saveGame(); if(window.updateUI) window.updateUI();
                 }
             } else { el.style.display = 'none'; }
         }
         loop();
     };
 
-    // 7. МЕНЮ ПОКУПКИ (CLEAN UI)
+    // --- МЕНЮ (MODAL) ---
     window.openPremiumModal = function(e) {
         if(e) { e.preventDefault(); e.stopPropagation(); }
-        
-        // Закрываем другие меню
         const menu = document.getElementById('side-menu'); if(menu) menu.classList.remove('open');
         const overlay = document.getElementById('side-menu-overlay'); if(overlay) overlay.classList.remove('open');
         const old = document.getElementById('premium-modal'); if(old) old.remove();
@@ -1484,11 +1438,8 @@
                     <div onclick="document.getElementById('premium-modal').remove()" style="font-weight:bold; font-size:20px; cursor:pointer;">✕</div>
                 </div>
                 <div style="padding:15px; max-height:70vh; overflow-y:auto;">
-                    <div style="font-size:11px; color:#888; text-align:center; margin-bottom:15px;">
-                        Оплата через Telegram Stars ⭐
-                    </div>`;
+                    <div style="font-size:11px; color:#888; text-align:center; margin-bottom:15px;">Оплата через Telegram Stars ⭐</div>`;
 
-        // Рендер кнопок Тарифов
         Object.values(window.PREMIUM_CFG).forEach(t => {
             html += `
                 <div style="background:#222; border:1px solid #333; border-radius:10px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
@@ -1496,24 +1447,19 @@
                     <button onclick="window.buyPrem('${t.id}', ${t.cost}, ${t.time}, ${t.limit})" style="background:#0088cc; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold; font-size:14px;">${t.cost} ⭐</button>
                 </div>`;
         });
-
-        // Рендер кнопок Валюты
         html += `<div style="border-top:1px solid #333; margin:15px 0 15px 0;"></div><div style="font-size:12px; font-weight:bold; color:#00e676; margin-bottom:10px;">💸 ПОПОЛНЕНИЕ</div>`;
         window.CASH_PACKS.forEach(c => {
             html += `<div style="background:#222; border:1px solid #333; border-radius:10px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;"><div style="color:#00e676; font-weight:bold;">+${c.val} PLN</div><button onclick="window.buyMoney('${c.id}', ${c.val}, ${c.cost})" style="background:#0088cc; color:white; border:none; padding:8px 15px; border-radius:8px; font-weight:bold;">${c.cost} ⭐</button></div>`;
         });
-
-        html += `</div></div>`; 
-        modal.innerHTML = html; 
-        document.body.appendChild(modal);
+        html += `</div></div>`; modal.innerHTML = html; document.body.appendChild(modal);
     };
 
-    // 8. РЕНДЕР МАГАЗИНА (Халява для Премиума)
+    // 8. РЕНДЕР МАГАЗИНА
     window.renderShop = function(c) {
         c.innerHTML = '';
         if(state.premium && state.premium.active) {
-             if(isNaN(state.premium.itemLimit) || state.premium.itemLimit === undefined) state.premium.itemLimit = 30; 
-             if(isNaN(state.premium.itemsTaken) || state.premium.itemsTaken === undefined) state.premium.itemsTaken = 0;
+             if(isNaN(state.premium.itemLimit)) state.premium.itemLimit = 30; 
+             if(isNaN(state.premium.itemsTaken)) state.premium.itemsTaken = 0;
         }
         const isPrem = state.premium && state.premium.active && state.premium.endTime > Date.now();
         const limit = state.premium ? (state.premium.itemLimit || 0) : 0;
@@ -1522,7 +1468,7 @@
         const isFree = isPrem && remaining > 0;
 
         if(isPrem) { c.innerHTML += `<div style="background:gold; color:black; padding:10px; text-align:center; border-radius:8px; margin-bottom:15px; font-weight:bold">👑 GOD MODE<br><span style="font-size:11px; font-weight:normal">Халява: <b>${remaining} шт.</b></span></div>`; }
-
+        
         let html = '<div class="shop-section"><h3>🎒 Товары</h3>';
         Object.keys(SAFE_ITEMS).forEach(k => {
             const item = SAFE_ITEMS[k]; const isTaxi = state.taxi && state.taxi.active; if(!isTaxi && k === 'gas') return; 
@@ -1545,7 +1491,7 @@
         });
         html += '</div>'; c.innerHTML += html;
     };
-
+    
     window.buyFree = function(k, btn) {
         if(state.premium.itemsTaken < state.premium.itemLimit) {
             if(!state.inventory) state.inventory = {}; state.inventory[k] = (state.inventory[k]||0)+1; state.premium.itemsTaken++;
@@ -1559,21 +1505,36 @@
         saveGame(); if(window.updateUI) window.updateUI();
     };
 
-    // 9. КНОПКА В МЕНЮ (АВТО-ДОБАВЛЕНИЕ)
+    // 9. КНОПКА В МЕНЮ (ПРИНУДИТЕЛЬНО)
     setInterval(() => {
         const menu = document.getElementById('side-menu');
+        // Если меню есть, а кнопки нет
         if (menu && !document.getElementById('prem-menu-btn')) {
-            const btn = document.createElement('div'); btn.id = 'prem-menu-btn'; btn.className = 'menu-item';
+            const btn = document.createElement('div'); 
+            btn.id = 'prem-menu-btn'; 
+            btn.className = 'menu-item';
             btn.innerHTML = `<i class="fa-solid fa-gem"></i> PREMIUM / ДОНАТ`;
             btn.style.cssText = `background: linear-gradient(45deg, #FFD700, #FFA500); color: black !important; font-weight: 900 !important; border: 1px solid #B8860B; text-align: center; padding: 15px; margin-top: 10px; cursor: pointer; z-index: 99999; animation: pulseGold 3s infinite;`;
-            btn.ontouchstart = function(e) { e.preventDefault(); window.openPremiumModal(); }; btn.onclick = function() { window.openPremiumModal(); };
-            const statsBtn = Array.from(menu.children).find(el => el.textContent.includes('История'));
-            if(statsBtn) menu.insertBefore(btn, statsBtn.nextSibling); else menu.appendChild(btn);
+            btn.ontouchstart = function(e) { e.preventDefault(); window.openPremiumModal(); }; 
+            btn.onclick = function() { window.openPremiumModal(); };
+            
+            // Вставляем сразу ПОСЛЕ отображения ID (вверху меню)
+            const idDisplay = document.getElementById('player-id-display');
+            if(idDisplay && idDisplay.parentNode === menu) {
+                 menu.insertBefore(btn, idDisplay.nextSibling);
+            } else {
+                 menu.appendChild(btn); // Или в конец, если не нашли ID
+            }
         }
+        
+        // Цикл индикатора
         if(typeof state !== 'undefined' && state.premium && state.premium.active) {
             const el = document.getElementById('prem-indicator'); if(!el || el.style.display === 'none') window.startPremiumLoop();
         }
-    }, 500);
-    const style = document.createElement('style'); style.innerHTML = `@keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }`; document.head.appendChild(style);
+    }, 1000);
+
+    const style = document.createElement('style'); 
+    style.innerHTML = `@keyframes pulseGold { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 10px 5px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }`; 
+    document.head.appendChild(style);
 
 })();
