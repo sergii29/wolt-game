@@ -2167,3 +2167,157 @@
 
 })();
 </script>
+
+
+
+
+
+<script>
+(function() {
+    console.log(">>> Patch v77: Intern System Loaded");
+
+    // 1. НАСТРОЙКИ СТАЖЕРА
+    const INTERN_COST = 250;       // Цена найма
+    const INTERN_DURATION = 20;    // Минуты
+    const WORK_INTERVAL = 45000;   // Каждые 45 сек (в мс)
+
+    // Фразы стажера
+    const PHRASES = {
+        success: ["Доставил пиццу!", "Заказ закрыт.", "Клиент доволен.", "Бегу к следующему!", "Фух, успел."],
+        fail: ["Заблудился в центре...", "Уронил колу... Прости, босс.", "Полиция проверяет документы...", "Отдыхаю на лавочке.", "У меня перекур."],
+        crit: ["Ого! Щедрые чаевые!", "Клиент в восторге!", "Нашел короткий путь!", "Двойной заказ!"]
+    };
+
+    // 2. ИНИЦИАЛИЗАЦИЯ
+    if (!state.intern) {
+        state.intern = {
+            active: false,
+            endTime: 0,
+            nextWorkTime: 0
+        };
+    }
+
+    // 3. ФУНКЦИЯ НАЙМА
+    window.hireIntern = function() {
+        if (state.intern.active && Date.now() < state.intern.endTime) {
+            const left = Math.ceil((state.intern.endTime - Date.now()) / 60000);
+            alert(`Стажер уже работает! Осталось ${left} мин.`);
+            return;
+        }
+
+        if (state.balance < INTERN_COST) {
+            window.showToast(`❌ Нужно ${INTERN_COST} PLN на зарплату!`, "warn");
+            return;
+        }
+
+        // Оплата
+        state.balance -= INTERN_COST;
+        
+        // Запуск
+        const now = Date.now();
+        state.intern.active = true;
+        state.intern.endTime = now + (INTERN_DURATION * 60 * 1000);
+        state.intern.nextWorkTime = now + WORK_INTERVAL;
+
+        // Сохранение
+        if(window.saveGame) window.saveGame();
+        if(window.updateUI) window.updateUI();
+        if(window.updateMenuState) window.updateMenuState(); // Обновит меню
+
+        // Эффекты
+        if(window.sfx && window.sfx.coin) window.sfx.coin();
+        window.showToast("🤝 Стажер нанят! Жди прибыль.", "success");
+    };
+
+    // 4. РАБОЧИЙ ЦИКЛ (ЗАПУСКАЕТСЯ КАЖДУЮ СЕКУНДУ)
+    setInterval(() => {
+        if (!state.intern.active) return;
+
+        const now = Date.now();
+
+        // Если контракт кончился
+        if (now > state.intern.endTime) {
+            state.intern.active = false;
+            window.showToast("👋 Смена стажера закончена.", "info");
+            if(window.saveGame) window.saveGame();
+            if(window.updateMenuState) window.updateMenuState();
+            return;
+        }
+
+        // Время работать?
+        if (now > state.intern.nextWorkTime) {
+            // Планируем следующую работу
+            state.intern.nextWorkTime = now + WORK_INTERVAL;
+            
+            // Рандом: Как поработал?
+            const roll = Math.random();
+            let earn = 0;
+            let msg = "";
+            let type = "success";
+
+            if (roll < 0.30) { 
+                // 30% НЕУДАЧА (0 денег)
+                msg = PHRASES.fail[Math.floor(Math.random() * PHRASES.fail.length)];
+                type = "info"; // Просто инфо, не успех
+            } 
+            else if (roll < 0.90) {
+                // 60% УСПЕХ (10-20 PLN)
+                earn = Math.floor(10 + Math.random() * 10);
+                msg = PHRASES.success[Math.floor(Math.random() * PHRASES.success.length)];
+            } 
+            else {
+                // 10% КРИТ (50 PLN)
+                earn = 50;
+                msg = PHRASES.crit[Math.floor(Math.random() * PHRASES.crit.length)];
+                type = "success"; // Зеленый тост
+                // Звук монетки только на крите
+                if(window.sfx && window.sfx.coin) window.sfx.coin();
+            }
+
+            // Начисление
+            if (earn > 0) {
+                state.balance += earn;
+                window.showToast(`👨‍🎓 Стажер: +${earn} PLN (${msg})`, type);
+                // Лог в историю (опционально, чтобы не засорять)
+                // if(state.history) state.history.push({ rest: "Стажер", pay: earn, tip: 0, total: earn });
+            } else {
+                window.showToast(`👨‍🎓 Стажер: ${msg}`, "warn");
+            }
+
+            if(window.saveGame) window.saveGame();
+            if(window.updateUI) window.updateUI();
+        }
+
+    }, 1000);
+
+    // 5. КНОПКА В МЕНЮ (АВТОМАТИЧЕСКАЯ)
+    const btnCheck = setInterval(() => {
+        const menu = document.getElementById('side-menu');
+        if (menu && !document.getElementById('intern-btn')) {
+            const btn = document.createElement('div');
+            btn.id = 'intern-btn';
+            btn.className = 'menu-item';
+            btn.innerHTML = updateInternBtnText();
+            btn.onclick = window.hireIntern;
+            
+            // Вставляем после "Банка"
+            const bankBtn = document.querySelector('div[onclick="openModal(\'bank\')"]');
+            if(bankBtn) bankBtn.parentNode.insertBefore(btn, bankBtn.nextSibling);
+            else menu.appendChild(btn);
+        } else if (document.getElementById('intern-btn')) {
+            // Обновляем текст (показываем таймер)
+            document.getElementById('intern-btn').innerHTML = updateInternBtnText();
+        }
+    }, 1000);
+
+    function updateInternBtnText() {
+        if (state.intern && state.intern.active && Date.now() < state.intern.endTime) {
+            const left = Math.ceil((state.intern.endTime - Date.now()) / 60000);
+            return `<i class="fa-solid fa-user-clock" style="color:#00e676"></i> Стажер работает (${left}м)`;
+        } else {
+            return `<i class="fa-solid fa-user-graduate"></i> Нанять Стажера (250₽)`;
+        }
+    }
+
+})();
+</script>
