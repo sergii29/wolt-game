@@ -2679,147 +2679,304 @@
 
 <script>
 (function() {
-    // 1. НАСТРОЙКИ ДЕТАЛЕЙ
-    const CAR_PARTS = {
-        'part_chip': { name: 'Чип ИИ', sell: 70 },
-        'part_engine': { name: 'Двигатель V8', sell: 140 },
-        'part_alloy': { name: 'Титановый сплав', sell: 90 },
-        'part_tire': { name: 'Шины', sell: 20 },
-        'part_battery': { name: 'Аккумулятор', sell: 35 },
-        'part_brakes': { name: 'Тормоза', sell: 45 },
-        'part_suspension': { name: 'Подвеска', sell: 55 }
+    console.log(">>> WARSAW CAREER MODE: ACTIVATED");
+
+    // 1. КОНФИГУРАЦИЯ
+    // Что нужно, чтобы собрать первую машину и открыть такси
+    const CAR_REQUIREMENTS = {
+        'part_engine': 1, // Двигатель
+        'part_chip': 1,   // Чип
+        'part_tire': 4,   // 4 колеса
+        'part_battery': 1 // Аккумулятор
     };
 
-    // 2. ФУНКЦИЯ ОТКРЫТИЯ ОКНА ГАРАЖА
+    // Цены и названия
+    const CAR_PARTS = {
+        'part_engine': { name: 'Двигатель V8', sell: 150, chance: 0.01 }, // 1% шанс
+        'part_chip':   { name: 'Чип Управления', sell: 80, chance: 0.02 }, // 2% шанс
+        'part_tire':   { name: 'Шина', sell: 30, chance: 0.05 },          // 5% шанс
+        'part_battery':{ name: 'Аккумулятор', sell: 40, chance: 0.03 },   // 3% шанс
+        'part_suspension': { name: 'Подвеска', sell: 60, chance: 0.02 }
+    };
+
+    // Настройки ремонта (если нет деталей)
+    const REPAIR_COST = 200; // Цена ремонта на СТО
+    const REPAIR_TIME_MINUTES = 60; // Ждать 60 минут
+
+    // 2. ИНТЕРФЕЙС ГАРАЖА / СБОРОЧНОГО ЦЕХА
     window.openGarage = function() {
+        // Удаляем старые окна
         const old = document.getElementById('garage-overlay');
         if (old) old.remove();
 
+        // Инициализация данных
         if (typeof state.taxi.health === 'undefined') state.taxi.health = 100;
         if (!state.inventory) state.inventory = {};
+        if (!state.taxi.isCarAssembled) state.taxi.isCarAssembled = false; // Флаг: собрана ли машина
+        if (!state.taxi.repairEndTime) state.taxi.repairEndTime = 0; // Время конца ремонта
 
+        const isLocked = !state.taxi.isCarAssembled;
+        const now = Date.now();
+        const isRepairing = state.taxi.repairEndTime > now;
+
+        // Создаем окно
         const overlay = document.createElement('div');
         overlay.id = 'garage-overlay';
-        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10000; display:flex; justify-content:center; align-items:center; font-family:sans-serif;";
+        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:20000; display:flex; justify-content:center; align-items:center; font-family:sans-serif;";
         
-        const hp = Math.floor(state.taxi.health);
-        const hpColor = hp > 50 ? '#00e676' : '#ff3d00';
-
-        let listHtml = '';
-        let hasItems = false;
-        for (let key in CAR_PARTS) {
-            const count = state.inventory[key] || 0;
-            if (count > 0) hasItems = true;
-            listHtml += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #333;">
-                    <div style="font-size:13px; color:#ddd;">${CAR_PARTS[key].name} <span style="color:#777;">(${CAR_PARTS[key].sell} PLN)</span></div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:13px; color:#fff;">x${count}</span>
-                        ${count > 0 ? `<button onclick="window.sellP('${key}')" style="background:#ff3d00; border:none; color:white; border-radius:4px; padding:4px 8px; font-size:11px;">$</button>` : ''}
-                    </div>
-                </div>`;
-        }
-        if (!hasItems) listHtml = '<div style="text-align:center; color:#555; padding:10px;">Пусто...</div>';
-
         const content = document.createElement('div');
-        content.style.cssText = "background:#1a1a1a; width:85%; max-width:350px; border-radius:16px; padding:20px; color:white; border: 1px solid #444;";
+        content.style.cssText = "background:#121212; width:90%; max-width:400px; border-radius:16px; padding:20px; color:white; border: 1px solid #333; box-shadow: 0 0 30px rgba(0,0,0,0.8); max-height: 80vh; overflow-y: auto;";
+
+        let htmlBody = '';
+
+        // === ВАРИАНТ 1: МАШИНА ЕЩЕ НЕ СОБРАНА ===
+        if (isLocked) {
+            let reqHtml = '';
+            let canAssemble = true;
+
+            for (let key in CAR_REQUIREMENTS) {
+                const needed = CAR_REQUIREMENTS[key];
+                const have = state.inventory[key] || 0;
+                const progressColor = have >= needed ? '#00e676' : '#ff3d00';
+                if (have < needed) canAssemble = false;
+
+                reqHtml += `
+                    <div style="display:flex; justify-content:space-between; padding:10px; background:#1e1e1e; margin-bottom:5px; border-radius:8px;">
+                        <div>${CAR_PARTS[key].name}</div>
+                        <div style="color:${progressColor}; font-weight:bold;">${have} / ${needed}</div>
+                    </div>
+                `;
+            }
+
+            htmlBody = `
+                <h2 style="text-align:center; color:#ff9100;">🏗 ПРОЕКТ "ТАКСИ"</h2>
+                <p style="text-align:center; color:#888; font-size:13px;">Для работы в Такси нужно собрать автомобиль. Ищи детали, работая курьером Wolt!</p>
+                <div style="margin: 20px 0;">${reqHtml}</div>
+                ${canAssemble 
+                    ? `<button onclick="window.assembleCar()" style="width:100%; padding:15px; background:#00e676; color:black; font-weight:bold; border:none; border-radius:10px; font-size:16px;">🚗 СОБРАТЬ МАШИНУ!</button>`
+                    : `<div style="text-align:center; padding:10px; background:#333; color:#aaa; border-radius:10px;">Соберите все детали...</div>`
+                }
+            `;
+        } 
+        // === ВАРИАНТ 2: МАШИНА СОБРАНА ===
+        else {
+            const hp = Math.floor(state.taxi.health);
+            const hpColor = hp > 50 ? '#00e676' : '#ff3d00';
+
+            // Блок состояния ремонта
+            let statusBlock = '';
+            if (isRepairing) {
+                const minutesLeft = Math.ceil((state.taxi.repairEndTime - now) / 60000);
+                statusBlock = `
+                    <div style="background:#2d1a1a; border:1px solid #ff3d00; padding:15px; border-radius:10px; text-align:center; margin-bottom:15px;">
+                        <div style="font-size:18px; color:#ff3d00; font-weight:bold;">⏳ МАШИНА В СЕРВИСЕ</div>
+                        <div style="color:#ddd; margin-top:5px;">Осталось ждать: ${minutesLeft} мин.</div>
+                    </div>
+                `;
+            } else {
+                statusBlock = `
+                    <div style="background:#222; padding:15px; border-radius:10px; margin-bottom:15px; text-align:center;">
+                        <div style="font-size:12px; color:#aaa;">Здоровье машины</div>
+                        <div style="font-size:36px; font-weight:bold; color:${hpColor};">${hp}%</div>
+                        <div style="width:100%; background:#444; height:8px; border-radius:4px; margin-top:5px; overflow:hidden;"><div style="width:${hp}%; height:100%; background:${hpColor};"></div></div>
+                        
+                        ${hp < 100 ? `
+                            <div style="margin-top:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                                <button onclick="window.repairWithPart()" style="background:#009de0; color:white; border:none; padding:10px; border-radius:8px; font-size:12px;">🔧 Деталью<br>(Быстро)</button>
+                                <button onclick="window.repairService()" style="background:#333; border:1px solid #555; color:#ddd; padding:10px; border-radius:8px; font-size:12px;">🏭 В сервис<br>(${REPAIR_COST} PLN / ${REPAIR_TIME_MINUTES} мин)</button>
+                            </div>
+                        ` : '<div style="margin-top:10px; color:#00e676;">Идеальное состояние</div>'}
+                    </div>
+                `;
+            }
+
+            // Инвентарь
+            let invHtml = '';
+            for (let key in CAR_PARTS) {
+                const count = state.inventory[key] || 0;
+                invHtml += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #333;">
+                        <div style="font-size:13px; color:#ddd;">${CAR_PARTS[key].name} <span style="color:#777;">(${CAR_PARTS[key].sell} PLN)</span></div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:13px; color:#fff;">x${count}</span>
+                            ${count > 0 ? `<button onclick="window.sellPartItem('${key}')" style="background:#ff3d00; border:none; color:white; border-radius:4px; padding:4px 8px; font-size:11px;">Продать</button>` : ''}
+                        </div>
+                    </div>`;
+            }
+
+            htmlBody = `
+                <h2 style="margin:0 0 15px 0;">🔧 Гараж</h2>
+                ${statusBlock}
+                <div style="background:#1a1a1a; border-radius:10px; padding:10px;">
+                    <h4 style="margin:0 0 10px 0; color:#888;">Запчасти (Склад)</h4>
+                    ${invHtml}
+                </div>
+            `;
+        }
+
         content.innerHTML = `
-            <div onclick="document.getElementById('garage-overlay').remove()" style="float:right; font-size:24px; cursor:pointer;">&times;</div>
-            <h2 style="margin:0 0 15px 0;">🔧 Гараж</h2>
-            <div style="background:#222; padding:15px; border-radius:10px; margin-bottom:15px; text-align:center;">
-                <div style="font-size:12px; color:#aaa;">Состояние авто</div>
-                <div style="font-size:32px; font-weight:bold; color:${hpColor};">${hp}%</div>
-                <div style="width:100%; background:#444; height:6px; border-radius:3px; margin-top:5px;"><div style="width:${hp}%; height:100%; background:${hpColor};"></div></div>
-                ${hp < 100 ? `<button onclick="window.doRepair()" style="margin-top:10px; width:100%; background:#009de0; color:white; padding:8px; border:none; border-radius:6px;">Починить</button>` : ''}
-            </div>
-            <div style="max-height:200px; overflow-y:auto;">${listHtml}</div>
+            <div onclick="document.getElementById('garage-overlay').remove()" style="float:right; font-size:24px; cursor:pointer; color:#777;">&times;</div>
+            ${htmlBody}
         `;
         overlay.appendChild(content);
         document.body.appendChild(overlay);
     };
 
-    // 3. ФУНКЦИИ ЛОГИКИ
-    window.sellP = function(k) {
-        if (state.inventory[k] > 0) {
-            state.inventory[k]--;
-            state.balance += CAR_PARTS[k].sell;
-            window.saveGame();
-            window.openGarage();
+    // 3. ФУНКЦИИ ЛОГИКИ (Сборка, Ремонт, Продажа)
+    window.assembleCar = function() {
+        // Списываем детали
+        for (let key in CAR_REQUIREMENTS) {
+            state.inventory[key] -= CAR_REQUIREMENTS[key];
         }
+        state.taxi.isCarAssembled = true;
+        state.taxi.health = 100;
+        window.saveGame();
+        window.openGarage();
+        window.showToast('🎉 АВТОМОБИЛЬ СОБРАН! Такси разблокировано!', 'success');
     };
-    window.doRepair = function() {
-        const parts = ['part_tire', 'part_battery', 'part_brakes', 'part_suspension', 'part_engine'];
+
+    window.repairWithPart = function() {
+        // Ищем любую деталь
+        const parts = ['part_tire', 'part_battery', 'part_suspension', 'part_engine'];
         const found = parts.find(p => state.inventory[p] > 0);
         if (found) {
             state.inventory[found]--;
             state.taxi.health = 100;
             window.saveGame();
             window.openGarage();
-            window.showToast('Машина восстановлена!', 'success');
+            window.showToast(`Авто починено деталью: ${CAR_PARTS[found].name}`, 'success');
         } else {
-            alert('Нужны запчасти (Шины, Аккумулятор и т.д.)!');
+            alert('Нет подходящих запчастей для ремонта! Либо купите на рынке, либо сдавайте в Сервис.');
         }
     };
 
-    // 4. ГЛАВНАЯ ЧАСТЬ: ИЩЕМ "ЛИЦЕНЗИИ" И ВСТАВЛЯЕМ КНОПКУ
+    window.repairService = function() {
+        if (state.balance < REPAIR_COST) {
+            alert(`Недостаточно средств! Нужно ${REPAIR_COST} PLN.`);
+            return;
+        }
+        if (confirm(`Сдать машину в сервис на ${REPAIR_TIME_MINUTES} минут за ${REPAIR_COST} PLN?`)) {
+            state.balance -= REPAIR_COST;
+            state.taxi.repairEndTime = Date.now() + (REPAIR_TIME_MINUTES * 60 * 1000);
+            state.taxi.health = 100;
+            window.saveGame();
+            window.openGarage();
+        }
+    };
+
+    window.sellPartItem = function(key) {
+        if (state.inventory[key] > 0) {
+            state.inventory[key]--;
+            state.balance += CAR_PARTS[key].sell;
+            window.saveGame();
+            window.openGarage();
+        }
+    };
+
+    // 4. ВНЕДРЕНИЕ КНОПКИ (СИСТЕМА ПОИСКА "ЛИЦЕНЗИЙ")
     setInterval(() => {
-        // Если кнопка уже стоит - ничего не делаем
         if (document.getElementById('injected-garage-btn')) return;
 
-        // Ищем все элементы на странице
-        const allDivs = document.querySelectorAll('div, span, p, button');
+        // Ищем блоки меню
+        const potentialItems = document.querySelectorAll('.menu-item, div[onclick]');
         
-        for (let el of allDivs) {
-            // Проверяем текст внутри (ищем "Лицензии" или "Права")
-            // Мы проверяем, что текст короткий (чтобы не найти огромный кусок текста)
-            if (el.innerText && (el.innerText.includes('Лицензи') || el.innerText.includes('права') || el.innerText.includes('Права')) && el.innerText.length < 50) {
+        for (let el of potentialItems) {
+            const txt = el.innerText || "";
+            // Ищем ключевое слово (Лицензии, Права, License)
+            if (txt.toLowerCase().includes('лиценз') || txt.toLowerCase().includes('прав') || txt.toLowerCase().includes('license')) {
+                // Нашли! Вставляем ПОСЛЕ
+                console.log(">>> Found Licenses Menu! Injecting Garage...");
                 
-                // Проверяем, что это похоже на пункт меню (у него есть класс или родитель)
-                // Обычно пункты меню лежат в блоках
-                const targetContainer = el.closest('.menu-item') || el.closest('div[onclick]') || el.parentNode;
+                const btn = document.createElement('div');
+                btn.id = 'injected-garage-btn';
+                btn.className = el.className; // Копируем стили оригинала
+                // Если стилей нет, задаем свои
+                btn.style.cssText = el.getAttribute('style') || "padding: 15px; border-bottom: 1px solid #eee; display:flex; align-items:center; cursor:pointer;";
+                btn.innerHTML = '<i class="fas fa-wrench" style="color:#ff3d00; width:25px; text-align:center; margin-right:10px;"></i> Автосалон / Гараж';
+                btn.onclick = window.openGarage;
 
-                if (targetContainer) {
-                    console.log(">>> НАЙДЕНО МЕНЮ ЛИЦЕНЗИЙ! Вставляем Гараж...");
-                    
-                    const btn = document.createElement('div');
-                    btn.id = 'injected-garage-btn';
-                    // Копируем стили класса menu-item, если он есть
-                    btn.className = 'menu-item'; 
-                    // Принудительные стили, чтобы выглядело красиво
-                    btn.style.cssText = "padding: 15px; border-bottom: 1px solid #f5f5f5; font-weight: 500; display:flex; align-items:center; cursor:pointer; background:white; color:#333;";
-                    btn.innerHTML = '<i class="fas fa-wrench" style="color:#ff3d00; width:25px; text-align:center; margin-right:10px;"></i> Гараж / Ремонт';
-                    btn.onclick = window.openGarage;
-
-                    // Вставляем ПОСЛЕ найденного элемента
-                    targetContainer.parentNode.insertBefore(btn, targetContainer.nextSibling);
-                    return; // Готово, выходим
-                }
+                el.parentNode.insertBefore(btn, el.nextSibling);
+                return;
             }
         }
-    }, 1000); // Проверяем каждую секунду (на случай если меню перерисуется)
+    }, 1000);
 
-    // 5. ЛОГИКА ИЗНОСА
+    // 5. ПЕРЕХВАТ ВКЛЮЧЕНИЯ ТАКСИ (Блокировка)
+    const checkTaxiLock = setInterval(() => {
+        if (window.toggleTaxiMode && !window.toggleTaxiMode.isPatched) {
+            const originalToggle = window.toggleTaxiMode;
+            
+            window.toggleTaxiMode = function() {
+                // 1. Проверка сборки
+                if (!state.taxi.isCarAssembled) {
+                    window.showToast('❌ Сначала собери машину в Автосалоне!', 'error');
+                    window.openGarage(); // Сразу открываем, чтобы он понял
+                    return;
+                }
+                // 2. Проверка сервиса
+                if (state.taxi.repairEndTime > Date.now()) {
+                    const minLeft = Math.ceil((state.taxi.repairEndTime - Date.now())/60000);
+                    window.showToast(`⏳ Машина в сервисе еще ${minLeft} мин.`, 'warn');
+                    return;
+                }
+                // 3. Проверка здоровья
+                if (state.taxi.health <= 0) {
+                    window.showToast('🔥 МАШИНА СЛОМАНА! Нужен ремонт.', 'error');
+                    window.openGarage();
+                    return;
+                }
+
+                // Если все ок - запускаем
+                originalToggle.apply(this, arguments);
+            };
+            window.toggleTaxiMode.isPatched = true;
+        }
+    }, 1000);
+
+    // 6. СИСТЕМА ЛУТА И ИЗНОСА
     if (window.saveGame) {
         const origSave = window.saveGame;
         let lastBal = 0;
+
         window.saveGame = function() {
-            if (state.balance && lastBal > 0 && state.balance > lastBal + 10) {
-                 if (state.taxi && state.taxi.active) {
-                     if (!state.taxi.health) state.taxi.health = 100;
-                     state.taxi.health -= (Math.random() * 3 + 1);
-                     if (state.taxi.health < 0) state.taxi.health = 0;
-                     if(Math.random() < 0.3) {
-                         const keys = Object.keys(CAR_PARTS);
-                         const p = keys[Math.floor(Math.random() * keys.length)];
-                         if(!state.inventory[p]) state.inventory[p] = 0;
-                         state.inventory[p]++;
-                         window.showToast('Найдена деталь!', 'success');
-                     }
-                 }
+            // Если баланс вырос (заказ выполнен)
+            if (state.balance && lastBal > 0 && state.balance > lastBal + 5) {
+                
+                // Сценарий А: Мы работаем в ТАКСИ (Ломаем машину)
+                if (state.taxi && state.taxi.active) {
+                    if (!state.taxi.health) state.taxi.health = 100;
+                    // Износ 2-5%
+                    state.taxi.health -= (Math.random() * 3 + 2);
+                    if (state.taxi.health < 0) state.taxi.health = 0;
+                    
+                    // В такси детали падают КРАЙНЕ редко (почти никогда, 0.5%)
+                    if (Math.random() < 0.005) {
+                         const p = 'part_tire'; // Максимум шина
+                         state.inventory[p] = (state.inventory[p] || 0) + 1;
+                         window.showToast('Найдена шина на дороге!', 'success');
+                    }
+                } 
+                // Сценарий Б: Мы работаем КУРЬЕРОМ WOLT (Ищем детали)
+                else {
+                    // Проходимся по всем возможным деталям
+                    for (let key in CAR_PARTS) {
+                        const item = CAR_PARTS[key];
+                        // Проверка шанса (например 0.01 = 1%)
+                        if (Math.random() < item.chance) {
+                            if (!state.inventory[key]) state.inventory[key] = 0;
+                            state.inventory[key]++;
+                            // Показываем красивое уведомление
+                            alert(`📦 ВЫ НАШЛИ ДЕТАЛЬ: ${item.name}!\nСоберите полный комплект, чтобы открыть Такси.`);
+                            // Выпадаем после первой находки (чтобы не найти 2 детали за раз)
+                            break; 
+                        }
+                    }
+                }
             }
             lastBal = state.balance;
             origSave.apply(this, arguments);
         };
     }
+
 })();
 </script>
