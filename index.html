@@ -866,11 +866,27 @@
                 showToast(`Долг (-${(rate*100).toFixed(0)}%): -${penalty.toFixed(2)} PLN`, 'warn');
             }
             
-            state.balance += totalEarn; state.career.totalOrders++;
-            updateMenuState(); 
-            state.history.push({ rest: currentOrder.rest.name, pay: pay, tip: tip, total: pay + tip });
-            sendLog(`Завершил заказ: +${(pay+tip).toFixed(2)} PLN`, 'ORDER');
-            setTimeout(() => { showToast(`+${(pay+tip).toFixed(2)} PLN`, 'success'); }, 500);
+            // Сохраняем заработок
+            state.balance += totalEarn;
+
+            // ПАТЧ: Проверяем и прибавляем доставку
+            if (!state.career) state.career = { totalOrders: 0 };
+            state.career.totalOrders++;
+
+            // СРАЗУ ОБНОВЛЯЕМ ЦИФРУ В МЕНЮ
+            const careerCount = document.getElementById('career-count');
+            if (careerCount) {
+                careerCount.textContent = state.career.totalOrders;
+            }
+
+            // Проверяем, не пора ли открыть такси
+            updateMenuState();
+            
+            // СОХРАНЯЕМ В БАЗУ (чтобы не пропало)
+            saveGame();
+            if (window.syncToCloud) syncToCloud(true);
+
+            showToast(`Заказ выполнен! Всего: ${state.career.totalOrders}`, 'success');
 
             // MAP CLEANUP
             clearMapVisuals();
