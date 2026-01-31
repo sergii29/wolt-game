@@ -2962,3 +2962,149 @@
     }
 })();
 </script>
+
+
+
+
+
+<script>
+(function() {
+    console.log(">>> WARSAW ADD-ON: LOANS SYSTEM CONNECTED");
+
+    // НАСТРОЙКИ ЗАЙМА
+    const LOAN_AMOUNT = 500;       // Дают на руки
+    const LOAN_RETURN = 800;       // Надо вернуть
+    const LOAN_TIME_MIN = 60;      // Время в минутах (реальных)
+
+    // 1. ФУНКЦИИ ЗАЙМА
+    window.openLoans = function() {
+        // Инициализация переменных, если их нет
+        if (typeof state.loanDebt === 'undefined') state.loanDebt = 0;
+        if (typeof state.loanDue === 'undefined') state.loanDue = 0;
+
+        // Удаляем старые окна, если открыты
+        const old = document.getElementById('garage-overlay'); if (old) old.remove();
+        
+        const overlay = document.createElement('div');
+        overlay.id = 'garage-overlay'; // Используем тот же ID стилей
+        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.96); z-index:99999; display:flex; justify-content:center; align-items:center; font-family:sans-serif;";
+
+        let htmlBody = '';
+        const now = Date.now();
+        const hasLoan = state.loanDebt > 0;
+
+        if (hasLoan) {
+            // ЕСТЬ ДОЛГ
+            const timeLeft = Math.max(0, Math.ceil((state.loanDue - now) / 60000));
+            const colorTime = timeLeft < 10 ? '#ff3d00' : '#fff';
+            
+            htmlBody = `
+                <h2 style="color:#d32f2f; text-align:center; text-transform:uppercase; margin-top:0;">🚫 ТЫ ДОЛЖЕН ДЕНЬГИ</h2>
+                <div style="background:#222; padding:20px; border-radius:10px; text-align:center; border:1px solid #d32f2f;">
+                    <div style="font-size:14px; color:#888;">Сумма долга</div>
+                    <div style="font-size:40px; font-weight:bold; color:white;">${state.loanDebt} PLN</div>
+                    <hr style="border:0; border-top:1px solid #444; margin:15px 0;">
+                    <div style="font-size:14px; color:#888;">Осталось времени</div>
+                    <div style="font-size:24px; font-weight:bold; color:${colorTime};">${timeLeft} мин</div>
+                </div>
+                <div style="margin-top:20px; text-align:center; font-size:12px; color:#666;">
+                    Не вернешь вовремя — коллекторы заберут машину.
+                </div>
+                <button onclick="window.repayLoan()" style="width:100%; padding:15px; margin-top:15px; background:#00e676; border:none; border-radius:8px; font-weight:bold; font-size:16px; cursor:pointer;">ВЕРНУТЬ ДОЛГ (${state.loanDebt} PLN)</button>
+            `;
+        } else {
+            // НЕТ ДОЛГА
+            htmlBody = `
+                <h2 style="color:#00e676; text-align:center; margin-top:0;">💸 БЫСТРЫЕ ЗАЙМЫ</h2>
+                <div style="background:#222; padding:20px; border-radius:10px; border:1px solid #444;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span style="color:#aaa;">Получишь сразу:</span>
+                        <span style="color:#00e676; font-weight:bold;">+${LOAN_AMOUNT} PLN</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span style="color:#aaa;">Вернешь через час:</span>
+                        <span style="color:#ff3d00; font-weight:bold;">-${LOAN_RETURN} PLN</span>
+                    </div>
+                    <div style="font-size:11px; color:#666; margin-top:10px; text-align:center;">
+                        ⚠️ В случае неуплаты конфискуем имущество и здоровье.
+                    </div>
+                </div>
+                <button onclick="window.takeLoan()" style="width:100%; padding:15px; margin-top:20px; background:#ff9100; border:none; border-radius:8px; font-weight:bold; font-size:16px; cursor:pointer;">ВЗЯТЬ ${LOAN_AMOUNT} PLN</button>
+            `;
+        }
+
+        overlay.innerHTML = `<div style="background:#121212; width:90%; max-width:400px; border-radius:16px; padding:20px; color:white; border: 1px solid #333;">
+            <div onclick="document.getElementById('garage-overlay').remove()" style="float:right; font-size:24px; cursor:pointer; color:#555;">&times;</div>${htmlBody}</div>`;
+        document.body.appendChild(overlay);
+    };
+
+    window.takeLoan = function() {
+        state.balance += LOAN_AMOUNT;
+        state.loanDebt = LOAN_RETURN;
+        state.loanDue = Date.now() + (LOAN_TIME_MIN * 60 * 1000);
+        window.saveGame(); // Используем функцию сохранения из прошлого скрипта
+        window.openLoans();
+        window.showToast('💰 Деньги получены. Тик-так...', 'success');
+    };
+
+    window.repayLoan = function() {
+        if (state.balance >= state.loanDebt) {
+            state.balance -= state.loanDebt;
+            state.loanDebt = 0;
+            state.loanDue = 0;
+            window.saveGame();
+            window.openLoans();
+            window.showToast('✅ Долг погашен! Ты свободен.', 'success');
+        } else {
+            alert('Не хватает денег! Иди работай, время идет!');
+        }
+    };
+
+    // 2. ВНЕДРЕНИЕ КНОПКИ В МЕНЮ (Безопасно)
+    setInterval(() => {
+        // Мы ищем кнопку ГАРАЖА, которую создал прошлый скрипт
+        const garageBtn = document.getElementById('injected-garage-btn');
+        const existingLoanBtn = document.getElementById('injected-loans-btn');
+
+        // Если гараж есть, а кнопки займа нет — добавляем
+        if (garageBtn && !existingLoanBtn) {
+            const btn = document.createElement('div');
+            btn.id = 'injected-loans-btn'; 
+            btn.className = 'menu-item';
+            btn.style.cssText = "padding:15px; border-bottom:1px solid #f5f5f5; display:flex; align-items:center; cursor:pointer; background:white; color:#333;";
+            btn.innerHTML = '<i class="fas fa-money-bill-wave" style="color:#ff3d00; width:25px; text-align:center; margin-right:10px;"></i> Займы / Chwilówki';
+            btn.onclick = window.openLoans;
+            
+            // Вставляем ПОСЛЕ кнопки гаража
+            garageBtn.parentNode.insertBefore(btn, garageBtn.nextSibling);
+        }
+    }, 1000);
+
+    // 3. КОЛЛЕКТОРЫ (Таймер смерти)
+    setInterval(() => {
+        if (state.loanDebt > 0 && state.loanDue > 0 && Date.now() > state.loanDue) {
+            // ВРЕМЯ ВЫШЛО!
+            console.log(">>> COLLECTORS ATTACK!");
+            
+            // Забираем деньги
+            state.balance = 0;
+            // Ломаем машину
+            if (state.taxi) state.taxi.health = 0;
+            // Снимаем колеса
+            if (state.inventory) state.inventory['part_tire'] = 0;
+            
+            // Сбрасываем долг (чтобы не убивать бесконечно)
+            state.loanDebt = 0; 
+            state.loanDue = 0;
+            
+            // Выключаем такси, если активно
+            if(window.toggleTaxiMode && state.taxi && state.taxi.active) window.toggleTaxiMode();
+
+            window.saveGame();
+            alert("☠️ ВРЕМЯ ВЫШЛО!\n\nКоллекторы нашли тебя.\n- Деньги отобраны.\n- Машина разбита.\n- Шины сняты.\n\nВ следующий раз плати вовремя.");
+            location.reload(); 
+        }
+    }, 5000); // Проверка каждые 5 сек
+
+})();
+</script>
