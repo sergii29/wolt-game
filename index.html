@@ -183,13 +183,12 @@
             <h2 style="margin-bottom: 5px">Профиль</h2>
             <div id="player-name-display" style="font-size:18px; color:var(--brand-blue); font-weight:bold; margin-bottom:5px"></div>
             <div id="player-id-display" style="font-size:10px; color:#666; display:block; margin-bottom:20px">Loading ID...</div>
+            
             <div class="menu-item" onclick="openModal('shop')"><i class="fa-solid fa-store" style="color:var(--brand-blue)"></i> Магазин / Инвентарь</div>
-            <div class="menu-item" onclick="window.openGarage()"><i class="fas fa-wrench" style="color: #ff3d00;"></i> Гараж / Склад</div><div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
+            <div class="menu-item" onclick="openModal('bank')"><i class="fa-solid fa-building-columns" style="color:var(--accent-green)"></i> Банк / Кредит</div>
             <div class="menu-item" onclick="openModal('deflation')"><i class="fa-solid fa-scale-unbalanced-flip" style="color:#90a4ae"></i> Правительство / Инфляция</div>
             <div class="menu-item" onclick="openModal('stats')"><i class="fa-solid fa-clock-rotate-left"></i> История</div>
             
-
-        
             <div class="menu-divider"></div>
             <div class="menu-section-title">🚖 Такси Департамент</div>
             <div class="menu-item taxi-item locked" id="taxi-showroom-btn" onclick="openModal('taxi-shop')">
@@ -867,15 +866,12 @@
                 showToast(`Долг (-${(rate*100).toFixed(0)}%): -${penalty.toFixed(2)} PLN`, 'warn');
             }
             
-            state.balance += totalEarn; 
-            // ИЗНОС МАШИНЫ
-            if (window.applyTaxiWear) window.applyTaxiWear();
-            state.career.totalOrders++;
+            state.balance += totalEarn; state.career.totalOrders++;
             updateMenuState(); 
             state.history.push({ rest: currentOrder.rest.name, pay: pay, tip: tip, total: pay + tip });
             sendLog(`Завершил заказ: +${(pay+tip).toFixed(2)} PLN`, 'ORDER');
             setTimeout(() => { showToast(`+${(pay+tip).toFixed(2)} PLN`, 'success'); }, 500);
-            
+
             // MAP CLEANUP
             clearMapVisuals();
             if(map) map.flyTo(WARSAW_CENTER, 13);
@@ -1058,19 +1054,13 @@
 
         function showLockedMsg() { showToast(`Нужно ${TAXI_UNLOCK_REQ} выполненных заказов!`, 'warn'); }
 
-        function toggleTaxiMode() { function toggleTaxiMode() {
-    // ВСТАВИТЬ ЭТУ СТРОКУ:
-    if (window.canWorkTaxi && !window.canWorkTaxi()) return;
-
-    // Дальше идет старый код...
-    // if(!state.taxi.licenses || ...
+        function toggleTaxiMode() {
             if (!state.taxi.vehicle || !state.taxi.licenses.driver || !state.taxi.licenses.insurance) { showToast('Купите машину и лицензии!', 'warn'); return; }
             if(state.isOnline) { showToast('Сначала уйди в офлайн!', 'warn'); return; }
             state.taxi.active = !state.taxi.active; saveGame(); updateUI(); updateMenuState();
             let msg = state.taxi.active ? '🚕 РЕЖИМ ТАКСИ ВКЛЮЧЕН' : '🚲 РЕЖИМ КУРЬЕРА ВКЛЮЧЕН'; showToast(msg, 'success');
         }
-         // ПРОВЕРКА НА ПОЛОМКУ (WARSZAWA_FOREVER)
-if (!state.taxi.active && window.canWorkTaxi && !window.canWorkTaxi()) return;
+
         // TAXI RENDER LOGIC
         function renderTaxiShop(c) {
             c.innerHTML = '';
@@ -1228,10 +1218,6 @@ if (!state.taxi.active && window.canWorkTaxi && !window.canWorkTaxi()) return;
             sendLog(`Взял кредит: ${amt} (Streak: ${state.loanStreak})`, 'LOAN');
             document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); saveGame(); syncToCloud(true); updateUI();
         }
-                                   // Было: state.balance += ...
-    
-    // ВСТАВИТЬ ЭТУ СТРОКУ:
-    if (window.applyTaxiWear) window.applyTaxiWear();
 
         function repayLoan() {
             const input = document.getElementById('loan-amount'); let amt = parseFloat(input.value); if (!amt || amt <= 0) return;
@@ -2330,7 +2316,7 @@ if (!state.taxi.active && window.canWorkTaxi && !window.canWorkTaxi()) return;
                 </div>`;
             btn.style.borderLeft = `3px solid ${color}`; // Индикатор сбоку
         } else {
-            btn.innerHTML = `<i class="fa-solid fa-user-graduate"></i> Нанять Стажера (250PLN)`;
+            btn.innerHTML = `<i class="fa-solid fa-user-graduate"></i> Нанять Стажера (250₽)`;
             btn.style.borderLeft = 'none';
         }
 
@@ -2513,7 +2499,7 @@ if (!state.taxi.active && window.canWorkTaxi && !window.canWorkTaxi()) return;
             btn.innerHTML = `<i class="fa-solid fa-eye" style="color:#00e676"></i> Линза работает (${left}м)`;
             btn.style.borderLeft = "3px solid #00e676";
         } else {
-            btn.innerHTML = `<i class="fa-solid fa-glasses"></i> Купить Линзу (${NEURO_COST}PLN)`;
+            btn.innerHTML = `<i class="fa-solid fa-glasses"></i> Купить Линзу (${NEURO_COST}₽)`;
             btn.style.borderLeft = "none";
         }
     }, 1000);
