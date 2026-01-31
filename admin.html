@@ -22,7 +22,7 @@
 
         body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
         
-        /* SIDEBAR */
+        /* SIDEBAR (LIST) */
         .sidebar { width: 350px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); font-size: 18px; font-weight: bold; color: var(--accent); display: flex; align-items: center; gap: 10px; }
         .search-box { padding: 10px; border-bottom: 1px solid var(--border); }
@@ -166,7 +166,7 @@
         renderPlayerDetails(playersData[id], id);
     }
 
-    // 4. RENDER PLAYER DETAILS (ГЛАВНАЯ ЧАСТЬ)
+    // 4. RENDER PLAYER DETAILS
     function renderPlayerDetails(data, id) {
         const inv = data.inventory || {};
         let invHtml = '';
@@ -209,16 +209,16 @@
                 </div>
 
                 <div class="card" style="border-color: #d500f9;">
-                    <h3 style="color:#d500f9">🔧 Гараж / Детали</h3>
+                    <h3 style="color:#d500f9">🔧 Гараж Cyber X</h3>
                     <div class="controls">
                         <button class="btn-item" style="background:#00e676; color:black" onclick="adminGiveParts()">
-                            🎁 Выдать Фулл (Машина)
+                            🎁 Выдать Фулл Комплект
                         </button>
                         <button class="btn-item" style="background:#ff3d00" onclick="adminResetParts()">
-                            🗑 Сброс (Удалить)
+                            🗑 Сбросить машину
                         </button>
                     </div>
-                    <div style="margin-top:5px; font-size:11px; color:#777;">Выдает детали, 55 заказов и бензин.</div>
+                    <div style="margin-top:5px; font-size:11px; color:#777;">Включает: Детали, 55 заказов, бензин</div>
                 </div>
 
                 <div class="card" style="grid-column: span 2;">
@@ -243,10 +243,10 @@
         }
     }
 
-    // === ФУНКЦИИ ВЫДАЧИ ДЕТАЛЕЙ (ПРЯМАЯ ЗАПИСЬ В БД) ===
+    // === NEW FUNCTIONS FOR GARAGE ===
     function adminGiveParts() {
-        if(!selectedId) return alert('Выберите игрока!');
-        if(!confirm('Выдать полный комплект для Cyber X, бензин и 55 заказов?')) return;
+        if (!selectedId) return alert('Выберите игрока!');
+        if (!confirm('Выдать полный комплект для Cyber X, бензин и 55 заказов?')) return;
 
         db.ref('users/' + selectedId).update({
             // Выдаем детали
@@ -257,7 +257,7 @@
             'inventory/part_battery': 5,
             'inventory/fuel_canister': 10,
             
-            // Ставим опыт чтобы работало
+            // Опыт для открытия лута
             'totalDeliveries': 55,
             
             // Подготовка к сборке
@@ -270,8 +270,8 @@
     }
 
     function adminResetParts() {
-        if(!selectedId) return alert('Выберите игрока!');
-        if(!confirm('Сбросить прогресс машины?')) return;
+        if (!selectedId) return alert('Выберите игрока!');
+        if (!confirm('Сбросить прогресс машины?')) return;
 
         db.ref('users/' + selectedId).update({
             'inventory/part_engine': 0,
@@ -307,38 +307,51 @@
         db.ref('config').once('value', snap => {
             const cfg = snap.val() || {};
             let html = '';
-            for(let k in cfg) {
-                if(typeof cfg[k] !== 'object') {
-                    html += `<div class="input-group"><label>${k}</label><input type="text" id="cfg-${k}" value="${cfg[k]}"></div>`;
-                }
-            }
-            document.getElementById('config-form').innerHTML = html || 'Нет конфига';
+            // Простейший рендер конфига
+            const keys = ['basePickupPay','perKmPay','inflationRate','deliveryTime','trafficDuration','tipChance','energyDrain','waterDrain'];
+            
+            keys.forEach(k => {
+                const val = cfg[k] !== undefined ? cfg[k] : 0;
+                html += `<div class="input-group"><label>${k}</label><input type="text" id="cfg-${k}" value="${val}"></div>`;
+            });
+            document.getElementById('config-form').innerHTML = html;
         });
     }
 
     function saveConfig() {
-        const inputs = document.querySelectorAll('#config-form input');
-        const updates = {};
-        inputs.forEach(inp => {
-            let val = inp.value;
-            if(!isNaN(val)) val = parseFloat(val);
-            updates[inp.id.replace('cfg-', '')] = val;
-        });
-        db.ref('config').update(updates).then(() => alert('Настройки сохранены'));
+        const newPrices = {
+            // Заглушка, если нужно править цены предметов, это нужно расширять
+        };
+        
+        const cfg = {
+            basePickupPay: parseFloat(document.getElementById('cfg-basePickupPay').value),
+            perKmPay: parseFloat(document.getElementById('cfg-perKmPay').value),
+            inflationRate: parseFloat(document.getElementById('cfg-inflationRate').value),
+            deliveryTime: parseInt(document.getElementById('cfg-deliveryTime').value),
+            trafficDuration: parseInt(document.getElementById('cfg-trafficDuration').value),
+            tipChance: parseFloat(document.getElementById('cfg-tipChance').value),
+            energyDrain: parseFloat(document.getElementById('cfg-energyDrain').value),
+            waterDrain: parseFloat(document.getElementById('cfg-waterDrain').value),
+        };
+        
+        db.ref('config').update(cfg).then(()=>alert('Сохранено'));
     }
 
+    // === LOGS ===
     function loadLogs() {
         db.ref('logs').limitToLast(50).once('value', snap => {
             const d = snap.val();
             let html = '';
             if(d) {
-                Object.values(d).sort((a,b) => b.timestamp - a.timestamp).forEach(l => {
-                    html += `<div class="log-entry"><div class="log-time">${new Date(l.timestamp).toLocaleTimeString()}</div><div class="log-user">${l.playerName || 'System'}</div><div class="log-msg">${l.message}</div></div>`;
+                Object.values(d).sort((a,b)=>b.timestamp-a.timestamp).forEach(l => {
+                    html += `<div class="log-entry"><div class="log-time">${new Date(l.timestamp).toLocaleTimeString()}</div><div class="log-user">${l.playerName}</div><div class="log-msg">${l.message}</div></div>`;
                 });
             }
             document.getElementById('logs-container').innerHTML = html || 'Нет логов';
         });
     }
+
+    showView('players', document.querySelector('.nav-btn'));
 
 </script>
 
