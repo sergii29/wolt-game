@@ -3,111 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WOLT GOD MODE | Admin Dashboard</title>
+    <title>WOLT ADMIN | FIX MODE</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <style>
-        :root {
-            --bg: #121212;
-            --panel: #1e1e1e;
-            --border: #333;
-            --text: #e0e0e0;
-            --accent: #00e676;
-            --danger: #ff3d00;
-            --info: #2979ff;
-            --warn: #ffea00;
-        }
-
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; overflow: hidden; }
+        :root { --bg: #121212; --panel: #1e1e1e; --border: #333; --text: #e0e0e0; --accent: #00e676; }
+        body { margin: 0; padding: 0; font-family: monospace; background: var(--bg); color: var(--text); height: 100vh; display: flex; }
         
-        /* SIDEBAR */
-        .sidebar { width: 350px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid var(--border); font-size: 18px; font-weight: bold; color: var(--accent); display: flex; align-items: center; gap: 10px; }
-        .search-box { padding: 10px; border-bottom: 1px solid var(--border); }
-        .search-box input { width: 95%; background: #333; border: none; padding: 8px; color: white; border-radius: 4px; }
+        .sidebar { width: 300px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 15px; border-bottom: 1px solid var(--border); font-weight: bold; color: var(--accent); }
+        .search-box input { width: 90%; background: #333; border: none; padding: 8px; color: white; margin: 10px; }
         .player-list { flex: 1; overflow-y: auto; }
-        .player-item { padding: 15px; border-bottom: 1px solid #333; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-        .player-item:hover { background: #2a2a2a; }
-        .player-item.active { background: rgba(0, 230, 118, 0.1); border-left: 3px solid var(--accent); }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #555; }
-        .status-dot.online { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
+        .player-item { padding: 10px; border-bottom: 1px solid #333; cursor: pointer; }
+        .player-item:hover { background: #333; }
+        .player-item.active { background: #333; border-left: 3px solid var(--accent); }
 
-        /* MAIN CONTENT */
-        .main { flex: 1; padding: 30px; overflow-y: auto; background: var(--bg); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .nav-btn { background: #333; border: none; color: #aaa; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-right: 10px; }
-        .nav-btn.active { background: var(--accent); color: black; }
+        .main { flex: 1; padding: 20px; overflow-y: auto; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+        .card { background: var(--panel); border: 1px solid var(--border); padding: 15px; border-radius: 8px; }
+        .card h3 { margin-top: 0; color: #888; font-size: 14px; text-transform: uppercase; }
         
-        /* CARDS */
-        .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; }
-        .card h3 { margin-top: 0; color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-value { font-size: 24px; font-weight: bold; margin: 10px 0; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .btn-item { padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; }
-        .btn-item:hover { opacity: 0.8; }
+        .btn { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; width: 100%; margin-top: 5px; }
+        .btn-green { background: #00e676; color: black; }
+        .btn-red { background: #ff3d00; }
+        .btn-blue { background: #2979ff; }
         
-        /* LOGS */
-        .log-entry { font-family: monospace; padding: 8px; border-bottom: 1px solid #333; display: flex; gap: 15px; font-size: 13px; }
-        .log-time { color: #777; }
-        .log-user { color: var(--accent); font-weight: bold; }
-        
-        /* INPUT GROUPS */
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; color: #888; margin-bottom: 5px; font-size: 12px; }
-        .input-group input { width: 100%; background: #252525; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; }
+        .raw-data { background: #000; padding: 10px; font-size: 10px; color: #0f0; margin-top: 20px; white-space: pre-wrap; display: none; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div class="sidebar-header"><i class="fas fa-shield-alt"></i> ADMIN PANEL</div>
-    <div class="search-box">
-        <input type="text" id="search" placeholder="Поиск игрока..." oninput="filterPlayers()">
-    </div>
+    <div class="sidebar-header">ADMIN PANEL (FIXED)</div>
+    <div class="search-box"><input type="text" id="search" placeholder="Поиск..." oninput="renderList()"></div>
     <div class="player-list" id="player-list">Загрузка...</div>
 </div>
 
 <div class="main">
-    <div class="header">
-        <h2>Dashboard</h2>
-        <div>
-            <button class="nav-btn active" onclick="showView('players', this)">Игроки</button>
-            <button class="nav-btn" onclick="showView('config', this)">Настройки</button>
-            <button class="nav-btn" onclick="showView('logs', this)">Логи</button>
-        </div>
-    </div>
-
-    <div id="players-view">
-        <div id="player-details" style="display:none;">
-            </div>
-        <div id="no-selection" style="text-align:center; color:#555; margin-top:100px;">
-            <i class="fas fa-user-circle" style="font-size: 64px; margin-bottom:20px;"></i><br>
-            Выберите игрока слева
-        </div>
-    </div>
-
-    <div id="config-view" style="display:none;">
-        <div class="card" style="max-width: 600px;">
-            <h3>Настройки Экономики</h3>
-            <div id="config-form">Загрузка...</div>
-            <button class="btn-item" style="background:var(--accent); color:black; width:100%; margin-top:20px;" onclick="saveConfig()">Сохранить настройки</button>
-        </div>
-    </div>
-
-    <div id="logs-view" style="display:none;">
-        <div class="card">
-            <h3>Системные логи</h3>
-            <div id="logs-container" style="height: 500px; overflow-y:auto;"></div>
-            <button class="btn-item" style="background:#333; width:100%; margin-top:10px;" onclick="loadLogs()">Обновить</button>
-        </div>
-    </div>
+    <div id="no-selection">Выберите игрока слева</div>
+    <div id="player-details" style="display:none;"></div>
 </div>
 
 <script>
-    // 1. CONFIGURATION
+    // 1. КОНФИГУРАЦИЯ (ТВОЯ)
     const firebaseConfig = {
       apiKey: "AIzaSyChrQMyO2soPgoEHq_f3aYs5Cs19q3sWEk",
       authDomain: "warszawa-courier.firebaseapp.com",
@@ -125,7 +65,7 @@
     let playersData = {};
     let selectedId = null;
 
-    // 2. INIT
+    // 2. ЗАГРУЗКА ДАННЫХ
     db.ref('users').on('value', snapshot => {
         playersData = snapshot.val() || {};
         renderList();
@@ -134,220 +74,112 @@
         }
     });
 
-    // 3. RENDER LIST
+    // 3. СПИСОК ИГРОКОВ
     function renderList() {
         const filter = document.getElementById('search').value.toLowerCase();
         const container = document.getElementById('player-list');
         container.innerHTML = '';
 
         Object.entries(playersData).forEach(([id, user]) => {
-            const name = user.firstName || 'User ' + id.substr(0,4);
-            if(name.toLowerCase().includes(filter) || id.includes(filter)) {
+            // Пытаемся найти хоть какое-то имя
+            const name = user.firstName || user.username || user.name || 'Без имени';
+            
+            if(name.toLowerCase().includes(filter) || id.toLowerCase().includes(filter)) {
                 const div = document.createElement('div');
                 div.className = `player-item ${id === selectedId ? 'active' : ''}`;
-                div.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold;">${name}</div>
-                        <div style="font-size:11px; color:#666;">ID: ${id}</div>
-                    </div>
-                    <div class="status-dot ${user.isOnline ? 'online' : ''}"></div>
-                `;
-                div.onclick = () => selectPlayer(id);
+                div.innerHTML = `<b>${name}</b><br><small style="color:#777">${id}</small>`;
+                div.onclick = () => { selectedId = id; renderList(); document.getElementById('no-selection').style.display='none'; document.getElementById('player-details').style.display='block'; renderPlayerDetails(user, id); };
                 container.appendChild(div);
             }
         });
     }
 
-    function selectPlayer(id) {
-        selectedId = id;
-        renderList();
-        document.getElementById('no-selection').style.display = 'none';
-        document.getElementById('player-details').style.display = 'block';
-        renderPlayerDetails(playersData[id], id);
-    }
-
-    // 4. RENDER PLAYER DETAILS (ТВОЯ ФУНКЦИЯ + НОВЫЕ КНОПКИ)
+    // 4. ДЕТАЛИ ИГРОКА (УМНАЯ ФУНКЦИЯ)
     function renderPlayerDetails(data, id) {
-        const inv = data.inventory || {};
-        let invHtml = '';
-        Object.entries(inv).forEach(([k,v]) => {
-            if(v > 0) invHtml += `<span style="background:#333; padding:4px 8px; border-radius:4px; font-size:12px; margin:2px;">${k}: ${v}</span>`;
-        });
-
+        // Ищем баланс во всех возможных полях
+        const balance = data.balance !== undefined ? data.balance : (data.money || 0);
+        // Ищем имя
+        const name = data.firstName || data.username || data.name || 'Не указано';
+        // Ищем доставки
+        const deliveries = data.totalDeliveries || data.deliveries || data.orders || 0;
+        
         const taxi = data.taxi || {};
-        const isBanned = data.isBanned ? 'Да' : 'Нет';
+        const inv = data.inventory || {};
+
+        let invHtml = '';
+        for(let k in inv) if(inv[k] > 0) invHtml += `<div>${k}: <b>${inv[k]}</b></div>`;
 
         document.getElementById('player-details').innerHTML = `
+            <h2 style="margin-top:0">${name} <span style="font-size:14px; color:#777">(${id})</span></h2>
+            
             <div class="card-grid">
                 <div class="card">
-                    <h3>Основное</h3>
-                    <div class="stat-value">${data.firstName || 'Без имени'}</div>
-                    <div>Баланс: <span style="color:#00e676">${(data.balance||0).toFixed(2)} PLN</span></div>
-                    <div>Доставки: ${(data.totalDeliveries||0)}</div>
-                    <div>Бан: <span style="color:${data.isBanned?'red':'green'}">${isBanned}</span></div>
-                    <div style="margin-top:10px; color:#888; font-size:12px;">TG ID: ${id}</div>
+                    <h3>Финансы & Стата</h3>
+                    <div style="font-size:24px; color:#00e676">${Number(balance).toFixed(2)} PLN</div>
+                    <div>Доставок: <b>${deliveries}</b></div>
+                    <div style="margin-top:10px">
+                        <button class="btn btn-blue" onclick="setBalancePrompt('${id}')">✏️ Изменить Баланс</button>
+                    </div>
                 </div>
 
-                <div class="card" style="border-color: #ff9100;">
-                    <h3 style="color:#ff9100">Такси Статус</h3>
-                    <div>Авто собрано: <b>${taxi.isCarAssembled ? 'ДА' : 'НЕТ'}</b></div>
-                    <div>Здоровье: <b>${taxi.health || 0}%</b></div>
-                    <div>Топливо: <b>${taxi.fuel || 0}%</b></div>
-                    <div>Лицензия: ${taxi.licenses ? 'Есть' : 'Нет'}</div>
+                <div class="card" style="border-color:#ff9100">
+                    <h3>Такси Состояние</h3>
+                    <div>Машина собрана: <b>${taxi.isCarAssembled ? 'ДА' : 'НЕТ'}</b></div>
+                    <div>Здоровье: <b>${taxi.health||0}%</b></div>
+                    <div>Бензин: <b>${taxi.fuel||0}%</b></div>
+                </div>
+
+                <div class="card" style="border-color:#d500f9">
+                    <h3>🔧 Гараж Cyber X</h3>
+                    <button class="btn btn-green" onclick="giveFullPack('${id}')">🎁 Выдать Фулл (Машина+55з+Бенз)</button>
+                    <button class="btn btn-red" onclick="resetCar('${id}')">🗑 Сбросить машину</button>
                 </div>
 
                 <div class="card">
-                    <h3>Действия</h3>
-                    <div class="controls">
-                        <button class="btn-item" style="background:#ff3d00" onclick="toggleBan('${id}', ${!data.isBanned})">
-                            ${data.isBanned ? 'Разбанить' : 'ЗАБАНИТЬ'}
-                        </button>
-                        <button class="btn-item" style="background:#2979ff" onclick="addMoney('${id}')">
-                            +1000 PLN
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card" style="border-color: #d500f9;">
-                    <h3 style="color:#d500f9">🔧 Гараж Cyber X</h3>
-                    <div class="controls">
-                        <button class="btn-item" style="background:#00e676; color:black" onclick="adminGiveParts()">
-                            🎁 Выдать Фулл Комплект
-                        </button>
-                        <button class="btn-item" style="background:#ff3d00" onclick="adminResetParts()">
-                            🗑 Сбросить машину
-                        </button>
-                    </div>
-                    <div style="margin-top:5px; font-size:11px; color:#777;">Включает: Детали, 55 заказов, бензин</div>
-                </div>
-
-                <div class="card" style="grid-column: span 2;">
                     <h3>Инвентарь</h3>
-                    <div style="display:flex; flex-wrap:wrap; gap:5px;">${invHtml || 'Пусто'}</div>
+                    <div style="font-size:12px">${invHtml || 'Пусто'}</div>
                 </div>
+            </div>
+
+            <div style="margin-top:20px;">
+                <button onclick="document.getElementById('raw-${id}').style.display='block'" style="background:#333; color:#aaa; border:none; cursor:pointer; padding:5px;">🔍 Показать сырые данные из БД</button>
+                <div id="raw-${id}" class="raw-data">${JSON.stringify(data, null, 2)}</div>
             </div>
         `;
     }
 
-    // 5. ACTIONS LOGIC
-    function toggleBan(uid, status) {
-        if(confirm(status ? 'Забанить игрока?' : 'Разбанить игрока?')) {
-            db.ref('users/' + uid).update({ isBanned: status });
-        }
+    // 5. ФУНКЦИИ
+    function setBalancePrompt(uid) {
+        const val = prompt("Введите новый баланс (PLN):");
+        if(val) db.ref('users/'+uid).update({ balance: parseFloat(val) }).then(()=>alert('Баланс обновлен!'));
     }
 
-    function addMoney(uid) {
-        const amount = prompt('Сколько добавить?', '1000');
-        if(amount) {
-            db.ref('users/' + uid + '/balance').transaction(val => (val||0) + parseFloat(amount));
-        }
-    }
-
-    // === НОВЫЕ ФУНКЦИИ ДЛЯ ГАРАЖА (ПРЯМАЯ ЗАПИСЬ В БД) ===
-    function adminGiveParts() {
-        if (!selectedId) return alert('Выберите игрока!');
-        if (!confirm('Выдать полный комплект для Cyber X, бензин и 55 заказов?')) return;
-
-        db.ref('users/' + selectedId).update({
-            // Выдаем детали
+    function giveFullPack(uid) {
+        if(!confirm("Выдать детали, собрать машину, налить бензин и дать 55 заказов?")) return;
+        db.ref('users/'+uid).update({
             'inventory/part_engine': 1,
             'inventory/part_chip': 1,
             'inventory/part_alloy': 1,
             'inventory/part_tire': 4,
             'inventory/part_battery': 5,
             'inventory/fuel_canister': 10,
-            
-            // Опыт для открытия лута
-            'totalDeliveries': 55,
-            
-            // Подготовка к сборке
-            'taxi/isCarAssembled': false, // Ставим false, чтобы кнопка "Собрать" стала активной
-            'taxi/fuel': 100,
-            'taxi/health': 100
-        }).then(() => {
-            alert('✅ Успешно! Скажи игроку перезайти в Гараж.');
-        }).catch(e => alert('Ошибка: ' + e.message));
+            'totalDeliveries': 55,       // ОПЫТ
+            'taxi/isCarAssembled': false, // Чтобы кнопка "Собрать" была активна
+            'taxi/health': 100,
+            'taxi/fuel': 100
+        }).then(()=>alert("✅ Выдано! Проверь в игре."));
     }
 
-    function adminResetParts() {
-        if (!selectedId) return alert('Выберите игрока!');
-        if (!confirm('Сбросить прогресс машины?')) return;
-
-        db.ref('users/' + selectedId).update({
+    function resetCar(uid) {
+        if(!confirm("Удалить прогресс машины?")) return;
+        db.ref('users/'+uid).update({
+            'taxi/isCarAssembled': false,
+            'taxi/active': false,
             'inventory/part_engine': 0,
             'inventory/part_chip': 0,
-            'inventory/part_alloy': 0,
-            'inventory/part_tire': 0,
-            'taxi/isCarAssembled': false,
-            'taxi/active': false
-        }).then(() => {
-            alert('✅ Прогресс сброшен.');
-        });
+            'inventory/part_alloy': 0
+        }).then(()=>alert("✅ Сброшено."));
     }
-
-    // 6. UI HELPERS
-    function filterPlayers() { renderList(); }
-    
-    function showView(viewId, btn) {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        if(btn) btn.classList.add('active');
-        
-        document.getElementById('players-view').style.display = 'none';
-        document.getElementById('config-view').style.display = 'none';
-        document.getElementById('logs-view').style.display = 'none';
-        
-        document.getElementById(viewId + '-view').style.display = 'block';
-
-        if(viewId === 'config') loadConfig();
-        if(viewId === 'logs') loadLogs();
-    }
-
-    // 7. CONFIG & LOGS (ТВОИ СТАРЫЕ НАСТРОЙКИ)
-    function loadConfig() {
-        db.ref('config').once('value', snap => {
-            const cfg = snap.val() || {};
-            let html = '';
-            // Твои специфичные поля, которые были в прошлом файле
-            const keys = ['basePickupPay','perKmPay','inflationRate','deliveryTime','trafficDuration','tipChance','energyDrain','waterDrain'];
-            
-            keys.forEach(k => {
-                const val = cfg[k] !== undefined ? cfg[k] : 0;
-                html += `<div class="input-group"><label>${k}</label><input type="text" id="cfg-${k}" value="${val}"></div>`;
-            });
-            document.getElementById('config-form').innerHTML = html;
-        });
-    }
-
-    function saveConfig() {
-        const cfg = {
-            basePickupPay: parseFloat(document.getElementById('cfg-basePickupPay').value),
-            perKmPay: parseFloat(document.getElementById('cfg-perKmPay').value),
-            inflationRate: parseFloat(document.getElementById('cfg-inflationRate').value),
-            deliveryTime: parseInt(document.getElementById('cfg-deliveryTime').value),
-            trafficDuration: parseInt(document.getElementById('cfg-trafficDuration').value),
-            tipChance: parseFloat(document.getElementById('cfg-tipChance').value),
-            energyDrain: parseFloat(document.getElementById('cfg-energyDrain').value),
-            waterDrain: parseFloat(document.getElementById('cfg-waterDrain').value),
-        };
-        
-        db.ref('config').update(cfg).then(()=>alert('Сохранено'));
-    }
-
-    function loadLogs() {
-        db.ref('logs').limitToLast(50).once('value', snap => {
-            const d = snap.val();
-            let html = '';
-            if(d) {
-                Object.values(d).sort((a,b)=>b.timestamp-a.timestamp).forEach(l => {
-                    html += `<div class="log-entry"><div class="log-time">${new Date(l.timestamp).toLocaleTimeString()}</div><div class="log-user">${l.playerName || 'User'}</div><div class="log-msg">${l.message}</div></div>`;
-                });
-            }
-            document.getElementById('logs-container').innerHTML = html || 'Нет логов';
-        });
-    }
-
-    showView('players', document.querySelector('.nav-btn'));
-
 </script>
 
 </body>
