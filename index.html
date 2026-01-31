@@ -3251,3 +3251,164 @@
 
 })();
 </script>
+
+
+
+
+
+
+<script>
+(function() {
+    console.log(">>> WARSAW SYSTEM: v19 DATABASE-SYNC ACTIVATED");
+
+    // === 1. ПОЛУЧЕНИЕ ID И БАЗЫ ===
+    function getUserId() {
+        if (window.tgUser && window.tgUser.id) return window.tgUser.id;
+        if (window.userId) return window.userId;
+        const s = window.state || window.user || {};
+        return s.id || null;
+    }
+
+    function getRealState() {
+        return window.state || window.user || window.gameData || {};
+    }
+
+    // === 2. ФУНКЦИЯ ОТПРАВКИ В БАЗУ ===
+    function sendDeliveryToDb() {
+        const uid = getUserId();
+        const s = getRealState();
+        
+        // Берем текущее число из игры (или 0)
+        let current = s.totalDeliveries || s.deliveries || 0;
+        
+        // Делаем +1
+        let newVal = parseInt(current) + 1;
+
+        // 1. Обновляем локально (чтобы гараж увидел сразу)
+        s.totalDeliveries = newVal;
+        if (s.deliveries) s.deliveries = newVal;
+
+        // 2. ОТПРАВЛЯЕМ В FIREBASE
+        if (window.db && uid) {
+            window.db.ref('users/' + uid).update({
+                totalDeliveries: newVal
+            }).then(() => {
+                console.log(`>>> DB UPDATED: ${newVal}`);
+                showToast(`📡 Сохранено в базу: ${newVal}/50`, 'success');
+                
+                // Если стало 50 - поздравляем
+                if (newVal === 50) {
+                    alert("🎉 ПОЗДРАВЛЯЮ! 50 доставок записано в базу. Гараж открыт.");
+                    window.openGarage();
+                }
+            }).catch(err => {
+                console.error(err);
+                showToast('❌ Ошибка записи в БД', 'error');
+            });
+        } else {
+            // Если базы нет (тест), просто пишем локально
+            console.warn("Нет соединения с БД, сохранено локально");
+            showToast(`📦 Локальный зачет: ${newVal}/50`, 'warn');
+        }
+    }
+
+    // === 3. ПЕРЕХВАТЧИК КЛИКОВ ===
+    document.addEventListener('click', function(e) {
+        if (e.target) {
+            const txt = (e.target.innerText || "").toLowerCase();
+            const triggers = [
+                'завершить', 'отдать', 'доставить', 'забрать награду', 
+                'dostarcz', 'zakończ', 'odbierz', 
+                'finish', 'complete', 'deliver'
+            ];
+
+            // Если нажали на кнопку доставки
+            if (triggers.some(word => txt.includes(word))) {
+                sendDeliveryToDb();
+            }
+        }
+    }, true);
+
+    // === 4. ОБНОВЛЕННЫЙ ГАРАЖ (ЧИТАЕТ ИЗ STATE/DB) ===
+    window.openGarage = function() {
+        const old = document.getElementById('garage-overlay'); if (old) old.remove();
+        const s = getRealState();
+        
+        // Настройки
+        if (!s.taxi) s.taxi = {};
+        if (typeof s.taxi.health === 'undefined') s.taxi.health = 100;
+        if (typeof s.taxi.fuel === 'undefined') s.taxi.fuel = 100;
+        if (!s.inventory) s.inventory = {};
+        if (!s.taxi.isCarAssembled) s.taxi.isCarAssembled = false;
+
+        // Читаем число (оно уже обновлено нашей функцией)
+        const currentOrders = s.totalDeliveries || s.deliveries || 0;
+        const MIN_DELIVERIES = 50;
+        const isLocked = !s.taxi.isCarAssembled;
+        const lootUnlocked = currentOrders >= MIN_DELIVERIES;
+
+        // Конфиг деталей
+        const REQ = { 'part_engine': 1, 'part_chip': 1, 'part_alloy': 1, 'part_tire': 4 };
+        const PARTS = {
+            'part_engine': 'Двигатель V8', 'part_chip': 'Чип Cyber', 
+            'part_alloy': 'Тит. Сплав', 'part_tire': 'Шина'
+        };
+
+        const overlay = document.createElement('div');
+        overlay.id = 'garage-overlay';
+        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.96); z-index:99999; display:flex; justify-content:center; align-items:center; font-family:sans-serif;";
+        
+        let htmlBody = '';
+
+        if (isLocked) {
+            // СБОРКА
+            let reqHtml = ''; let canAssemble = true;
+            for (let key in REQ) {
+                const needed = REQ[key]; const have = s.inventory[key] || 0;
+                if (have < needed) canAssemble = false;
+                reqHtml += `<div style="display:flex; justify-content:space-between; padding:10px; background:#1e1e1e; margin-bottom:5px; border-radius:8px;"><div>${PARTS[key]}</div><div style="color:${have>=needed?'#00e676':'#ff3d00'}">${have}/${needed}</div></div>`;
+            }
+            
+            let lootMsg = lootUnlocked 
+                ? `<div style="color:#00e676; text-align:center; padding:10px; border:1px solid #00e676; border-radius:8px; margin-bottom:10px;">✅ ДОСТУП ОТКРЫТ! Выпадают детали.</div>` 
+                : `<div style="color:#ff3d00; text-align:center; padding:10px; border:1px solid #ff3d00; border-radius:8px; margin-bottom:10px;">🔒 ЗАБЛОКИРОВАНО<br>Нужно 50 доставок.<br>По базе: <b style="color:white; font-size:16px;">${currentOrders}</b>/50</div>`;
+            
+            htmlBody = `<h2 style="text-align:center; color:#ff9100;">СБОРКА</h2>${lootMsg}<div style="margin-bottom:20px;">${reqHtml}</div><button onclick="window.assembleCar()" style="width:100%; padding:15px; background:${canAssemble?'#00e676':'#333'}; color:${canAssemble?'black':'#666'}; border:none; border-radius:10px; font-weight:bold;" ${canAssemble?'':'disabled'}>🚀 СОБРАТЬ</button>`;
+        } else {
+            // ГАРАЖ
+            const hp = Math.floor(s.taxi.health); const fuel = Math.floor(s.taxi.fuel||0);
+            htmlBody = `<h2 style="margin:0 0 15px 0;">⛽ Гараж</h2><div style="background:#222; padding:15px; border-radius:12px; margin-bottom:15px;"><div>Здоровье: <b style="color:${hp>50?'#00e676':'#ff3d00'}">${hp}%</b></div><div>Бензин: <b style="color:${fuel>20?'#ff9100':'#ff3d00'}">${fuel}%</b></div><div style="display:flex; gap:10px; margin-top:10px;"><button onclick="window.repairService()" style="flex:1; background:#d32f2f; color:white; padding:10px; border:none; border-radius:6px;">Ремонт (250)</button><button onclick="window.buyFuel()" style="flex:1; background:#ff9100; color:black; padding:10px; border:none; border-radius:6px;">Бензин (50)</button></div></div>`;
+        }
+
+        // КНОПКА РУЧНОЙ СИНХРОНИЗАЦИИ (ЕСЛИ ВДРУГ ЧТО-ТО ПОШЛО НЕ ТАК)
+        const syncBtn = `<div onclick="window.forceSyncDb()" style="margin-top:20px; text-align:center; font-size:10px; color:#555; cursor:pointer;">[Нажми сюда если цифра не верная]</div>`;
+
+        overlay.innerHTML = `<div style="background:#121212; width:90%; max-width:400px; border-radius:16px; padding:20px; color:white; border: 1px solid #333;"><div onclick="document.getElementById('garage-overlay').remove()" style="float:right; font-size:24px; cursor:pointer;">&times;</div>${htmlBody}${syncBtn}</div>`;
+        document.body.appendChild(overlay);
+    };
+
+    // ФУНКЦИЯ РУЧНОГО ПИНКА БАЗЫ (на всякий случай)
+    window.forceSyncDb = function() {
+        const uid = getUserId();
+        const s = getRealState();
+        const current = s.totalDeliveries || 0;
+        const val = prompt("Введи правильное число доставок для записи в БД:", current);
+        if (val && !isNaN(parseInt(val)) && uid && window.db) {
+            window.db.ref('users/' + uid).update({ totalDeliveries: parseInt(val) });
+            s.totalDeliveries = parseInt(val);
+            alert("Записано!");
+            window.openGarage();
+        }
+    };
+
+    // ТОСТЕР (Уведомления)
+    if (!window.showToast) {
+        window.showToast = function(msg, type) {
+            const t = document.createElement('div');
+            t.style.cssText = `position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.9); color:white; padding:10px 20px; border-radius:20px; z-index:999999; border:1px solid ${type==='error'?'#f00':'#0f0'};`;
+            t.innerText = msg; document.body.appendChild(t); setTimeout(()=>t.remove(), 3000);
+        }
+    }
+
+})();
+</script>
