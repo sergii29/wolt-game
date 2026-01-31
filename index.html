@@ -2669,3 +2669,160 @@
 
 })();
 </script>
+
+
+
+
+
+
+
+
+<script>
+(function() {
+    // 1. ЛОГИКА ГАРАЖА (Если ты её удалил при откате - она восстановится здесь)
+    const CAR_PARTS = {
+        'part_chip': { name: 'Чип ИИ', price: 150, sellPrice: 70 },
+        'part_engine': { name: 'Двигатель V8', price: 300, sellPrice: 140 },
+        'part_alloy': { name: 'Титановый сплав', price: 200, sellPrice: 90 },
+        'part_tire': { name: 'Шины', price: 50, sellPrice: 20 },
+        'part_battery': { name: 'Аккумулятор', price: 80, sellPrice: 35 },
+        'part_brakes': { name: 'Тормоза', price: 100, sellPrice: 45 },
+        'part_suspension': { name: 'Подвеска', price: 120, sellPrice: 55 }
+    };
+
+    window.openGarage = function() {
+        const modalBody = document.getElementById('modal-body');
+        if (!modalBody) return;
+        
+        // Инициализация здоровья
+        if (typeof state.taxi.health === 'undefined') state.taxi.health = 100;
+        if (typeof state.inventory === 'undefined') state.inventory = {};
+
+        const healthColor = state.taxi.health > 50 ? '#00e676' : '#ff3d00';
+        
+        let html = `
+            <div style="background:#333; padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;">
+                <div style="font-size:14px; color:#aaa;">Здоровье Такси</div>
+                <div style="font-size:32px; font-weight:bold; color:${healthColor};">${Math.floor(state.taxi.health)}%</div>
+                <div style="width:100%; background:#555; height:10px; border-radius:5px; margin-top:5px; overflow:hidden;">
+                    <div style="width:${state.taxi.health}%; background:${healthColor}; height:100%;"></div>
+                </div>
+                ${state.taxi.health < 100 ? `<button onclick="window.repairTaxi()" style="margin-top:10px; background:#009de0; color:white; border:none; padding:8px 20px; border-radius:8px;">🔧 ПОЧИНИТЬ (Нужна деталь)</button>` : ''}
+            </div>
+            <h3 style="color:white; margin-bottom:10px;">📦 Склад запчастей</h3>`;
+
+        for (let key in CAR_PARTS) {
+            const count = state.inventory[key] || 0;
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#2a2a2a; padding:10px; margin-bottom:5px; border-radius:8px; border-left: 3px solid ${count > 0 ? '#00e676' : '#555'};">
+                    <div style="color:white;">${CAR_PARTS[key].name} <span style="color:#777; font-size:12px;">(Продать: ${CAR_PARTS[key].sellPrice} PLN)</span></div>
+                    <div>
+                        <span style="color:white; margin-right:10px;">x${count}</span>
+                        ${count > 0 ? `<button onclick="window.sellPart('${key}')" style="background:#ff3d00; border:none; color:white; border-radius:4px; padding:2px 8px;">$</button>` : ''}
+                    </div>
+                </div>`;
+        }
+        
+        document.getElementById('modal-title').innerText = "ГАРАЖ";
+        modalBody.innerHTML = html;
+        document.getElementById('game-modal').style.display = 'flex';
+    };
+
+    window.repairTaxi = function() {
+        // Ищем любую деталь для ремонта
+        const parts = ['part_tire', 'part_battery', 'part_brakes', 'part_suspension', 'part_engine'];
+        let found = parts.find(p => state.inventory[p] > 0);
+        
+        if (found) {
+            state.inventory[found]--;
+            state.taxi.health = 100;
+            window.showToast('Машина починена!', 'success');
+            window.saveGame();
+            window.openGarage();
+        } else {
+            window.showToast('Нет запчастей! Найди их в заказах.', 'error');
+        }
+    };
+
+    window.sellPart = function(key) {
+        if(state.inventory[key] > 0) {
+            state.inventory[key]--;
+            state.balance += CAR_PARTS[key].sellPrice;
+            window.saveGame();
+            window.openGarage(); // Обновить вид
+            // Если есть функция обновления баланса в UI
+            if(document.getElementById('balance-display')) document.getElementById('balance-display').innerText = state.balance.toFixed(2) + " PLN";
+        }
+    };
+
+    // 2. АКТИВАТОР (Ждет 2 секунды и внедряется в игру)
+    setTimeout(() => {
+        console.log(">>> WARSZAWA GARAGE PATCH: STARTED");
+
+        // А) ВСТАВЛЯЕМ КНОПКУ В МЕНЮ
+        const menu = document.querySelector('.menu-items') || document.getElementById('side-menu');
+        if (menu) {
+            // Удаляем старую кнопку если есть (чтоб не дублировалась при перезагрузках)
+            const oldBtn = document.getElementById('btn-garage-patch');
+            if(oldBtn) oldBtn.remove();
+
+            const btn = document.createElement('div');
+            btn.id = 'btn-garage-patch';
+            btn.className = 'menu-item';
+            btn.innerHTML = '<i class="fas fa-wrench" style="color: #ff3d00;"></i> Гараж / Ремонт';
+            btn.onclick = window.openGarage;
+            
+            // Вставляем после первого элемента (обычно Профиль)
+            if(menu.children.length > 0) menu.insertBefore(btn, menu.children[1]);
+            else menu.appendChild(btn);
+        }
+
+        // Б) ПЕРЕХВАТЫВАЕМ КНОПКУ ВКЛЮЧЕНИЯ ТАКСИ
+        if (window.toggleTaxiMode) {
+            const originalToggle = window.toggleTaxiMode;
+            window.toggleTaxiMode = function() {
+                // Проверка здоровья
+                if (!state.taxi.health) state.taxi.health = 100;
+                
+                if (state.taxi.health <= 0) {
+                    window.showToast('МАШИНА СЛОМАНА! Зайди в Гараж.', 'error');
+                    window.openGarage();
+                    return; // Не даем включить
+                }
+                // Если все ок - запускаем оригинал
+                originalToggle.apply(this, arguments);
+            };
+        }
+
+        // В) ПЕРЕХВАТЫВАЕМ СОХРАНЕНИЕ (Чтобы ломать машину после заработка)
+        if (window.saveGame) {
+            const originalSave = window.saveGame;
+            let lastBalance = 0; // Начнем следить
+            
+            window.saveGame = function() {
+                // Если баланс определен и вырос
+                if (state.balance && lastBalance > 0 && state.balance > lastBalance + 5) {
+                    // Это похоже на завершение заказа
+                    if (state.taxi && state.taxi.active) {
+                        if (!state.taxi.health) state.taxi.health = 100;
+                        state.taxi.health -= (Math.random() * 5 + 1); // Минус 1-6%
+                        if (state.taxi.health < 0) state.taxi.health = 0;
+                        
+                        // Шанс дропа
+                        if(Math.random() < 0.3) {
+                            const keys = Object.keys(CAR_PARTS);
+                            const p = keys[Math.floor(Math.random() * keys.length)];
+                            if(!state.inventory[p]) state.inventory[p] = 0;
+                            state.inventory[p]++;
+                            window.showToast('Найдена деталь: ' + CAR_PARTS[p].name, 'success');
+                        }
+                    }
+                }
+                lastBalance = state.balance;
+                originalSave.apply(this, arguments);
+            };
+        }
+
+    }, 2000); // Задержка 2 сек, чтобы игра успела загрузиться
+})();
+</script>
