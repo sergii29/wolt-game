@@ -1058,7 +1058,12 @@
 
         function showLockedMsg() { showToast(`Нужно ${TAXI_UNLOCK_REQ} выполненных заказов!`, 'warn'); }
 
-        function toggleTaxiMode() {
+        function toggleTaxiMode() { function toggleTaxiMode() {
+    // ВСТАВИТЬ ЭТУ СТРОКУ:
+    if (window.canWorkTaxi && !window.canWorkTaxi()) return;
+
+    // Дальше идет старый код...
+    // if(!state.taxi.licenses || ...
             if (!state.taxi.vehicle || !state.taxi.licenses.driver || !state.taxi.licenses.insurance) { showToast('Купите машину и лицензии!', 'warn'); return; }
             if(state.isOnline) { showToast('Сначала уйди в офлайн!', 'warn'); return; }
             state.taxi.active = !state.taxi.active; saveGame(); updateUI(); updateMenuState();
@@ -1223,6 +1228,10 @@ if (!state.taxi.active && window.canWorkTaxi && !window.canWorkTaxi()) return;
             sendLog(`Взял кредит: ${amt} (Streak: ${state.loanStreak})`, 'LOAN');
             document.getElementById('modal-body').innerHTML = ''; renderBank(document.getElementById('modal-body')); saveGame(); syncToCloud(true); updateUI();
         }
+                                   // Было: state.balance += ...
+    
+    // ВСТАВИТЬ ЭТУ СТРОКУ:
+    if (window.applyTaxiWear) window.applyTaxiWear();
 
         function repayLoan() {
             const input = document.getElementById('loan-amount'); let amt = parseFloat(input.value); if (!amt || amt <= 0) return;
