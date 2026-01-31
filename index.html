@@ -2679,26 +2679,25 @@
 
 <script>
 (function() {
-    console.log(">>> WARSAW CAREER: SYNCED WITH CYBER X");
+    console.log(">>> WARSAW CAREER: CLEANER PATCH v6");
 
-    // 1. КОНФИГУРАЦИЯ (ТОЧНО КАК В КОДЕ ИГРЫ)
+    // 1. КОНФИГУРАЦИЯ (АКТУАЛЬНЫЙ СПИСОК ДЛЯ СБОРКИ)
     const MIN_DELIVERIES_FOR_LOOT = 50; 
 
-    // Требования для сборки (взято из craftCyberCarNew)
+    // Требования (4 детали)
     const CAR_REQUIREMENTS = {
         'part_engine': 1, // Двигатель
         'part_chip': 1,   // Чип
-        'part_alloy': 1,  // Титановый сплав
-        'part_tire': 4    // Шины
+        'part_alloy': 1,  // Сплав
+        'part_tire': 4    // Шины (4 шт)
     };
 
-    // Настройки деталей (Цены и Шанс выпадения)
+    // Параметры деталей
     const CAR_PARTS = {
-        'part_engine': { name: 'Двигатель V8', sell: 150, chance: 0.01 }, // Редкое
+        'part_engine': { name: 'Двигатель V8', sell: 150, chance: 0.01 }, 
         'part_chip':   { name: 'Чип Cyber',    sell: 90,  chance: 0.02 }, 
         'part_alloy':  { name: 'Титановый Сплав', sell: 120, chance: 0.015 },
-        'part_tire':   { name: 'Шина',         sell: 30,  chance: 0.06 },  // Чаще
-        // Доп. расходники для ремонта (не нужны для сборки, но можно найти)
+        'part_tire':   { name: 'Шина',         sell: 30,  chance: 0.06 },  
         'part_battery':{ name: 'Аккумулятор',  sell: 40,  chance: 0.04 }
     };
 
@@ -2709,11 +2708,12 @@
         return state.totalDeliveries || state.deliveries || state.orders || state.completedOrders || 0;
     }
 
-    // 2. ИНТЕРФЕЙС ГАРАЖА
+    // 2. ИНТЕРФЕЙС НОВОГО ГАРАЖА
     window.openGarage = function() {
         const old = document.getElementById('garage-overlay');
         if (old) old.remove();
 
+        // Базовая инициализация
         if (typeof state.taxi.health === 'undefined') state.taxi.health = 100;
         if (!state.inventory) state.inventory = {};
         if (!state.taxi.isCarAssembled) state.taxi.isCarAssembled = false;
@@ -2727,19 +2727,18 @@
 
         const overlay = document.createElement('div');
         overlay.id = 'garage-overlay';
-        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:20000; display:flex; justify-content:center; align-items:center; font-family:sans-serif;";
+        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.96); z-index:99999; display:flex; justify-content:center; align-items:center; font-family:sans-serif;";
         
         const content = document.createElement('div');
-        content.style.cssText = "background:#121212; width:90%; max-width:400px; border-radius:16px; padding:20px; color:white; border: 1px solid #333; box-shadow: 0 0 30px rgba(0,0,0,0.8); max-height: 85vh; overflow-y: auto;";
+        content.style.cssText = "background:#121212; width:90%; max-width:400px; border-radius:16px; padding:20px; color:white; border: 1px solid #333; box-shadow: 0 0 40px rgba(0,0,0,1); max-height: 85vh; overflow-y: auto;";
 
         let htmlBody = '';
 
-        // === РЕЖИМ 1: СБОРКА МАШИНЫ ===
+        // === РЕЖИМ СБОРКИ ===
         if (isLocked) {
             let reqHtml = '';
             let canAssemble = true;
 
-            // Показываем ТОЛЬКО то, что нужно для сборки
             for (let key in CAR_REQUIREMENTS) {
                 const needed = CAR_REQUIREMENTS[key];
                 const have = state.inventory[key] || 0;
@@ -2759,26 +2758,26 @@
             }
 
             let lootStatus = lootUnlocked 
-                ? `<div style="color:#00e676; font-size:12px; margin-bottom:15px; background:rgba(0,230,118,0.1); padding:8px; border-radius:6px; text-align:center;">✅ ПОИСК ДЕТАЛЕЙ АКТИВЕН</div>`
-                : `<div style="color:#ff3d00; font-size:12px; margin-bottom:15px; background:rgba(255,61,0,0.1); padding:8px; border-radius:6px; text-align:center;">🔒 ЗАБЛОКИРОВАНО: Нужен опыт (50+ доставок). <br>Сейчас: ${currentOrders}</div>`;
+                ? `<div style="color:#00e676; font-size:12px; margin-bottom:15px; background:rgba(0,230,118,0.1); padding:8px; border-radius:6px; text-align:center;">✅ В ЗАКАЗАХ ВЫПАДАЮТ ДЕТАЛИ</div>`
+                : `<div style="color:#ff3d00; font-size:12px; margin-bottom:15px; background:rgba(255,61,0,0.1); padding:8px; border-radius:6px; text-align:center;">🔒 ЗАБЛОКИРОВАНО. Сделайте 50 доставок (Сейчас: ${currentOrders})</div>`;
 
             htmlBody = `
                 <h2 style="text-align:center; color:#ff9100; margin-top:0;">ПРОЕКТ "CYBER X"</h2>
-                <p style="text-align:center; color:#888; font-size:13px; margin-bottom:15px;">Соберите легендарное такси, чтобы начать карьеру.</p>
+                <p style="text-align:center; color:#888; font-size:13px; margin-bottom:15px;">Соберите машину мечты.</p>
                 ${lootStatus}
                 <div style="margin-bottom: 20px;">${reqHtml}</div>
                 ${canAssemble 
-                    ? `<button onclick="window.assembleCar()" style="width:100%; padding:15px; background:#00e676; color:black; font-weight:bold; border:none; border-radius:10px; font-size:16px; cursor:pointer; box-shadow: 0 0 15px rgba(0,230,118,0.4);">🚀 СОБРАТЬ CYBER X</button>`
-                    : `<button disabled style="width:100%; padding:15px; background:#333; color:#666; font-weight:bold; border:none; border-radius:10px;">Деталей не хватает</button>`
+                    ? `<button onclick="window.assembleCar()" style="width:100%; padding:15px; background:#00e676; color:black; font-weight:bold; border:none; border-radius:10px; font-size:16px; cursor:pointer; box-shadow: 0 0 15px rgba(0,230,118,0.4);">🚀 СОБРАТЬ МАШИНУ</button>`
+                    : `<button disabled style="width:100%; padding:15px; background:#333; color:#666; font-weight:bold; border:none; border-radius:10px;">Не хватает деталей</button>`
                 }
                 
                 <div style="margin-top:20px; border-top:1px solid #333; padding-top:10px;">
-                    <div style="font-size:12px; color:#888; margin-bottom:5px;">Ваш склад (излишки):</div>
+                    <div style="font-size:12px; color:#888; margin-bottom:5px;">Инвентарь:</div>
                     ${generateInventoryList()}
                 </div>
             `;
         } 
-        // === РЕЖИМ 2: ГАРАЖ И ОБСЛУЖИВАНИЕ ===
+        // === РЕЖИМ ГАРАЖА ===
         else {
             const hp = Math.floor(state.taxi.health);
             const hpColor = hp > 50 ? '#00e676' : '#ff3d00';
@@ -2788,33 +2787,31 @@
                 const minutesLeft = Math.ceil((state.taxi.repairEndTime - now) / 60000);
                 statusBlock = `
                     <div style="background:#2d1a1a; border:1px solid #ff3d00; padding:20px; border-radius:12px; text-align:center; margin-bottom:20px;">
-                        <div style="font-size:20px; color:#ff3d00; font-weight:bold; margin-bottom:5px;">⛔ В СЕРВИСЕ</div>
-                        <div style="color:#ddd;">Ожидание запчастей...</div>
+                        <div style="font-size:20px; color:#ff3d00; font-weight:bold; margin-bottom:5px;">⛔ РЕМОНТ</div>
+                        <div style="color:#ddd;">Машина в сервисе</div>
                         <div style="font-size:24px; color:white; margin-top:10px; font-weight:bold;">${minutesLeft} мин</div>
                     </div>`;
             } else {
                 statusBlock = `
                     <div style="background:#222; padding:20px; border-radius:12px; margin-bottom:20px; text-align:center;">
-                        <div style="font-size:13px; color:#aaa;">Состояние Cyber X</div>
+                        <div style="font-size:13px; color:#aaa;">Здоровье</div>
                         <div style="font-size:42px; font-weight:bold; color:${hpColor}; margin:10px 0;">${hp}%</div>
                         <div style="width:100%; background:#444; height:10px; border-radius:5px; overflow:hidden;"><div style="width:${hp}%; height:100%; background:${hpColor}; transition: width 0.3s;"></div></div>
                         
                         ${hp < 100 ? `
                             <div style="margin-top:20px;">
-                                <div style="font-size:12px; color:#ccc; margin-bottom:5px;">Быстрый ремонт (требует детали):</div>
                                 <div style="display:flex; gap:10px; justify-content:center;">
-                                    <button onclick="window.repairWithPart('part_tire')" style="background:#444; border:1px solid #666; color:white; padding:8px 12px; border-radius:8px; font-size:12px;">🛞 Шиной</button>
-                                    <button onclick="window.repairWithPart('part_battery')" style="background:#444; border:1px solid #666; color:white; padding:8px 12px; border-radius:8px; font-size:12px;">🔋 АКБ</button>
+                                    <button onclick="window.repairWithPart('part_tire')" style="background:#444; border:1px solid #666; color:white; padding:10px; border-radius:8px; font-size:12px;">🛞 Шина</button>
+                                    <button onclick="window.repairWithPart('part_battery')" style="background:#444; border:1px solid #666; color:white; padding:10px; border-radius:8px; font-size:12px;">🔋 АКБ</button>
                                 </div>
-                                <div style="margin:10px 0; color:#555; font-size:11px;">— ИЛИ —</div>
-                                <button onclick="window.repairService()" style="width:100%; background:#d32f2f; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">🏭 Полный ремонт в СТО (${REPAIR_COST} PLN)</button>
+                                <button onclick="window.repairService()" style="margin-top:10px; width:100%; background:#d32f2f; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">🏭 СТО (${REPAIR_COST} PLN)</button>
                             </div>
-                        ` : '<div style="margin-top:15px; color:#00e676; font-weight:bold;">✨ Машина в идеальном состоянии</div>'}
+                        ` : '<div style="margin-top:15px; color:#00e676; font-weight:bold;">✨ Машина исправна</div>'}
                     </div>`;
             }
 
             htmlBody = `
-                <h2 style="margin:0 0 15px 0;">🔧 Гараж Cyber X</h2>
+                <h2 style="margin:0 0 15px 0;">🔧 Гараж</h2>
                 ${statusBlock}
                 <div style="background:#1a1a1a; border-radius:12px; padding:15px; border:1px solid #333;">
                     <h4 style="margin:0 0 10px 0; color:#888; text-transform:uppercase; font-size:12px;">Склад запчастей</h4>
@@ -2828,21 +2825,17 @@
         document.body.appendChild(overlay);
     };
 
-    // Вспомогательная функция для списка
     function generateInventoryList() {
         let html = '';
         let isEmpty = true;
         for (let key in CAR_PARTS) {
             const count = state.inventory[key] || 0;
             if (count > 0) isEmpty = false;
-            
-            // Кнопка действия зависит от того, собрана машина или нет
-            // Если собрана - можно продать. Если нет - лучше беречь, но продать тоже можно.
             html += `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #333;">
                     <div>
                         <div style="font-size:13px; color:#e0e0e0;">${CAR_PARTS[key].name}</div>
-                        <div style="font-size:11px; color:#666;">Цена: ${CAR_PARTS[key].sell} PLN</div>
+                        <div style="font-size:11px; color:#666;">${CAR_PARTS[key].sell} PLN</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="font-size:14px; font-weight:bold; color:${count > 0 ? '#fff' : '#444'}">x${count}</span>
@@ -2850,34 +2843,27 @@
                     </div>
                 </div>`;
         }
-        if (isEmpty) return '<div style="text-align:center; padding:10px; color:#555; font-size:12px;">Склад пуст</div>';
-        return html;
+        return isEmpty ? '<div style="text-align:center; padding:10px; color:#555;">Пусто</div>' : html;
     }
 
     // 3. ЛОГИКА ДЕЙСТВИЙ
     window.assembleCar = function() {
-        // Списываем детали
-        for (let key in CAR_REQUIREMENTS) {
-            state.inventory[key] -= CAR_REQUIREMENTS[key];
-        }
+        for (let key in CAR_REQUIREMENTS) state.inventory[key] -= CAR_REQUIREMENTS[key];
         state.taxi.isCarAssembled = true;
         state.taxi.health = 100;
-        
-        // Синхронизируем с оригинальной переменной машины (если она используется)
         if(window.CYBER_CAR) state.taxi.vehicle = window.CYBER_CAR.id;
-
         window.saveGame();
         window.openGarage();
-        window.showToast('🤖 CYBER X СОБРАН! Доступ к заказам открыт!', 'success');
+        window.showToast('🤖 CYBER X СОБРАН! Доступ открыт!', 'success');
     };
 
     window.repairWithPart = function(partKey) {
         if (state.inventory[partKey] > 0) {
             state.inventory[partKey]--;
-            state.taxi.health = 100; // Полный ремонт
+            state.taxi.health = 100;
             window.saveGame();
             window.openGarage();
-            window.showToast(`Ремонт выполнен: ${CAR_PARTS[partKey].name}`, 'success');
+            window.showToast(`Ремонт выполнен!`, 'success');
         } else {
             alert(`Нет детали: ${CAR_PARTS[partKey].name}`);
         }
@@ -2885,7 +2871,7 @@
 
     window.repairService = function() {
         if (state.balance < REPAIR_COST) return alert(`Нужно ${REPAIR_COST} PLN!`);
-        if (confirm(`Начать ремонт? Это займет ${REPAIR_TIME_MINUTES} минут.`)) {
+        if (confirm(`Начать ремонт? (${REPAIR_TIME_MINUTES} мин)`)) {
             state.balance -= REPAIR_COST;
             state.taxi.repairEndTime = Date.now() + (REPAIR_TIME_MINUTES * 60 * 1000);
             state.taxi.health = 100;
@@ -2896,11 +2882,9 @@
 
     window.sellPartItem = function(key) {
         if (state.inventory[key] > 0) {
-            // Предупреждение если продаем важную деталь до сборки
             if (!state.taxi.isCarAssembled && CAR_REQUIREMENTS[key]) {
-                if(!confirm(`Внимание! "${CAR_PARTS[key].name}" нужна для сборки машины! Точно продать?`)) return;
+                if(!confirm(`Это нужно для сборки! Продать?`)) return;
             }
-            
             state.inventory[key]--;
             state.balance += CAR_PARTS[key].sell;
             window.saveGame();
@@ -2908,26 +2892,47 @@
         }
     };
 
-    // 4. ВСТАВКА КНОПКИ (Умный поиск)
+    // 4. ВСТАВКА КНОПКИ + УДАЛЕНИЕ СТАРОГО АВТОСАЛОНА
+    // Это функция-"чистильщик", которая работает каждую секунду
     setInterval(() => {
-        if (document.getElementById('injected-garage-btn')) return;
-        const allItems = document.querySelectorAll('.menu-item');
-        let target = null;
+        // А) Вставка нашей кнопки
+        if (!document.getElementById('injected-garage-btn')) {
+            const allItems = document.querySelectorAll('.menu-item');
+            let target = Array.from(allItems).find(el => el.innerText.includes('Лиценз') || el.innerText.includes('Права'));
+            if (!target) target = Array.from(allItems).find(el => el.innerText.includes('Магазин') || el.innerText.includes('Shop'));
+            if (!target) target = Array.from(allItems).find(el => el.innerText.includes('Профиль'));
 
-        // Приоритеты: Лицензии -> Магазин -> Профиль
-        target = Array.from(allItems).find(el => el.innerText.includes('Лиценз') || el.innerText.includes('Права'));
-        if (!target) target = Array.from(allItems).find(el => el.innerText.includes('Магазин') || el.innerText.includes('Shop'));
-        if (!target) target = Array.from(allItems).find(el => el.innerText.includes('Профиль'));
-
-        if (target) {
-            const btn = document.createElement('div');
-            btn.id = 'injected-garage-btn';
-            btn.className = 'menu-item';
-            btn.style.cssText = "padding: 15px; border-bottom: 1px solid #f5f5f5; font-weight: 500; display:flex; align-items:center; cursor:pointer; background:white; color:#333;";
-            btn.innerHTML = '<i class="fas fa-car" style="color:#d500f9; width:25px; text-align:center; margin-right:10px;"></i> Гараж Cyber X';
-            btn.onclick = window.openGarage;
-            target.parentNode.insertBefore(btn, target.nextSibling);
+            if (target) {
+                const btn = document.createElement('div');
+                btn.id = 'injected-garage-btn';
+                btn.className = 'menu-item';
+                btn.style.cssText = "padding: 15px; border-bottom: 1px solid #f5f5f5; font-weight: 500; display:flex; align-items:center; cursor:pointer; background:white; color:#333;";
+                btn.innerHTML = '<i class="fas fa-car" style="color:#d500f9; width:25px; text-align:center; margin-right:10px;"></i> Гараж Cyber X';
+                btn.onclick = window.openGarage;
+                target.parentNode.insertBefore(btn, target.nextSibling);
+            }
         }
+
+        // Б) УДАЛЕНИЕ СТАРОГО "АВТОСАЛОНА" (Если он вдруг появился в меню)
+        // Ищем кнопки, которые содержат старые названия
+        const oldButtons = document.querySelectorAll('.menu-item');
+        oldButtons.forEach(btn => {
+            // Если кнопка не наша, но похожа на "Автосалон" или "Cyber"
+            if (btn.id !== 'injected-garage-btn' && (btn.innerText.includes('Автосалон') || btn.innerText.includes('Cyber'))) {
+                console.log(">>> Hiding old UI element:", btn.innerText);
+                btn.style.display = 'none'; // Скрываем
+            }
+        });
+
+        // В) ПЕРЕХВАТ ФУНКЦИЙ (Если игра пытается открыть старое окно)
+        if (window.renderTaxiShop && !window.renderTaxiShop.isPatched) {
+            window.renderTaxiShop = function() {
+                // Вместо старого магазина открываем наш Гараж
+                window.openGarage();
+            };
+            window.renderTaxiShop.isPatched = true;
+        }
+
     }, 1000);
 
     // 5. БЛОКИРОВКА ТАКСИ
@@ -2936,16 +2941,16 @@
             const originalToggle = window.toggleTaxiMode;
             window.toggleTaxiMode = function() {
                 if (!state.taxi.isCarAssembled) {
-                    window.showToast('⛔ Сначала соберите CYBER X в Гараже!', 'error');
+                    window.showToast('⛔ Сначала соберите машину в Гараже!', 'error');
                     window.openGarage(); 
                     return;
                 }
                 if (state.taxi.repairEndTime > Date.now()) {
-                    window.showToast('⏳ Машина в ремонте...', 'warn');
+                    window.showToast('⏳ Машина в сервисе...', 'warn');
                     return;
                 }
                 if (state.taxi.health <= 0) {
-                    window.showToast('🔥 Машина разбита! Нужен ремонт.', 'error');
+                    window.showToast('🔥 Машина сломана! Нужен ремонт.', 'error');
                     window.openGarage();
                     return;
                 }
@@ -2961,19 +2966,19 @@
         let lastBal = 0;
         window.saveGame = function() {
             if (state.balance && lastBal > 0 && state.balance > lastBal + 5) {
-                // Если ТАКСИ (износ)
+                // ТАКСИ (тратим здоровье)
                 if (state.taxi && state.taxi.active) {
                     if (!state.taxi.health) state.taxi.health = 100;
                     state.taxi.health -= (Math.random() * 4 + 1); 
                     if (state.taxi.health < 0) state.taxi.health = 0;
                 } 
-                // Если КУРЬЕР (поиск деталей)
+                // КУРЬЕР (ищем детали)
                 else if (getDeliveriesCount() >= MIN_DELIVERIES_FOR_LOOT) {
                     for (let key in CAR_PARTS) {
                         if (Math.random() < CAR_PARTS[key].chance) {
                             if (!state.inventory[key]) state.inventory[key] = 0;
                             state.inventory[key]++;
-                            alert(`📦 НАХОДКА: ${CAR_PARTS[key].name}!\nСохраните для Cyber X.`);
+                            alert(`📦 НАХОДКА: ${CAR_PARTS[key].name}!`);
                             break; 
                         }
                     }
