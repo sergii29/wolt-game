@@ -3059,3 +3059,55 @@
     }
 })();
 </script>
+
+
+
+
+
+
+
+
+<script>
+(function() {
+    console.log(">>> TELEGRAM PAYMENT LISTENER: ACTIVATED");
+
+    // Проверяем, подключен ли Telegram WebApp
+    if (window.Telegram && window.Telegram.WebApp) {
+        
+        // Слушаем событие: "Окно оплаты закрылось"
+        window.Telegram.WebApp.onEvent('invoiceClosed', function(object) {
+            console.log(">>> Invoice Closed:", object);
+            
+            // Убираем спиннер загрузки (если он есть у тебя в игре)
+            // Попытаемся найти и скрыть все лоадеры
+            const loaders = document.querySelectorAll('.loader, .spinner, .loading-overlay');
+            loaders.forEach(el => el.style.display = 'none');
+
+            if (object.status === 'paid') {
+                // ОПЛАТА ПРОШЛА
+                // Тут игра должна начислить бонус, но обычно это делает БОТ.
+                // Мы просто покажем радостное сообщение.
+                // window.showToast - твоя функция уведомлений
+                if(window.showToast) window.showToast('✅ Оплата прошла успешно! Проверь баланс.', 'success');
+                else alert('✅ Оплата успешна! Жди начисления.');
+
+                // Принудительно обновляем данные через 2 секунды (чтобы подтянуть новый баланс из базы)
+                setTimeout(() => {
+                    if(window.loadUserData) window.loadUserData();
+                    else location.reload(); 
+                }, 2000);
+
+            } else if (object.status === 'cancelled') {
+                // ИГРОК ЗАКРЫЛ ОКНО ИЛИ ОТМЕНИЛ
+                if(window.showToast) window.showToast('❌ Оплата отменена.', 'error');
+            } else if (object.status === 'failed') {
+                // ОШИБКА
+                if(window.showToast) window.showToast('⚠️ Ошибка транзакции Stars.', 'error');
+                else alert('Ошибка оплаты.');
+            }
+        });
+    } else {
+        console.log(">>> Telegram WebApp not found (Are you in browser?)");
+    }
+})();
+</script>
