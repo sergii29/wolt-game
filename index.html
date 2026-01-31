@@ -2679,12 +2679,13 @@
 
 <script>
 (function() {
-    console.log(">>> WARSAW SYSTEM: FULL CONTROL v8 ACTIVATED");
+    console.log(">>> WARSAW SYSTEM: NO-BRANDING UPDATE v10");
 
-    // 1. КОНФИГУРАЦИЯ
+    // --- 1. КОНФИГУРАЦИЯ ---
     const MIN_DELIVERIES_FOR_LOOT = 50; 
     const FUEL_PRICE = 50; 
     const REPAIR_COST = 250; 
+
     const CAR_PARTS = {
         'part_engine': { name: 'Двигатель V8', sell: 150, chance: 0.02 }, 
         'part_chip':   { name: 'Чип Cyber',    sell: 90,  chance: 0.03 }, 
@@ -2693,18 +2694,18 @@
         'part_battery':{ name: 'Аккумулятор',  sell: 40,  chance: 0.05 },
         'fuel_canister':{ name: 'Бензин (25л)', sell: 25, chance: 0 }
     };
+    
     const CAR_REQUIREMENTS = { 'part_engine': 1, 'part_chip': 1, 'part_alloy': 1, 'part_tire': 4 };
 
     function getDeliveriesCount() {
         return state.totalDeliveries || state.deliveries || state.orders || state.completedOrders || 0;
     }
 
-    // 2. ИСПРАВЛЕНИЕ РЮКЗАКА (ЧТОБЫ БЕНЗИН БЫЛ ВИДЕН)
+    // --- 2. БЕНЗИН В РЮКЗАКЕ ---
     setInterval(() => {
         const invModal = document.querySelector('.modal-inventory') || document.getElementById('modal-body');
         if (invModal && (invModal.innerText.includes('Инвентарь') || invModal.innerText.includes('Inventory'))) {
             const count = state.inventory['fuel_canister'] || 0;
-            // Если есть бензин, но нет кнопки "Заправить"
             if (count > 0 && !invModal.innerHTML.includes('fuel_canister') && !invModal.innerHTML.includes('Заправить')) {
                 const list = invModal.querySelector('.list') || invModal;
                 const div = document.createElement('div');
@@ -2733,12 +2734,11 @@
         if (state.taxi.fuel > 100) state.taxi.fuel = 100;
         window.showToast('⛽ Заправлено +25л', 'success');
         window.saveGame();
-        // Обновляем UI
         const closeBtn = document.querySelector('.fa-arrow-left'); 
         if(closeBtn) { closeBtn.click(); setTimeout(()=>document.querySelector('.bag-btn').click(), 100); }
     };
 
-    // 3. ГАРАЖ
+    // --- 3. ГАРАЖ ---
     window.openGarage = function() {
         const old = document.getElementById('garage-overlay'); if (old) old.remove();
         if (typeof state.taxi.health === 'undefined') state.taxi.health = 100;
@@ -2790,8 +2790,9 @@
     };
     window.repairService = function() { if(state.balance>=REPAIR_COST){ state.balance-=REPAIR_COST; state.taxi.health=100; window.saveGame(); window.openGarage(); } };
 
-    // 4. КНОПКА ГАРАЖА В МЕНЮ
+    // --- 4. МЕНЮ: КНОПКА ГАРАЖА + КНОПКА СМЕНЫ РАБОТЫ ---
     setInterval(() => {
+        // 1. Кнопка Гаража
         if (!document.getElementById('injected-garage-btn')) {
             const items = document.querySelectorAll('.menu-item');
             let target = Array.from(items).find(el => el.innerText.includes('Лиценз') || el.innerText.includes('Магазин'));
@@ -2799,14 +2800,69 @@
                 const btn = document.createElement('div');
                 btn.id = 'injected-garage-btn'; btn.className = 'menu-item';
                 btn.style.cssText = "padding:15px; border-bottom:1px solid #f5f5f5; display:flex; align-items:center; cursor:pointer; background:white; color:#333;";
-                btn.innerHTML = '<i class="fas fa-car" style="color:#d500f9; width:25px; text-align:center; margin-right:10px;"></i> Гараж Cyber X';
+                btn.innerHTML = '<i class="fas fa-wrench" style="color:#d500f9; width:25px; text-align:center; margin-right:10px;"></i> Гараж Cyber X';
                 btn.onclick = window.openGarage;
                 target.parentNode.insertBefore(btn, target.nextSibling);
             }
         }
+
+        // 2. Кнопка СМЕНЫ РАБОТЫ
+        if (state.taxi && state.taxi.isCarAssembled) {
+            let switchBtn = document.getElementById('injected-switch-btn');
+            
+            if (!switchBtn) {
+                const garageBtn = document.getElementById('injected-garage-btn');
+                if (garageBtn) {
+                    switchBtn = document.createElement('div');
+                    switchBtn.id = 'injected-switch-btn'; 
+                    switchBtn.className = 'menu-item';
+                    switchBtn.style.cssText = "padding:15px; border-bottom:1px solid #f5f5f5; display:flex; align-items:center; cursor:pointer; background:white; font-weight:bold;";
+                    switchBtn.onclick = function() { if(window.toggleTaxiMode) window.toggleTaxiMode(); };
+                    garageBtn.parentNode.insertBefore(switchBtn, garageBtn.nextSibling);
+                }
+            }
+
+            // Обновляем текст (БЕЗ СЛОВА WOLT)
+            if (switchBtn) {
+                if (state.taxi.active) {
+                    // ЕСЛИ МЫ В ТАКСИ
+                    switchBtn.innerHTML = '<i class="fas fa-bicycle" style="color:#00e676; width:25px; text-align:center; margin-right:10px;"></i> Вернуться в Доставку';
+                    switchBtn.style.color = "#006400";
+                } else {
+                    // ЕСЛИ МЫ КУРЬЕР
+                    switchBtn.innerHTML = '<i class="fas fa-taxi" style="color:#ff9100; width:25px; text-align:center; margin-right:10px;"></i> Начать смену Такси';
+                    switchBtn.style.color = "#333";
+                }
+            }
+        }
+        
+        // Скрываем старые кнопки
+        document.querySelectorAll('.menu-item').forEach(btn => {
+            if (btn.id !== 'injected-garage-btn' && btn.id !== 'injected-switch-btn' && (btn.innerText.includes('Автосалон') || btn.innerText.includes('Cyber'))) btn.style.display = 'none';
+        });
+
+    }, 800);
+
+    // --- 5. БЛОКИРОВКА ВКЛЮЧЕНИЯ ТАКСИ ---
+    const checkTaxiLock = setInterval(() => {
+        if (window.toggleTaxiMode && !window.toggleTaxiMode.isPatched) {
+            const originalToggle = window.toggleTaxiMode;
+            window.toggleTaxiMode = function() {
+                // Если ВКЛЮЧАЕМ такси - проверки
+                if (!state.taxi.active) {
+                    if (!state.taxi.isCarAssembled) { window.showToast('⛔ Сначала соберите машину!', 'error'); window.openGarage(); return; }
+                    if (state.taxi.repairEndTime > Date.now()) { window.showToast('⏳ Машина в сервисе', 'warn'); return; }
+                    if (state.taxi.health <= 0) { window.showToast('🔥 Машина сломана!', 'error'); window.openGarage(); return; }
+                    if ((state.taxi.fuel || 0) <= 0) { window.showToast('⛽ Нет бензина!', 'error'); window.openGarage(); return; }
+                }
+                originalToggle.apply(this, arguments);
+                setTimeout(window.saveGame, 500);
+            };
+            window.toggleTaxiMode.isPatched = true;
+        }
     }, 1000);
 
-    // 5. ЛУТ (ТОЛЬКО ПОСЛЕ 50 ЗАКАЗОВ)
+    // --- 6. ЛУТ И РАСХОД ---
     if (window.saveGame) {
         const origSave = window.saveGame; let lastBal = 0;
         window.saveGame = function() {
@@ -2826,57 +2882,6 @@
             }
             lastBal = state.balance; origSave.apply(this, arguments);
         };
-    }
-})();
-</script>
-
-
-
-
-
-
-
-<script>
-(function() {
-    console.log(">>> TELEGRAM PAYMENT LISTENER: ACTIVATED");
-
-    // Проверяем, подключен ли Telegram WebApp
-    if (window.Telegram && window.Telegram.WebApp) {
-        
-        // Слушаем событие: "Окно оплаты закрылось"
-        window.Telegram.WebApp.onEvent('invoiceClosed', function(object) {
-            console.log(">>> Invoice Closed:", object);
-            
-            // Убираем спиннер загрузки (если он есть у тебя в игре)
-            // Попытаемся найти и скрыть все лоадеры
-            const loaders = document.querySelectorAll('.loader, .spinner, .loading-overlay');
-            loaders.forEach(el => el.style.display = 'none');
-
-            if (object.status === 'paid') {
-                // ОПЛАТА ПРОШЛА
-                // Тут игра должна начислить бонус, но обычно это делает БОТ.
-                // Мы просто покажем радостное сообщение.
-                // window.showToast - твоя функция уведомлений
-                if(window.showToast) window.showToast('✅ Оплата прошла успешно! Проверь баланс.', 'success');
-                else alert('✅ Оплата успешна! Жди начисления.');
-
-                // Принудительно обновляем данные через 2 секунды (чтобы подтянуть новый баланс из базы)
-                setTimeout(() => {
-                    if(window.loadUserData) window.loadUserData();
-                    else location.reload(); 
-                }, 2000);
-
-            } else if (object.status === 'cancelled') {
-                // ИГРОК ЗАКРЫЛ ОКНО ИЛИ ОТМЕНИЛ
-                if(window.showToast) window.showToast('❌ Оплата отменена.', 'error');
-            } else if (object.status === 'failed') {
-                // ОШИБКА
-                if(window.showToast) window.showToast('⚠️ Ошибка транзакции Stars.', 'error');
-                else alert('Ошибка оплаты.');
-            }
-        });
-    } else {
-        console.log(">>> Telegram WebApp not found (Are you in browser?)");
     }
 })();
 </script>
