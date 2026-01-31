@@ -2679,45 +2679,121 @@
 
 <script>
 (function() {
-    console.log(">>> WARSAW CAREER: CLEANER PATCH v6");
+    console.log(">>> WARSAW SYSTEM: FULL CONTROL ACTIVATED");
 
-    // 1. КОНФИГУРАЦИЯ (АКТУАЛЬНЫЙ СПИСОК ДЛЯ СБОРКИ)
+    // --- 1. КОНФИГУРАЦИЯ БАЛАНСА ---
     const MIN_DELIVERIES_FOR_LOOT = 50; 
-
-    // Требования (4 детали)
-    const CAR_REQUIREMENTS = {
-        'part_engine': 1, // Двигатель
-        'part_chip': 1,   // Чип
-        'part_alloy': 1,  // Сплав
-        'part_tire': 4    // Шины (4 шт)
-    };
-
-    // Параметры деталей
-    const CAR_PARTS = {
-        'part_engine': { name: 'Двигатель V8', sell: 150, chance: 0.01 }, 
-        'part_chip':   { name: 'Чип Cyber',    sell: 90,  chance: 0.02 }, 
-        'part_alloy':  { name: 'Титановый Сплав', sell: 120, chance: 0.015 },
-        'part_tire':   { name: 'Шина',         sell: 30,  chance: 0.06 },  
-        'part_battery':{ name: 'Аккумулятор',  sell: 40,  chance: 0.04 }
-    };
-
+    const FUEL_PRICE = 50; // Цена канистры (25 литров)
     const REPAIR_COST = 250; 
-    const REPAIR_TIME_MINUTES = 60; 
 
+    const CAR_REQUIREMENTS = {
+        'part_engine': 1, 'part_chip': 1, 'part_alloy': 1, 'part_tire': 4
+    };
+
+    const CAR_PARTS = {
+        'part_engine': { name: 'Двигатель V8', sell: 150, chance: 0.02 }, 
+        'part_chip':   { name: 'Чип Cyber',    sell: 90,  chance: 0.03 }, 
+        'part_alloy':  { name: 'Тит. Сплав',   sell: 120, chance: 0.02 },
+        'part_tire':   { name: 'Шина',         sell: 30,  chance: 0.08 },  
+        'part_battery':{ name: 'Аккумулятор',  sell: 40,  chance: 0.05 },
+        'fuel_canister':{ name: 'Бензин (25л)', sell: 25, chance: 0 }
+    };
+
+    // --- 2. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
     function getDeliveriesCount() {
         return state.totalDeliveries || state.deliveries || state.orders || state.completedOrders || 0;
     }
 
-    // 2. ИНТЕРФЕЙС НОВОГО ГАРАЖА
+    // --- 3. ИНТЕГРАЦИЯ БЕНЗИНА В РЮКЗАК (BACKPACK FIX) ---
+    // Перехватываем стандартную функцию использования предметов
+    if (!window.originalUseItem) window.originalUseItem = window.useItem;
+
+    window.useItem = function(key) {
+        // Если это бензин - заправляем
+        if (key === 'fuel_canister') {
+            if (!state.taxi.isCarAssembled) {
+                window.showToast('❌ Машина не собрана! Зачем ей бензин?', 'error');
+                return;
+            }
+            if ((state.taxi.fuel || 0) >= 100) {
+                window.showToast('⛽ Бак полон!', 'warn');
+                return;
+            }
+            
+            // Тратим
+            state.inventory['fuel_canister']--;
+            if (typeof state.taxi.fuel === 'undefined') state.taxi.fuel = 0;
+            state.taxi.fuel += 25;
+            if (state.taxi.fuel > 100) state.taxi.fuel = 100;
+            
+            window.showToast('⛽ Заправлено +25л', 'success');
+            window.saveGame();
+            
+            // Обновляем UI рюкзака, если он открыт
+            if(window.renderInventory) window.renderInventory(); 
+            // И наше меню гаража тоже
+            if(document.getElementById('garage-overlay')) window.openGarage();
+            return;
+        }
+        
+        // Для остальных предметов вызываем родную функцию игры
+        if (window.originalUseItem) window.originalUseItem(key);
+    };
+
+    // ХАК: Добавляем иконку бензина, чтобы рюкзак её видел
+    // Пытаемся внедрить в разные системы, которые может использовать игра
+    setTimeout(() => {
+        if (typeof ITEM_ICONS !== 'undefined') {
+            ITEM_ICONS['fuel_canister'] = '<i class="fas fa-gas-pump" style="color:#ff9100"></i>';
+        }
+        if (typeof ITEMS !== 'undefined') {
+            ITEMS['fuel_canister'] = { name: 'Бензин', icon: '⛽', description: 'Топливо для такси' };
+        }
+    }, 1000);
+
+    // СУПЕР-ХАК: Принудительно рисуем бензин в рюкзаке, если игра его игнорирует
+    setInterval(() => {
+        const inventoryModal = document.querySelector('.modal-inventory') || document.getElementById('inventory-modal') || document.getElementById('modal-body');
+        
+        // Если открыто окно инвентаря/магазина
+        if (inventoryModal && inventoryModal.innerText.includes('Инвентарь')) {
+            // Проверяем, есть ли у нас бензин, но нет его кнопки
+            const hasFuel = (state.inventory['fuel_canister'] || 0) > 0;
+            const fuelBtnExists = inventoryModal.innerHTML.includes('fuel_canister') || inventoryModal.innerHTML.includes('Заправить');
+            
+            if (hasFuel && !fuelBtnExists) {
+                console.log(">>> Injecting Fuel into Backpack UI");
+                const div = document.createElement('div');
+                div.className = 'inventory-item'; // Класс игры
+                div.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333; background:#222; margin-top:5px; border-radius:5px;";
+                div.innerHTML = `
+                    <div style="display:flex; align-items:center;">
+                        <i class="fas fa-gas-pump" style="color:#ff9100; font-size:20px; margin-right:10px;"></i>
+                        <div>
+                            <div style="font-weight:bold; color:white;">Бензин (25л)</div>
+                            <div style="font-size:11px; color:#aaa;">x${state.inventory['fuel_canister']}</div>
+                        </div>
+                    </div>
+                    <button onclick="window.useItem('fuel_canister')" style="background:#00e676; color:black; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold;">Заправить</button>
+                `;
+                // Вставляем в список
+                const list = inventoryModal.querySelector('.list') || inventoryModal;
+                list.appendChild(div);
+            }
+        }
+    }, 500);
+
+
+    // --- 4. НОВЫЙ ГАРАЖ (ЕДИНЫЙ ЦЕНТР) ---
     window.openGarage = function() {
         const old = document.getElementById('garage-overlay');
         if (old) old.remove();
 
-        // Базовая инициализация
+        // Инициализация
         if (typeof state.taxi.health === 'undefined') state.taxi.health = 100;
+        if (typeof state.taxi.fuel === 'undefined') state.taxi.fuel = 100;
         if (!state.inventory) state.inventory = {};
         if (!state.taxi.isCarAssembled) state.taxi.isCarAssembled = false;
-        if (!state.taxi.repairEndTime) state.taxi.repairEndTime = 0;
 
         const isLocked = !state.taxi.isCarAssembled;
         const now = Date.now();
@@ -2734,7 +2810,7 @@
 
         let htmlBody = '';
 
-        // === РЕЖИМ СБОРКИ ===
+        // === ВАРИАНТ А: СБОРКА МАШИНЫ ===
         if (isLocked) {
             let reqHtml = '';
             let canAssemble = true;
@@ -2742,79 +2818,61 @@
             for (let key in CAR_REQUIREMENTS) {
                 const needed = CAR_REQUIREMENTS[key];
                 const have = state.inventory[key] || 0;
-                const info = CAR_PARTS[key];
                 const progressColor = have >= needed ? '#00e676' : '#ff3d00';
                 if (have < needed) canAssemble = false;
-
                 reqHtml += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; background:#1e1e1e; margin-bottom:6px; border-radius:8px; border-left: 3px solid ${progressColor}">
-                        <div>
-                            <div style="font-weight:bold;">${info.name}</div>
-                            <div style="font-size:11px; color:#777;">Нужно для Cyber X</div>
-                        </div>
-                        <div style="color:${progressColor}; font-weight:bold; font-size:16px;">${have} / ${needed}</div>
-                    </div>
-                `;
+                <div style="display:flex; justify-content:space-between; padding:12px; background:#1e1e1e; margin-bottom:6px; border-radius:8px; border-left:3px solid ${progressColor}; align-items:center;">
+                    <div>${CAR_PARTS[key].name}</div>
+                    <div style="color:${progressColor}; font-weight:bold;">${have}/${needed}</div>
+                </div>`;
             }
 
-            let lootStatus = lootUnlocked 
-                ? `<div style="color:#00e676; font-size:12px; margin-bottom:15px; background:rgba(0,230,118,0.1); padding:8px; border-radius:6px; text-align:center;">✅ В ЗАКАЗАХ ВЫПАДАЮТ ДЕТАЛИ</div>`
-                : `<div style="color:#ff3d00; font-size:12px; margin-bottom:15px; background:rgba(255,61,0,0.1); padding:8px; border-radius:6px; text-align:center;">🔒 ЗАБЛОКИРОВАНО. Сделайте 50 доставок (Сейчас: ${currentOrders})</div>`;
+            let lootMsg = lootUnlocked 
+                ? `<div style="color:#00e676; font-size:12px; padding:10px; background:rgba(0,230,118,0.1); border-radius:6px; margin-bottom:15px; text-align:center;">✅ Доступно! Детали выпадают в заказах.</div>` 
+                : `<div style="color:#ff3d00; font-size:12px; padding:10px; background:rgba(255,61,0,0.1); border-radius:6px; margin-bottom:15px; text-align:center;">🔒 ЗАБЛОКИРОВАНО. Сделайте 50 доставок (Сейчас: ${currentOrders})</div>`;
 
             htmlBody = `
-                <h2 style="text-align:center; color:#ff9100; margin-top:0;">ПРОЕКТ "CYBER X"</h2>
-                <p style="text-align:center; color:#888; font-size:13px; margin-bottom:15px;">Соберите машину мечты.</p>
-                ${lootStatus}
+                <h2 style="text-align:center; color:#ff9100; margin-top:0;">ПРОЕКТ CYBER-X</h2>
+                ${lootMsg}
                 <div style="margin-bottom: 20px;">${reqHtml}</div>
                 ${canAssemble 
-                    ? `<button onclick="window.assembleCar()" style="width:100%; padding:15px; background:#00e676; color:black; font-weight:bold; border:none; border-radius:10px; font-size:16px; cursor:pointer; box-shadow: 0 0 15px rgba(0,230,118,0.4);">🚀 СОБРАТЬ МАШИНУ</button>`
-                    : `<button disabled style="width:100%; padding:15px; background:#333; color:#666; font-weight:bold; border:none; border-radius:10px;">Не хватает деталей</button>`
+                    ? `<button onclick="window.assembleCar()" style="width:100%; padding:15px; background:#00e676; color:black; font-weight:bold; border:none; border-radius:10px; font-size:16px; cursor:pointer;">🚀 СОБРАТЬ МАШИНУ</button>`
+                    : `<button disabled style="width:100%; padding:15px; background:#333; color:#666; border-radius:10px; border:none;">Ищите детали...</button>`
                 }
-                
-                <div style="margin-top:20px; border-top:1px solid #333; padding-top:10px;">
-                    <div style="font-size:12px; color:#888; margin-bottom:5px;">Инвентарь:</div>
-                    ${generateInventoryList()}
-                </div>
             `;
         } 
-        // === РЕЖИМ ГАРАЖА ===
+        // === ВАРИАНТ Б: ГАРАЖ И ЗАПРАВКА ===
         else {
             const hp = Math.floor(state.taxi.health);
+            const fuel = Math.floor(state.taxi.fuel || 0);
             const hpColor = hp > 50 ? '#00e676' : '#ff3d00';
+            const fuelColor = fuel > 20 ? '#ff9100' : '#ff3d00';
 
             let statusBlock = '';
             if (isRepairing) {
-                const minutesLeft = Math.ceil((state.taxi.repairEndTime - now) / 60000);
-                statusBlock = `
-                    <div style="background:#2d1a1a; border:1px solid #ff3d00; padding:20px; border-radius:12px; text-align:center; margin-bottom:20px;">
-                        <div style="font-size:20px; color:#ff3d00; font-weight:bold; margin-bottom:5px;">⛔ РЕМОНТ</div>
-                        <div style="color:#ddd;">Машина в сервисе</div>
-                        <div style="font-size:24px; color:white; margin-top:10px; font-weight:bold;">${minutesLeft} мин</div>
-                    </div>`;
+                const m = Math.ceil((state.taxi.repairEndTime - now) / 60000);
+                statusBlock = `<div style="background:#2d1a1a; padding:20px; border-radius:12px; text-align:center; margin-bottom:15px; border:1px solid #ff3d00;"><div style="font-size:18px; color:#ff3d00; font-weight:bold;">⛔ РЕМОНТ</div><div>Осталось: ${m} мин</div></div>`;
             } else {
                 statusBlock = `
-                    <div style="background:#222; padding:20px; border-radius:12px; margin-bottom:20px; text-align:center;">
-                        <div style="font-size:13px; color:#aaa;">Здоровье</div>
-                        <div style="font-size:42px; font-weight:bold; color:${hpColor}; margin:10px 0;">${hp}%</div>
-                        <div style="width:100%; background:#444; height:10px; border-radius:5px; overflow:hidden;"><div style="width:${hp}%; height:100%; background:${hpColor}; transition: width 0.3s;"></div></div>
+                    <div style="background:#222; padding:15px; border-radius:12px; margin-bottom:15px;">
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#aaa;"><span>Здоровье</span><span>${hp}%</span></div>
+                        <div style="width:100%; background:#444; height:6px; border-radius:3px; overflow:hidden; margin-bottom:10px;"><div style="width:${hp}%; height:100%; background:${hpColor};"></div></div>
                         
-                        ${hp < 100 ? `
-                            <div style="margin-top:20px;">
-                                <div style="display:flex; gap:10px; justify-content:center;">
-                                    <button onclick="window.repairWithPart('part_tire')" style="background:#444; border:1px solid #666; color:white; padding:10px; border-radius:8px; font-size:12px;">🛞 Шина</button>
-                                    <button onclick="window.repairWithPart('part_battery')" style="background:#444; border:1px solid #666; color:white; padding:10px; border-radius:8px; font-size:12px;">🔋 АКБ</button>
-                                </div>
-                                <button onclick="window.repairService()" style="margin-top:10px; width:100%; background:#d32f2f; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">🏭 СТО (${REPAIR_COST} PLN)</button>
-                            </div>
-                        ` : '<div style="margin-top:15px; color:#00e676; font-weight:bold;">✨ Машина исправна</div>'}
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#aaa;"><span>Бензин</span><span>${fuel}/100</span></div>
+                        <div style="width:100%; background:#444; height:6px; border-radius:3px; overflow:hidden; margin-bottom:15px;"><div style="width:${fuel}%; height:100%; background:${fuelColor};"></div></div>
+
+                        <div style="display:flex; gap:10px;">
+                            <button onclick="window.repairService()" style="flex:1; background:#d32f2f; color:white; border:none; padding:10px; border-radius:8px;">В сервис (${REPAIR_COST} P)</button>
+                            <button onclick="window.buyFuel()" style="flex:1; background:#ff9100; color:black; border:none; padding:10px; border-radius:8px;">Купить бензин (${FUEL_PRICE} P)</button>
+                        </div>
                     </div>`;
             }
 
             htmlBody = `
-                <h2 style="margin:0 0 15px 0;">🔧 Гараж</h2>
+                <h2 style="margin:0 0 15px 0;">⛽ Гараж</h2>
                 ${statusBlock}
-                <div style="background:#1a1a1a; border-radius:12px; padding:15px; border:1px solid #333;">
-                    <h4 style="margin:0 0 10px 0; color:#888; text-transform:uppercase; font-size:12px;">Склад запчастей</h4>
+                <div style="background:#1a1a1a; border-radius:12px; padding:10px; border:1px solid #333;">
+                    <h4 style="margin:0 0 10px 0; color:#888; font-size:12px;">ЗАПАСЫ</h4>
                     ${generateInventoryList()}
                 </div>
             `;
@@ -2827,64 +2885,67 @@
 
     function generateInventoryList() {
         let html = '';
-        let isEmpty = true;
         for (let key in CAR_PARTS) {
             const count = state.inventory[key] || 0;
-            if (count > 0) isEmpty = false;
-            html += `
+            if (count > 0 || key === 'fuel_canister') {
+                if (count === 0 && key !== 'fuel_canister') continue;
+
+                let action = '';
+                if(key === 'fuel_canister' && count > 0) action = `<button onclick="window.useItem('fuel_canister')" style="background:#00e676; border:none; padding:4px 8px; border-radius:4px; margin-right:5px; font-weight:bold; cursor:pointer;">Залить</button>`;
+                action += count > 0 ? `<button onclick="window.sellPartItem('${key}')" style="background:#ff3d00; border:none; padding:4px 8px; border-radius:4px; color:white; cursor:pointer;">$</button>` : '';
+
+                html += `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #333;">
-                    <div>
-                        <div style="font-size:13px; color:#e0e0e0;">${CAR_PARTS[key].name}</div>
-                        <div style="font-size:11px; color:#666;">${CAR_PARTS[key].sell} PLN</div>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="font-size:14px; font-weight:bold; color:${count > 0 ? '#fff' : '#444'}">x${count}</span>
-                        ${count > 0 ? `<button onclick="window.sellPartItem('${key}')" style="background:#ff3d00; border:none; color:white; border-radius:4px; padding:4px 10px; font-size:11px; cursor:pointer;">Продать</button>` : ''}
+                    <div style="font-size:13px; color:#ddd;">${CAR_PARTS[key].name}</div>
+                    <div style="display:flex; align-items:center;">
+                        <span style="font-weight:bold; margin-right:10px;">x${count}</span>
+                        ${action}
                     </div>
                 </div>`;
+            }
         }
-        return isEmpty ? '<div style="text-align:center; padding:10px; color:#555;">Пусто</div>' : html;
+        return html || '<div style="text-align:center; color:#555;">Пусто</div>';
     }
 
-    // 3. ЛОГИКА ДЕЙСТВИЙ
+    // --- 5. ФУНКЦИИ ЛОГИКИ ---
     window.assembleCar = function() {
         for (let key in CAR_REQUIREMENTS) state.inventory[key] -= CAR_REQUIREMENTS[key];
         state.taxi.isCarAssembled = true;
         state.taxi.health = 100;
+        state.taxi.fuel = 100;
         if(window.CYBER_CAR) state.taxi.vehicle = window.CYBER_CAR.id;
         window.saveGame();
         window.openGarage();
-        window.showToast('🤖 CYBER X СОБРАН! Доступ открыт!', 'success');
+        window.showToast('🚘 МАШИНА СОБРАНА! Теперь можно таксовать.', 'success');
     };
 
-    window.repairWithPart = function(partKey) {
-        if (state.inventory[partKey] > 0) {
-            state.inventory[partKey]--;
-            state.taxi.health = 100;
+    window.buyFuel = function() {
+        if(state.balance >= FUEL_PRICE) {
+            state.balance -= FUEL_PRICE;
+            if(!state.inventory['fuel_canister']) state.inventory['fuel_canister'] = 0;
+            state.inventory['fuel_canister']++;
+            window.showToast('Канистра добавлена в рюкзак!', 'success');
             window.saveGame();
             window.openGarage();
-            window.showToast(`Ремонт выполнен!`, 'success');
         } else {
-            alert(`Нет детали: ${CAR_PARTS[partKey].name}`);
+            alert('Не хватает денег!');
         }
     };
 
     window.repairService = function() {
         if (state.balance < REPAIR_COST) return alert(`Нужно ${REPAIR_COST} PLN!`);
-        if (confirm(`Начать ремонт? (${REPAIR_TIME_MINUTES} мин)`)) {
+        if (confirm(`Ремонт займет 60 минут. Оплатить?`)) {
             state.balance -= REPAIR_COST;
-            state.taxi.repairEndTime = Date.now() + (REPAIR_TIME_MINUTES * 60 * 1000);
+            state.taxi.repairEndTime = Date.now() + (60 * 60 * 1000);
             state.taxi.health = 100;
             window.saveGame();
             window.openGarage();
         }
     };
-
+    
     window.sellPartItem = function(key) {
         if (state.inventory[key] > 0) {
-            if (!state.taxi.isCarAssembled && CAR_REQUIREMENTS[key]) {
-                if(!confirm(`Это нужно для сборки! Продать?`)) return;
-            }
+            if (!state.taxi.isCarAssembled && CAR_REQUIREMENTS[key] && !confirm(`Это нужно для сборки! Точно продать?`)) return;
             state.inventory[key]--;
             state.balance += CAR_PARTS[key].sell;
             window.saveGame();
@@ -2892,14 +2953,30 @@
         }
     };
 
-    // 4. ВСТАВКА КНОПКИ + УДАЛЕНИЕ СТАРОГО АВТОСАЛОНА
-    // Это функция-"чистильщик", которая работает каждую секунду
+    // --- 6. КНОПКА ГАРАЖА И ЗНАЧОК БЕНЗИНА ---
     setInterval(() => {
-        // А) Вставка нашей кнопки
+        // Значок бензина сверху
+        const header = document.querySelector('.header-info') || document.querySelector('.user-info');
+        if (header && state.taxi && state.taxi.isCarAssembled && state.taxi.active) {
+            let fuelIcon = document.getElementById('top-fuel-icon');
+            if (!fuelIcon) {
+                fuelIcon = document.createElement('div');
+                fuelIcon.id = 'top-fuel-icon';
+                fuelIcon.style.cssText = "display:inline-flex; align-items:center; margin-left:10px; background:rgba(0,0,0,0.5); padding:2px 8px; border-radius:12px; border:1px solid #ff9100;";
+                header.appendChild(fuelIcon);
+            }
+            fuelIcon.innerHTML = `<i class="fas fa-gas-pump" style="color:#ff9100; font-size:12px; margin-right:4px;"></i> <span style="color:white; font-size:12px; font-weight:bold;">${Math.floor(state.taxi.fuel||0)}%</span>`;
+            fuelIcon.style.display = 'inline-flex';
+        } else {
+            const icon = document.getElementById('top-fuel-icon');
+            if(icon) icon.style.display = 'none';
+        }
+
+        // Кнопка Гаража в меню
         if (!document.getElementById('injected-garage-btn')) {
             const allItems = document.querySelectorAll('.menu-item');
             let target = Array.from(allItems).find(el => el.innerText.includes('Лиценз') || el.innerText.includes('Права'));
-            if (!target) target = Array.from(allItems).find(el => el.innerText.includes('Магазин') || el.innerText.includes('Shop'));
+            if (!target) target = Array.from(allItems).find(el => el.innerText.includes('Магазин'));
             if (!target) target = Array.from(allItems).find(el => el.innerText.includes('Профиль'));
 
             if (target) {
@@ -2912,73 +2989,65 @@
                 target.parentNode.insertBefore(btn, target.nextSibling);
             }
         }
-
-        // Б) УДАЛЕНИЕ СТАРОГО "АВТОСАЛОНА" (Если он вдруг появился в меню)
-        // Ищем кнопки, которые содержат старые названия
-        const oldButtons = document.querySelectorAll('.menu-item');
-        oldButtons.forEach(btn => {
-            // Если кнопка не наша, но похожа на "Автосалон" или "Cyber"
-            if (btn.id !== 'injected-garage-btn' && (btn.innerText.includes('Автосалон') || btn.innerText.includes('Cyber'))) {
-                console.log(">>> Hiding old UI element:", btn.innerText);
-                btn.style.display = 'none'; // Скрываем
-            }
+        
+        // Скрываем старые кнопки автосалона
+        document.querySelectorAll('.menu-item').forEach(btn => {
+            if (btn.id !== 'injected-garage-btn' && (btn.innerText.includes('Автосалон') || btn.innerText.includes('Cyber'))) btn.style.display = 'none';
         });
 
-        // В) ПЕРЕХВАТ ФУНКЦИЙ (Если игра пытается открыть старое окно)
+        // Перехват магазина такси
         if (window.renderTaxiShop && !window.renderTaxiShop.isPatched) {
-            window.renderTaxiShop = function() {
-                // Вместо старого магазина открываем наш Гараж
-                window.openGarage();
-            };
+            window.renderTaxiShop = window.openGarage;
             window.renderTaxiShop.isPatched = true;
         }
-
     }, 1000);
 
-    // 5. БЛОКИРОВКА ТАКСИ
+    // --- 7. БЛОКИРОВКА ВКЛЮЧЕНИЯ ТАКСИ ---
     const checkTaxiLock = setInterval(() => {
         if (window.toggleTaxiMode && !window.toggleTaxiMode.isPatched) {
             const originalToggle = window.toggleTaxiMode;
             window.toggleTaxiMode = function() {
-                if (!state.taxi.isCarAssembled) {
-                    window.showToast('⛔ Сначала соберите машину в Гараже!', 'error');
-                    window.openGarage(); 
-                    return;
-                }
-                if (state.taxi.repairEndTime > Date.now()) {
-                    window.showToast('⏳ Машина в сервисе...', 'warn');
-                    return;
-                }
-                if (state.taxi.health <= 0) {
-                    window.showToast('🔥 Машина сломана! Нужен ремонт.', 'error');
-                    window.openGarage();
-                    return;
-                }
+                if (!state.taxi.isCarAssembled) { window.showToast('⛔ Сначала соберите машину!', 'error'); window.openGarage(); return; }
+                if (state.taxi.repairEndTime > Date.now()) { window.showToast('⏳ Машина в сервисе', 'warn'); return; }
+                if (state.taxi.health <= 0) { window.showToast('🔥 Машина сломана!', 'error'); window.openGarage(); return; }
+                if ((state.taxi.fuel || 0) <= 0) { window.showToast('⛽ Нет бензина!', 'error'); window.openGarage(); return; }
                 originalToggle.apply(this, arguments);
             };
             window.toggleTaxiMode.isPatched = true;
         }
     }, 1000);
 
-    // 6. СИСТЕМА ЛУТА (50+ заказов)
+    // --- 8. ИГРОВОЙ ЦИКЛ (ЛУТ И РАСХОД) ---
     if (window.saveGame) {
         const origSave = window.saveGame;
         let lastBal = 0;
         window.saveGame = function() {
             if (state.balance && lastBal > 0 && state.balance > lastBal + 5) {
-                // ТАКСИ (тратим здоровье)
+                // Если работает ТАКСИ
                 if (state.taxi && state.taxi.active) {
                     if (!state.taxi.health) state.taxi.health = 100;
-                    state.taxi.health -= (Math.random() * 4 + 1); 
+                    if (typeof state.taxi.fuel === 'undefined') state.taxi.fuel = 100;
+                    
+                    state.taxi.health -= (Math.random() * 3 + 1); 
+                    state.taxi.fuel -= (Math.random() * 5 + 2); // Расход бензина
+                    
                     if (state.taxi.health < 0) state.taxi.health = 0;
+                    if (state.taxi.fuel < 0) { 
+                        state.taxi.fuel = 0;
+                        window.showToast('⛽ БАК ПУСТ! ТАКСИ ОСТАНОВЛЕНО.', 'error');
+                        if(window.toggleTaxiMode) window.toggleTaxiMode(); 
+                    }
                 } 
-                // КУРЬЕР (ищем детали)
+                // Если работает КУРЬЕР (и есть 50+ заказов)
                 else if (getDeliveriesCount() >= MIN_DELIVERIES_FOR_LOOT) {
                     for (let key in CAR_PARTS) {
-                        if (Math.random() < CAR_PARTS[key].chance) {
+                        // Канистру в заказах не находим, только детали
+                        if (key !== 'fuel_canister' && Math.random() < CAR_PARTS[key].chance) {
                             if (!state.inventory[key]) state.inventory[key] = 0;
                             state.inventory[key]++;
-                            alert(`📦 НАХОДКА: ${CAR_PARTS[key].name}!`);
+                            alert(`📦 НАЙДЕН ПРЕДМЕТ: ${CAR_PARTS[key].name}!`);
+                            // Обновляем рюкзак, если открыт
+                            if(window.renderInventory) window.renderInventory();
                             break; 
                         }
                     }
