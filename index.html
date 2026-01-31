@@ -867,12 +867,15 @@
                 showToast(`Долг (-${(rate*100).toFixed(0)}%): -${penalty.toFixed(2)} PLN`, 'warn');
             }
             
-            state.balance += totalEarn; state.career.totalOrders++;
+            state.balance += totalEarn; 
+            // ИЗНОС МАШИНЫ
+            if (window.applyTaxiWear) window.applyTaxiWear();
+            state.career.totalOrders++;
             updateMenuState(); 
             state.history.push({ rest: currentOrder.rest.name, pay: pay, tip: tip, total: pay + tip });
             sendLog(`Завершил заказ: +${(pay+tip).toFixed(2)} PLN`, 'ORDER');
             setTimeout(() => { showToast(`+${(pay+tip).toFixed(2)} PLN`, 'success'); }, 500);
-
+            
             // MAP CLEANUP
             clearMapVisuals();
             if(map) map.flyTo(WARSAW_CENTER, 13);
@@ -1061,7 +1064,8 @@
             state.taxi.active = !state.taxi.active; saveGame(); updateUI(); updateMenuState();
             let msg = state.taxi.active ? '🚕 РЕЖИМ ТАКСИ ВКЛЮЧЕН' : '🚲 РЕЖИМ КУРЬЕРА ВКЛЮЧЕН'; showToast(msg, 'success');
         }
-
+         // ПРОВЕРКА НА ПОЛОМКУ (WARSZAWA_FOREVER)
+if (!state.taxi.active && window.canWorkTaxi && !window.canWorkTaxi()) return;
         // TAXI RENDER LOGIC
         function renderTaxiShop(c) {
             c.innerHTML = '';
