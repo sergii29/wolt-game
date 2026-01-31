@@ -782,3 +782,198 @@
             if(window.updateMenuState) window.updateMenuState();
         }
     
+
+
+
+
+
+        // ==========================================
+// ОБНОВЛЕНИЕ: TAXI REALISM & GARAGE (PLN)
+// Key: WARSZAWA_FOREVER
+// ==========================================
+
+(function() {
+    // 1. КОНФИГУРАЦИЯ ДЕТАЛЕЙ (Расширенный список)
+    const CAR_PARTS = {
+        'part_chip': { name: 'Чип ИИ', price: 150, sellPrice: 70, type: 'rare' },
+        'part_engine': { name: 'Двигатель V8', price: 300, sellPrice: 140, type: 'rare' },
+        'part_alloy': { name: 'Титановый сплав', price: 200, sellPrice: 90, type: 'rare' },
+        // Новые расходники для ремонта
+        'part_tire': { name: 'Гоночная шина', price: 50, sellPrice: 20, type: 'common' },
+        'part_battery': { name: 'Аккумулятор', price: 80, sellPrice: 35, type: 'common' },
+        'part_brakes': { name: 'Керамич. тормоза', price: 100, sellPrice: 45, type: 'common' },
+        'part_suspension': { name: 'Пневмоподвеска', price: 120, sellPrice: 55, type: 'common' }
+    };
+
+    // Инициализация новых переменных при старте
+    const initTaxiState = () => {
+        if (!state.taxi.health) state.taxi.health = 100; // Здоровье машины
+        if (!state.taxi.repairUntil) state.taxi.repairUntil = 0; // Время окончания ремонта
+        
+        // Проверяем наличие новых ключей в инвентаре, если нет - создаем
+        for (let key in CAR_PARTS) {
+            if (typeof state.inventory[key] === 'undefined') state.inventory[key] = 0;
+        }
+    };
+
+    // Перехватываем загрузку, чтобы обновить данные
+    const originalLoad = window.loadGame || function(){};
+    window.loadGame = function() {
+        originalLoad();
+        initTaxiState();
+    };
+
+    // 2. ФУНКЦИЯ ИЗНОСА (Вызывать при завершении заказа такси)
+    window.applyTaxiWear = function() {
+        // Уменьшаем здоровье на случайную величину от 2 до 5%
+        const damage = Math.floor(Math.random() * 4) + 2;
+        state.taxi.health -= damage;
+        if (state.taxi.health < 0) state.taxi.health = 0;
+        
+        // Шанс найти деталь во время работы (лут)
+        const dropChance = Math.random();
+        if (dropChance < 0.30) { // 30% шанс найти что-то
+            const keys = Object.keys(CAR_PARTS);
+            const randomPart = keys[Math.floor(Math.random() * keys.length)];
+            state.inventory[randomPart]++;
+            window.showToast(`🔧 Найдено: ${CAR_PARTS[randomPart].name}!`, 'success');
+        }
+
+        window.saveGame();
+    };
+
+    // 3. ПРОВЕРКА ПЕРЕД РАБОТОЙ
+    window.canWorkTaxi = function() {
+        const now = Date.now();
+        
+        // Если на ремонте
+        if (state.taxi.repairUntil > now) {
+            const left = Math.ceil((state.taxi.repairUntil - now) / 60000); // Минуты
+            alert(`⛔ Машина в сервисе! Осталось ждать: ${left} мин.\nЛибо используйте детали для быстрого ремонта.`);
+            return false;
+        }
+
+        // Если сломана
+        if (state.taxi.health <= 10) {
+            alert("⚠️ КРИТИЧЕСКАЯ ПОЛОМКА!\nМашина дымится (Здоровье < 10%).\nЗайдите в ГАРАЖ для ремонта.");
+            window.openGarage(); // Открываем гараж
+            return false;
+        }
+
+        return true;
+    };
+
+    // 4. ИНТЕРФЕЙС ГАРАЖА (Продажа и Ремонт)
+    window.openGarage = function() {
+        const modalBody = document.getElementById('modal-body'); // Используем твое стандартное окно
+        if (!modalBody) return;
+
+        // Расчет времени ремонта (если бесплатно)
+        const now = Date.now();
+        const isRepairing = state.taxi.repairUntil > now;
+        let repairStatusHtml = '';
+
+        if (isRepairing) {
+            const timeLeft = Math.ceil((state.taxi.repairUntil - now) / 1000 / 60);
+            repairStatusHtml = `<div style="background:#ff3d00; color:white; padding:10px; border-radius:8px; margin-bottom:10px; text-align:center;">⏳ РЕМОНТ В ПРОЦЕССЕ: ${timeLeft} мин</div>`;
+        } else {
+            const healthColor = state.taxi.health > 50 ? '#00e676' : '#ff3d00';
+            repairStatusHtml = `
+                <div style="background:#333; padding:15px; border-radius:12px; margin-bottom:20px; text-align:center;">
+                    <div style="font-size:14px; color:#aaa;">Состояние авто</div>
+                    <div style="font-size:32px; font-weight:bold; color:${healthColor};">${state.taxi.health}%</div>
+                    <div style="width:100%; background:#555; height:10px; border-radius:5px; margin-top:5px; overflow:hidden;">
+                        <div style="width:${state.taxi.health}%; background:${healthColor}; height:100%;"></div>
+                    </div>
+                    ${state.taxi.health < 100 ? `
+                        <div style="margin-top:15px; display:flex; gap:10px; justify-content:center;">
+                            <button onclick="window.repairTaxi('wait')" style="background:#555; color:white; border:none; padding:8px 15px; border-radius:8px;">⏳ Ждать (12ч)</button>
+                            <button onclick="window.repairTaxi('part')" style="background:#009de0; color:white; border:none; padding:8px 15px; border-radius:8px;">🔧 Запчастью (Мгновенно)</button>
+                        </div>
+                    ` : '<div style="margin-top:10px; color:#00e676;">Машина в идеале!</div>'}
+                </div>
+            `;
+        }
+
+        // Генерация списка инвентаря
+        let inventoryHtml = '<h3 style="color:white; margin-bottom:10px;">📦 СКЛАД ДЕТАЛЕЙ</h3>';
+        
+        for (let key in CAR_PARTS) {
+            const item = CAR_PARTS[key];
+            const count = state.inventory[key] || 0;
+            
+            inventoryHtml += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#2a2a2a; padding:10px; margin-bottom:8px; border-radius:8px; border-left: 4px solid ${count > 0 ? '#00e676' : '#555'};">
+                    <div>
+                        <div style="font-weight:bold; color:white;">${item.name}</div>
+                        <div style="font-size:12px; color:#777;">Цена продажи: ${item.sellPrice} PLN</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:16px; color:white;">x${count}</span>
+                        ${count > 0 ? `<button onclick="window.sellPart('${key}')" style="background:#ff3d00; color:white; border:none; padding:5px 10px; border-radius:6px; font-size:12px;">Продать</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Отображение
+        document.getElementById('modal-title').innerText = "ГАРАЖ & МАСТЕРСКАЯ";
+        modalBody.innerHTML = repairStatusHtml + inventoryHtml;
+        document.getElementById('game-modal').style.display = 'flex';
+    };
+
+    // 5. ЛОГИКА ПРОДАЖИ И РЕМОНТА
+    window.sellPart = function(partKey) {
+        if (state.inventory[partKey] > 0) {
+            state.inventory[partKey]--;
+            const income = CAR_PARTS[partKey].sellPrice;
+            state.balance += income; // Начисляем PLN
+            window.saveGame();
+            window.updateBalanceDisplay(); // Убедись, что такая функция есть, или обнови UI вручную
+            window.openGarage(); // Обновляем окно
+            window.showToast(`💰 Продано за ${income} PLN`, 'success');
+        }
+    };
+
+    window.repairTaxi = function(method) {
+        if (method === 'wait') {
+            // Ремонт занимает 12 часов (43200000 мс)
+            state.taxi.repairUntil = Date.now() + (12 * 60 * 60 * 1000); 
+            window.saveGame();
+            window.openGarage();
+        } else if (method === 'part') {
+            // Ищем любую подходящую деталь (шины, подвеска и т.д.)
+            const repairParts = ['part_tire', 'part_battery', 'part_brakes', 'part_suspension', 'part_engine'];
+            let foundPart = null;
+            
+            for (let p of repairParts) {
+                if (state.inventory[p] > 0) {
+                    foundPart = p;
+                    break;
+                }
+            }
+
+            if (foundPart) {
+                state.inventory[foundPart]--;
+                state.taxi.health = 100;
+                window.showToast(`🔧 Машина починена с помощью: ${CAR_PARTS[foundPart].name}`, 'success');
+                window.saveGame();
+                window.openGarage();
+            } else {
+                alert("У вас нет подходящих запчастей (Шины, Аккумулятор и т.д.)! Купите их или найдите во время работы.");
+            }
+        }
+    };
+
+    // Обновляем крафт (теперь нужно больше деталей для самого первого авто)
+    // Перезаписываем старую функцию крафта, если нужно
+    window.craftCyberCarNew = function() {
+         if(state.inventory['part_chip'] >= 1 && state.inventory['part_engine'] >= 1 && state.inventory['part_alloy'] >= 1 && state.inventory['part_tire'] >= 4) {
+             // Логика крафта...
+             alert("Супер! Но теперь нужны еще и 4 шины!");
+         }
+    };
+
+    console.log(">>> Garage & Inventory Logic Loaded");
+
+})();
