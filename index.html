@@ -2679,7 +2679,7 @@
 
 <script>
 (function() {
-    console.log(">>> WARSAW SYSTEM: NO-BRANDING UPDATE v10");
+    console.log(">>> WARSAW SYSTEM: STRICT MODE v11");
 
     // --- 1. КОНФИГУРАЦИЯ ---
     const MIN_DELIVERIES_FOR_LOOT = 50; 
@@ -2695,6 +2695,7 @@
         'fuel_canister':{ name: 'Бензин (25л)', sell: 25, chance: 0 }
     };
     
+    // Требования для сборки
     const CAR_REQUIREMENTS = { 'part_engine': 1, 'part_chip': 1, 'part_alloy': 1, 'part_tire': 4 };
 
     function getDeliveriesCount() {
@@ -2738,11 +2739,15 @@
         if(closeBtn) { closeBtn.click(); setTimeout(()=>document.querySelector('.bag-btn').click(), 100); }
     };
 
-    // --- 3. ГАРАЖ ---
+    // --- 3. ГАРАЖ И СБОРКА (ИСПРАВЛЕНО) ---
     window.openGarage = function() {
         const old = document.getElementById('garage-overlay'); if (old) old.remove();
+        
+        // Фикс переменных, если их нет
+        if (!state.taxi) state.taxi = {};
         if (typeof state.taxi.health === 'undefined') state.taxi.health = 100;
         if (typeof state.taxi.fuel === 'undefined') state.taxi.fuel = 100;
+        if (!state.inventory) state.inventory = {};
         if (!state.taxi.isCarAssembled) state.taxi.isCarAssembled = false;
 
         const isLocked = !state.taxi.isCarAssembled;
@@ -2758,39 +2763,81 @@
             for (let key in CAR_REQUIREMENTS) {
                 const needed = CAR_REQUIREMENTS[key]; const have = state.inventory[key] || 0;
                 if (have < needed) canAssemble = false;
-                reqHtml += `<div style="display:flex; justify-content:space-between; padding:10px; background:#1e1e1e; margin-bottom:5px; border-radius:8px;"><div>${CAR_PARTS[key].name}</div><div style="color:${have>=needed?'#0f0':'#f00'}">${have}/${needed}</div></div>`;
+                // Красный/Зеленый цвет
+                const clr = have >= needed ? '#00e676' : '#ff3d00';
+                reqHtml += `<div style="display:flex; justify-content:space-between; padding:10px; background:#1e1e1e; margin-bottom:5px; border-radius:8px;"><div>${CAR_PARTS[key].name}</div><div style="color:${clr}; font-weight:bold;">${have}/${needed}</div></div>`;
             }
-            let lootMsg = lootUnlocked ? `<div style="color:#0f0; text-align:center; margin-bottom:10px;">✅ Детали выпадают в заказах!</div>` : `<div style="color:#f00; text-align:center; margin-bottom:10px;">🔒 Нужно 50 доставок (У вас: ${getDeliveriesCount()})</div>`;
-            htmlBody = `<h2 style="text-align:center; color:#ff9100; margin-top:0;">СБОРКА АВТО</h2>${lootMsg}${reqHtml}${canAssemble ? `<button onclick="window.assembleCar()" style="width:100%; padding:15px; background:#0f0; font-weight:bold; margin-top:10px;">🚀 СОБРАТЬ</button>` : ''}`;
+            let lootMsg = lootUnlocked ? `<div style="color:#00e676; text-align:center; font-size:12px; margin-bottom:10px;">✅ Детали выпадают в заказах!</div>` : `<div style="color:#ff3d00; text-align:center; font-size:12px; margin-bottom:10px;">🔒 Требуется 50 доставок (У вас: ${getDeliveriesCount()})</div>`;
+            
+            htmlBody = `
+                <h2 style="text-align:center; color:#ff9100; margin-top:0;">СБОРКА АВТО</h2>
+                ${lootMsg}
+                <div style="margin-bottom:20px;">${reqHtml}</div>
+                <button id="btn-assemble" onclick="window.assembleCar()" style="width:100%; padding:15px; border-radius:10px; font-size:16px; font-weight:bold; border:none; cursor:pointer; background:${canAssemble ? '#00e676' : '#333'}; color:${canAssemble ? 'black' : '#666'};" ${canAssemble ? '' : 'disabled'}>
+                    ${canAssemble ? '🚀 СОБРАТЬ МАШИНУ' : 'Не хватает деталей'}
+                </button>
+            `;
         } else {
             const hp = Math.floor(state.taxi.health); const fuel = Math.floor(state.taxi.fuel||0);
             htmlBody = `<h2 style="margin:0 0 15px 0;">⛽ Гараж</h2>
             <div style="background:#222; padding:15px; border-radius:12px; margin-bottom:15px;">
-                <div>Здоровье: <b style="color:${hp>50?'#0f0':'#f00'}">${hp}%</b></div>
-                <div>Бензин: <b style="color:${fuel>20?'#ff9100':'#f00'}">${fuel}%</b></div>
+                <div>Здоровье: <b style="color:${hp>50?'#00e676':'#ff3d00'}">${hp}%</b></div>
+                <div>Бензин: <b style="color:${fuel>20?'#ff9100':'#ff3d00'}">${fuel}%</b></div>
                 <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button onclick="window.repairService()" style="flex:1; background:#d32f2f; color:white; padding:10px;">Сервис (${REPAIR_COST} P)</button>
-                    <button onclick="window.buyFuel()" style="flex:1; background:#ff9100; color:black; padding:10px;">Купить (${FUEL_PRICE} P)</button>
+                    <button onclick="window.repairService()" style="flex:1; background:#d32f2f; color:white; padding:10px; border:none; border-radius:6px;">Сервис (${REPAIR_COST} PLN)</button>
+                    <button onclick="window.buyFuel()" style="flex:1; background:#ff9100; color:black; padding:10px; border:none; border-radius:6px;">Купить (${FUEL_PRICE} PLN)</button>
                 </div>
-            </div>`;
+            </div>
+            <div style="font-size:12px; color:#aaa; text-align:center;">Управление машиной</div>`;
         }
         overlay.innerHTML = `<div style="background:#121212; width:90%; max-width:400px; border-radius:16px; padding:20px; color:white; border: 1px solid #333;">
-            <div onclick="document.getElementById('garage-overlay').remove()" style="float:right; font-size:24px; cursor:pointer;">&times;</div>${htmlBody}</div>`;
+            <div onclick="document.getElementById('garage-overlay').remove()" style="float:right; font-size:24px; cursor:pointer; color:#777;">&times;</div>${htmlBody}</div>`;
         document.body.appendChild(overlay);
     };
 
+    // ФУНКЦИЯ СБОРКИ (МАКСИМАЛЬНО ПРОСТАЯ)
     window.assembleCar = function() {
-        for (let key in CAR_REQUIREMENTS) state.inventory[key] -= CAR_REQUIREMENTS[key];
-        state.taxi.isCarAssembled = true; state.taxi.health = 100; state.taxi.fuel = 100;
-        if(window.CYBER_CAR) state.taxi.vehicle = window.CYBER_CAR.id;
-        window.saveGame(); window.openGarage(); window.showToast('🚘 АВТО СОБРАНО!', 'success');
+        console.log("Попытка сборки...");
+        // Еще раз проверяем наличие (на всякий случай)
+        for (let key in CAR_REQUIREMENTS) {
+            if ((state.inventory[key] || 0) < CAR_REQUIREMENTS[key]) {
+                alert("Ошибка! Деталей не хватает.");
+                return;
+            }
+        }
+        // Списываем
+        for (let key in CAR_REQUIREMENTS) {
+            state.inventory[key] -= CAR_REQUIREMENTS[key];
+        }
+        
+        state.taxi.isCarAssembled = true;
+        state.taxi.health = 100;
+        state.taxi.fuel = 100;
+        state.taxi.vehicle = 'cyber_x'; // Жестко прописываем ID, чтобы не зависеть от window.CYBER_CAR
+        
+        window.saveGame();
+        window.openGarage(); // Обновляем окно
+        window.showToast('🚘 МАШИНА СОБРАНА! Теперь нужны права и можно в путь.', 'success');
     };
-    window.buyFuel = function() {
-        if(state.balance >= FUEL_PRICE) { state.balance -= FUEL_PRICE; if(!state.inventory['fuel_canister']) state.inventory['fuel_canister']=0; state.inventory['fuel_canister']++; window.showToast('Куплено!', 'success'); window.saveGame(); window.openGarage(); }
-    };
-    window.repairService = function() { if(state.balance>=REPAIR_COST){ state.balance-=REPAIR_COST; state.taxi.health=100; window.saveGame(); window.openGarage(); } };
 
-    // --- 4. МЕНЮ: КНОПКА ГАРАЖА + КНОПКА СМЕНЫ РАБОТЫ ---
+    window.buyFuel = function() {
+        if(state.balance >= FUEL_PRICE) { 
+            state.balance -= FUEL_PRICE; 
+            if(!state.inventory['fuel_canister']) state.inventory['fuel_canister']=0; 
+            state.inventory['fuel_canister']++; 
+            window.showToast('Куплено!', 'success'); 
+            window.saveGame(); window.openGarage(); 
+        } else { alert('Не хватает PLN!'); }
+    };
+    window.repairService = function() { 
+        if(state.balance>=REPAIR_COST){ 
+            state.balance-=REPAIR_COST; 
+            state.taxi.health=100; 
+            window.saveGame(); window.openGarage(); 
+        } else { alert('Не хватает PLN!'); } 
+    };
+
+    // --- 4. МЕНЮ: КНОПКИ ---
     setInterval(() => {
         // 1. Кнопка Гаража
         if (!document.getElementById('injected-garage-btn')) {
@@ -2806,10 +2853,9 @@
             }
         }
 
-        // 2. Кнопка СМЕНЫ РАБОТЫ
+        // 2. Кнопка СМЕНЫ РАБОТЫ (Появляется, если машина собрана)
         if (state.taxi && state.taxi.isCarAssembled) {
             let switchBtn = document.getElementById('injected-switch-btn');
-            
             if (!switchBtn) {
                 const garageBtn = document.getElementById('injected-garage-btn');
                 if (garageBtn) {
@@ -2817,52 +2863,83 @@
                     switchBtn.id = 'injected-switch-btn'; 
                     switchBtn.className = 'menu-item';
                     switchBtn.style.cssText = "padding:15px; border-bottom:1px solid #f5f5f5; display:flex; align-items:center; cursor:pointer; background:white; font-weight:bold;";
-                    switchBtn.onclick = function() { if(window.toggleTaxiMode) window.toggleTaxiMode(); };
+                    // ПРЯМОЙ ВЫЗОВ toggleTaxiMode
+                    switchBtn.onclick = function() { 
+                        console.log("Нажата кнопка переключения");
+                        if(window.toggleTaxiMode) window.toggleTaxiMode(); 
+                    };
                     garageBtn.parentNode.insertBefore(switchBtn, garageBtn.nextSibling);
                 }
             }
-
-            // Обновляем текст (БЕЗ СЛОВА WOLT)
             if (switchBtn) {
                 if (state.taxi.active) {
-                    // ЕСЛИ МЫ В ТАКСИ
                     switchBtn.innerHTML = '<i class="fas fa-bicycle" style="color:#00e676; width:25px; text-align:center; margin-right:10px;"></i> Вернуться в Доставку';
                     switchBtn.style.color = "#006400";
                 } else {
-                    // ЕСЛИ МЫ КУРЬЕР
                     switchBtn.innerHTML = '<i class="fas fa-taxi" style="color:#ff9100; width:25px; text-align:center; margin-right:10px;"></i> Начать смену Такси';
                     switchBtn.style.color = "#333";
                 }
             }
         }
         
-        // Скрываем старые кнопки
+        // Скрываем мусор
         document.querySelectorAll('.menu-item').forEach(btn => {
             if (btn.id !== 'injected-garage-btn' && btn.id !== 'injected-switch-btn' && (btn.innerText.includes('Автосалон') || btn.innerText.includes('Cyber'))) btn.style.display = 'none';
         });
-
     }, 800);
 
-    // --- 5. БЛОКИРОВКА ВКЛЮЧЕНИЯ ТАКСИ ---
+    // --- 5. ПОЛИЦИЯ (АВТО-ВЫКЛЮЧЕНИЕ ТАКСИ) ---
+    // Если ты в такси, но у тебя нет машины или прав — выкидываем в доставку
+    setInterval(() => {
+        if (state.taxi && state.taxi.active) {
+            const hasLicense = state.taxi.licenses && state.taxi.licenses.taxi; // Проверка прав
+            const isAssembled = state.taxi.isCarAssembled;
+            const hasFuel = (state.taxi.fuel || 0) > 0;
+            const isBroken = state.taxi.health <= 0;
+
+            if (!isAssembled || !hasLicense || !hasFuel || isBroken) {
+                console.log("SECURITY CHECK FAILED: Ejecting form Taxi Mode");
+                
+                // ВЫКЛЮЧАЕМ ТАКСИ ПРИНУДИТЕЛЬНО
+                if(window.toggleTaxiMode) window.toggleTaxiMode();
+                
+                // Сообщаем причину
+                if(!isAssembled) window.showToast('⛔ Сначала собери машину!', 'error');
+                else if(!hasLicense) window.showToast('👮 Нет Лицензии Такси! Купите в Мэрии.', 'error');
+                else if(!hasFuel) window.showToast('⛽ Бак пуст!', 'error');
+                else if(isBroken) window.showToast('🔥 Машина сломана!', 'error');
+            }
+        }
+    }, 2000); // Проверка каждые 2 секунды
+
+    // --- 6. ЗАЩИТА НА ВКЛЮЧЕНИЕ (КЛИК ПО КНОПКЕ) ---
     const checkTaxiLock = setInterval(() => {
         if (window.toggleTaxiMode && !window.toggleTaxiMode.isPatched) {
             const originalToggle = window.toggleTaxiMode;
             window.toggleTaxiMode = function() {
-                // Если ВКЛЮЧАЕМ такси - проверки
+                // Если хотим ВКЛЮЧИТЬ (сейчас выкл)
                 if (!state.taxi.active) {
-                    if (!state.taxi.isCarAssembled) { window.showToast('⛔ Сначала соберите машину!', 'error'); window.openGarage(); return; }
-                    if (state.taxi.repairEndTime > Date.now()) { window.showToast('⏳ Машина в сервисе', 'warn'); return; }
-                    if (state.taxi.health <= 0) { window.showToast('🔥 Машина сломана!', 'error'); window.openGarage(); return; }
+                    // Проверяем права
+                    if (!state.taxi.licenses || !state.taxi.licenses.taxi) {
+                        window.showToast('👮 Нужна Лицензия Такси (см. Лицензии)!', 'error');
+                        return; // Не пускаем
+                    }
+                    if (!state.taxi.isCarAssembled) { window.showToast('⛔ Машина не собрана!', 'error'); window.openGarage(); return; }
                     if ((state.taxi.fuel || 0) <= 0) { window.showToast('⛽ Нет бензина!', 'error'); window.openGarage(); return; }
+                    if (state.taxi.health <= 0) { window.showToast('🔥 Ремонт!', 'error'); window.openGarage(); return; }
                 }
+                
+                // Вызываем оригинал
                 originalToggle.apply(this, arguments);
+                
+                // Сохраняем
                 setTimeout(window.saveGame, 500);
             };
             window.toggleTaxiMode.isPatched = true;
         }
     }, 1000);
 
-    // --- 6. ЛУТ И РАСХОД ---
+    // --- 7. ЛУТ И РАСХОД ---
     if (window.saveGame) {
         const origSave = window.saveGame; let lastBal = 0;
         window.saveGame = function() {
