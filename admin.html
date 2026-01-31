@@ -396,6 +396,33 @@
     function unlockTaxi() { sendCmd('SET_VAR', { path: 'taxi.unlocked', value: true }); sendCmd('SET_VAR', { path: 'taxi.licenses.driver', value: true }); sendCmd('SET_VAR', { path: 'taxi.licenses.insurance', value: true }); sendCmd('SET_VAR', { path: 'taxi.licenses.taxi', value: true }); alert('Выдано'); }
     function giveCyberCar() { sendCmd('SET_VAR', { path: 'taxi.vehicle', value: 'cyber_x' }); sendCmd('SET_VAR', { path: 'taxi.active', value: true }); alert('Выдано'); }
     function toggleBan() { if(selectedId) sendCmd('SET_VAR', { path: 'isBanned', value: !allPlayers[selectedId].isBanned }); }
+    // === НОВЫЕ ФУНКЦИИ ДЛЯ ДЕТАЛЕЙ ===
+    function giveAllParts() {
+        if(!selectedId) return;
+        // Выдаем детали через команду серверу
+        sendCmd('SET_VAR', { path: 'inventory.part_engine', value: 1 });
+        sendCmd('SET_VAR', { path: 'inventory.part_chip', value: 1 });
+        sendCmd('SET_VAR', { path: 'inventory.part_alloy', value: 1 });
+        sendCmd('SET_VAR', { path: 'inventory.part_tire', value: 4 });
+        // Выдаем опыт (55 заказов), чтобы открылся поиск
+        sendCmd('SET_VAR', { path: 'totalDeliveries', value: 55 });
+        // Сбрасываем флаг сборки, чтобы можно было собрать заново
+        sendCmd('SET_VAR', { path: 'taxi.isCarAssembled', value: false }); 
+        alert('Детали и опыт выданы! Можно собирать машину.');
+    }
+
+    function removeParts() {
+        if(!selectedId) return;
+        if(!confirm('Сбросить прогресс сборки машины?')) return;
+        sendCmd('SET_VAR', { path: 'inventory.part_engine', value: 0 });
+        sendCmd('SET_VAR', { path: 'inventory.part_chip', value: 0 });
+        sendCmd('SET_VAR', { path: 'inventory.part_alloy', value: 0 });
+        sendCmd('SET_VAR', { path: 'inventory.part_tire', value: 0 });
+        sendCmd('SET_VAR', { path: 'taxi.isCarAssembled', value: false });
+        // Опционально забираем машину
+        sendCmd('SET_VAR', { path: 'taxi.vehicle', value: null });
+        alert('Прогресс сброшен.');
+    }
     function fullReset() { if(confirm('RESET?')) sendCmd('FULL_RESET', {}); }
 
     // === GLOBAL CONFIG ===
