@@ -2679,9 +2679,7 @@
 
 <script>
 (function() {
-    console.log(">>> Garage Patch 2.0 Loaded");
-
-    // 1. НАСТРОЙКИ И ДАННЫЕ
+    // 1. ДАННЫЕ И НАСТРОЙКИ
     const CAR_PARTS = {
         'part_chip': { name: 'Чип ИИ', sell: 70 },
         'part_engine': { name: 'Двигатель V8', sell: 140 },
@@ -2692,61 +2690,58 @@
         'part_suspension': { name: 'Подвеска', sell: 55 }
     };
 
-    // 2. ФУНКЦИЯ ОТКРЫТИЯ ОКНА (Собственный интерфейс)
+    // 2. ФУНКЦИЯ ОТКРЫТИЯ ОКНА
     window.openGarage = function() {
         // Удаляем старое окно если есть
-        const old = document.getElementById('garage-modal-overlay');
+        const old = document.getElementById('garage-overlay');
         if (old) old.remove();
 
-        // Инициализация данных
         if (typeof state.taxi.health === 'undefined') state.taxi.health = 100;
         if (!state.inventory) state.inventory = {};
 
-        // Создаем свое окно поверх всего
+        // Создаем затемнение
         const overlay = document.createElement('div');
-        overlay.id = 'garage-modal-overlay';
-        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; display:flex; justify-content:center; align-items:center; font-family:sans-serif;";
+        overlay.id = 'garage-overlay';
+        overlay.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:999999; display:flex; justify-content:center; align-items:center; font-family:sans-serif;";
         
+        // Создаем контент
         const content = document.createElement('div');
-        content.style.cssText = "background:#1a1a1a; width:90%; max-width:400px; border-radius:15px; padding:20px; color:white; border: 1px solid #333; box-shadow: 0 0 20px rgba(0,0,0,0.5);";
+        content.style.cssText = "background:#1a1a1a; width:85%; max-width:350px; border-radius:16px; padding:20px; color:white; border: 1px solid #444; position:relative;";
 
-        // HTML Содержимое
-        const healthColor = state.taxi.health > 50 ? '#00e676' : '#ff3d00';
-        let itemsHtml = '';
-        
+        // Генерируем список деталей
+        let listHtml = '';
+        let hasItems = false;
         for (let key in CAR_PARTS) {
             const count = state.inventory[key] || 0;
-            itemsHtml += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333;">
-                    <div>
-                        <div style="font-size:14px;">${CAR_PARTS[key].name}</div>
-                        <div style="font-size:11px; color:#888;">Цена: ${CAR_PARTS[key].sell} PLN</div>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="font-weight:bold; color:${count > 0 ? '#fff' : '#555'}">x${count}</span>
-                        ${count > 0 ? `<button onclick="window.sellPartItem('${key}')" style="background:#ff3d00; border:none; color:white; border-radius:5px; padding:4px 8px; cursor:pointer;">Продать</button>` : ''}
+            if (count > 0) hasItems = true;
+            listHtml += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #333;">
+                    <div style="font-size:13px; color:#ddd;">${CAR_PARTS[key].name} <span style="color:#777;">(${CAR_PARTS[key].sell} PLN)</span></div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:13px; color:#fff;">x${count}</span>
+                        ${count > 0 ? `<button onclick="window.sellP('${key}')" style="background:#ff3d00; border:none; color:white; border-radius:4px; padding:4px 8px; font-size:11px;">$</button>` : ''}
                     </div>
                 </div>`;
         }
+        if (!hasItems) listHtml = '<div style="text-align:center; color:#555; padding:10px;">Пусто... Ищи детали в заказах!</div>';
+
+        const hp = Math.floor(state.taxi.health);
+        const hpColor = hp > 50 ? '#00e676' : '#ff3d00';
 
         content.innerHTML = `
-            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-                <h2 style="margin:0;">🔧 Гараж</h2>
-                <div onclick="document.getElementById('garage-modal-overlay').remove()" style="cursor:pointer; font-size:20px;">✕</div>
+            <div onclick="document.getElementById('garage-overlay').remove()" style="position:absolute; top:10px; right:15px; font-size:24px; cursor:pointer; color:#777;">&times;</div>
+            <h2 style="margin:0 0 20px 0; text-align:center;">🔧 Гараж</h2>
+            
+            <div style="background:#222; padding:15px; border-radius:10px; margin-bottom:15px; text-align:center;">
+                <div style="font-size:12px; color:#aaa;">Здоровье машины</div>
+                <div style="font-size:32px; font-weight:bold; color:${hpColor};">${hp}%</div>
+                <div style="width:100%; background:#444; height:6px; border-radius:3px; margin-top:5px;"><div style="width:${hp}%; height:100%; background:${hpColor};"></div></div>
+                ${hp < 100 ? `<button onclick="window.doRepair()" style="margin-top:10px; width:100%; background:#009de0; color:white; padding:10px; border:none; border-radius:8px;">Починить</button>` : ''}
             </div>
 
-            <div style="background:#222; padding:15px; border-radius:10px; text-align:center; margin-bottom:20px;">
-                <div style="color:#aaa; font-size:12px;">Состояние машины</div>
-                <div style="font-size:36px; font-weight:bold; color:${healthColor}; margin:5px 0;">${Math.floor(state.taxi.health)}%</div>
-                <div style="width:100%; background:#444; height:8px; border-radius:4px; overflow:hidden;">
-                    <div style="width:${state.taxi.health}%; background:${healthColor}; height:100%;"></div>
-                </div>
-                ${state.taxi.health < 100 ? `<button onclick="window.tryRepair()" style="margin-top:15px; width:100%; background:#009de0; color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer;">ПОЧИНИТЬ (Нужна деталь)</button>` : '<div style="margin-top:10px; color:#00e676; font-size:12px;">Машина в идеале</div>'}
-            </div>
-
-            <div style="max-height:300px; overflow-y:auto;">
-                <h3 style="margin:0 0 10px 0; font-size:16px; color:#bbb;">Склад запчастей</h3>
-                ${itemsHtml}
+            <div style="max-height:250px; overflow-y:auto;">
+                <h4 style="margin:0 0 10px 0; color:#888;">Запчасти</h4>
+                ${listHtml}
             </div>
         `;
 
@@ -2754,96 +2749,89 @@
         document.body.appendChild(overlay);
     };
 
-    // 3. ФУНКЦИИ ЛОГИКИ (Глобальные)
-    window.sellPartItem = function(key) {
-        if (state.inventory[key] > 0) {
-            state.inventory[key]--;
-            state.balance += CAR_PARTS[key].sell;
+    // 3. ФУНКЦИИ ДЕЙСТВИЙ
+    window.sellP = function(k) {
+        if (state.inventory[k] > 0) {
+            state.inventory[k]--;
+            state.balance += CAR_PARTS[k].sell;
             window.saveGame();
-            window.openGarage(); // Перерисовать окно
-            window.showToast(`Продано за ${CAR_PARTS[key].sell} PLN`, 'success');
+            window.openGarage();
         }
     };
-
-    window.tryRepair = function() {
+    window.doRepair = function() {
         const parts = ['part_tire', 'part_battery', 'part_brakes', 'part_suspension', 'part_engine'];
         const found = parts.find(p => state.inventory[p] > 0);
-        
         if (found) {
             state.inventory[found]--;
             state.taxi.health = 100;
             window.saveGame();
             window.openGarage();
-            window.showToast('Машина починена!', 'success');
+            window.showToast('Машина как новая!', 'success');
         } else {
-            alert('Нет запчастей для ремонта! Найди их выполняя заказы.');
+            alert('Нет запчастей! (Шины, Аккумулятор и т.д.)');
         }
     };
 
-    // 4. ВНЕДРЕНИЕ КНОПКИ В МЕНЮ (Умный поиск)
-    const injectButton = setInterval(() => {
-        const menu = document.querySelector('.menu-items'); // Контейнер меню
-        if (!menu) return;
+    // 4. СОЗДАЕМ КНОПКУ-ВИДЖЕТ (Которая висит поверх всего)
+    setTimeout(() => {
+        // Удаляем, если уже есть
+        const oldBtn = document.getElementById('garage-fab');
+        if (oldBtn) oldBtn.remove();
 
-        // Если кнопка уже есть - не дублируем
-        if (document.getElementById('btn-garage-fixed')) return;
-
-        // Ищем кнопку Такси, чтобы встать ПОД ней
-        const items = menu.querySelectorAll('.menu-item');
-        let taxiBtn = null;
-        items.forEach(item => {
-            if (item.innerText.includes('Такси') || item.innerText.includes('Карьера') || item.innerText.includes('Wolt')) {
-                taxiBtn = item;
-            }
-        });
-
-        const garageBtn = document.createElement('div');
-        garageBtn.id = 'btn-garage-fixed';
-        garageBtn.className = 'menu-item';
-        garageBtn.innerHTML = '<i class="fas fa-wrench" style="color:#ff3d00; width:25px; text-align:center;"></i> Гараж / Ремонт';
-        garageBtn.onclick = window.openGarage;
-        garageBtn.style.cursor = "pointer";
-
-        if (taxiBtn) {
-            // Вставляем ПОСЛЕ кнопки такси
-            taxiBtn.parentNode.insertBefore(garageBtn, taxiBtn.nextSibling);
-            console.log(">>> Garage button placed after Taxi section");
-            clearInterval(injectButton);
-        } else {
-            // Если не нашли - просто в конец
-            menu.appendChild(garageBtn);
-            clearInterval(injectButton);
-        }
-
-    }, 1000); // Проверяем раз в секунду пока не найдем меню
-
-    // 5. ИЗНОС МАШИНЫ (Слушает начисление денег)
-    if (window.saveGame) {
-        const originalSave = window.saveGame;
-        let lastBalanceCheck = 0;
+        const fab = document.createElement('div');
+        fab.id = 'garage-fab';
+        // СТИЛИ КНОПКИ: Красный круг с ключом
+        fab.style.cssText = `
+            position: fixed;
+            bottom: 120px; 
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: #ff3d00;
+            border-radius: 50%;
+            z-index: 99999;
+            box-shadow: 0 4px 15px rgba(255, 61, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: white;
+            font-size: 20px;
+            border: 2px solid white;
+        `;
+        fab.innerHTML = '<i class="fas fa-wrench"></i>';
+        fab.onclick = window.openGarage;
         
+        document.body.appendChild(fab);
+        console.log(">>> Garage Button Created!");
+
+    }, 2500); // Появится через 2.5 секунды после старта
+
+    // 5. ЛОГИКА ИЗНОСА
+    if (window.saveGame) {
+        const origSave = window.saveGame;
+        let lastBal = 0;
         window.saveGame = function() {
-            // Если баланс вырос больше чем на 10 (значит заказ)
-            if (state.balance && lastBalanceCheck > 0 && state.balance > lastBalanceCheck + 10) {
+            // Если баланс вырос (был заказ)
+            if (state.balance && lastBal > 0 && state.balance > lastBal + 10) {
                  if (state.taxi && state.taxi.active) {
                      if (!state.taxi.health) state.taxi.health = 100;
-                     state.taxi.health -= (Math.floor(Math.random() * 4) + 1); // -1..4%
+                     state.taxi.health -= (Math.random() * 3 + 1); // -1..4%
                      if (state.taxi.health < 0) state.taxi.health = 0;
                      
-                     // Дроп детали (30% шанс)
+                     // Дроп детали 30%
                      if(Math.random() < 0.3) {
                          const keys = Object.keys(CAR_PARTS);
                          const p = keys[Math.floor(Math.random() * keys.length)];
                          if(!state.inventory[p]) state.inventory[p] = 0;
                          state.inventory[p]++;
-                         window.showToast('Найдена деталь!', 'success');
+                         window.showToast('Найдено: ' + CAR_PARTS[p].name, 'success');
                      }
                  }
             }
-            lastBalanceCheck = state.balance;
-            originalSave.apply(this, arguments);
+            lastBal = state.balance;
+            origSave.apply(this, arguments);
         };
     }
-
 })();
 </script>
